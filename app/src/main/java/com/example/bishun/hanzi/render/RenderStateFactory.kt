@@ -40,6 +40,7 @@ object RenderStateFactory {
                 outline = CharacterRenderState(outlineOpacity, outlineStrokes),
                 highlight = CharacterRenderState(0f, highlightStrokes),
             ),
+            quiz = QuizRenderState(),
         )
     }
 }

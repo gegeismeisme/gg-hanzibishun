@@ -56,6 +56,10 @@ data class CharacterLayersState(
     }
 }
 
+data class QuizRenderState(
+    val activeUserStrokeId: Int? = null,
+)
+
 data class UserStrokeRenderState(
     val id: Int,
     val points: List<Point>,
@@ -66,6 +70,7 @@ data class RenderStateSnapshot(
     val options: RenderOptionsState,
     val character: CharacterLayersState,
     val userStrokes: Map<Int, UserStrokeRenderState> = emptyMap(),
+    val quiz: QuizRenderState = QuizRenderState(),
 ) {
     fun interpolate(target: RenderStateSnapshot, progress: Float): RenderStateSnapshot {
         val t = progress.coerceIn(0f, 1f)
@@ -81,6 +86,7 @@ data class RenderStateSnapshot(
         return copy(
             character = character.interpolate(target.character, t),
             userStrokes = blendedUserStrokes + additionalStrokes,
+            quiz = target.quiz,
         )
     }
 }
