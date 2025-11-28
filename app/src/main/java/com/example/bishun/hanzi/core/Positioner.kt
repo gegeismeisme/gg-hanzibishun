@@ -1,5 +1,6 @@
 package com.example.bishun.hanzi.core
 
+import androidx.compose.ui.geometry.Offset
 import com.example.bishun.hanzi.model.Point
 
 class Positioner(
@@ -37,6 +38,12 @@ class Positioner(
         val x = (point.x - xOffset) / scale
         val y = (canvasHeight - yOffset - point.y) / scale
         return Point(x.toDouble(), y.toDouble())
+    }
+
+    fun toCanvasOffset(point: Point): Offset {
+        val x = point.x * scale + xOffset
+        val y = canvasHeight - yOffset - point.y * scale
+        return Offset(x.toFloat(), y.toFloat())
     }
 
     companion object {
