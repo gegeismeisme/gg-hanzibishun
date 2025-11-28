@@ -1,12 +1,14 @@
 package com.example.bishun.data.characters
 
+import com.example.bishun.data.characters.cache.CharacterDiskCache
 import com.example.bishun.data.characters.model.CharacterJsonDto
 import com.example.bishun.data.characters.source.CharacterAssetDataSource
-import com.example.bishun.data.characters.source.JsDelivrCharacterDataSource
+import com.example.bishun.data.characters.source.RemoteCharacterDataSource
 
 class DefaultCharacterDataRepository(
     private val assetDataSource: CharacterAssetDataSource,
-    private val remoteDataSource: JsDelivrCharacterDataSource,
+    private val diskCache: CharacterDiskCache,
+    private val remoteSources: List<RemoteCharacterDataSource>,
 ) : CharacterDataRepository {
 
     override suspend fun loadCharacter(character: String): Result<CharacterJsonDto> {
@@ -20,14 +22,23 @@ class DefaultCharacterDataRepository(
             return localResult
         }
 
-        val remoteResult = remoteDataSource.fetch(normalized)
-        if (remoteResult.isSuccess) {
-            return remoteResult
+        diskCache.read(normalized)?.let {
+            return Result.success(it)
         }
 
-        val combinedError = remoteResult.exceptionOrNull() ?: localResult.exceptionOrNull()
+        var lastError: Throwable? = localResult.exceptionOrNull()
+        remoteSources.forEach { source ->
+            val remoteResult = source.fetch(normalized)
+            if (remoteResult.isSuccess) {
+                val dto = remoteResult.getOrThrow()
+                runCatching { diskCache.write(normalized, dto) }
+                return remoteResult
+            }
+            lastError = remoteResult.exceptionOrNull() ?: lastError
+        }
+
         return Result.failure(
-            combinedError ?: IllegalStateException("Unable to load $normalized"),
+            lastError ?: IllegalStateException("Unable to load $normalized"),
         )
     }
 }

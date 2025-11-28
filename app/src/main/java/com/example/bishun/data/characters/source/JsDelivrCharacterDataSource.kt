@@ -19,9 +19,9 @@ class JsDelivrCharacterDataSource(
     private val json: Json,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val datasetVersion: String = DEFAULT_VERSION,
-) {
+) : RemoteCharacterDataSource {
 
-    suspend fun fetch(character: String): Result<CharacterJsonDto> = withContext(dispatcher) {
+    override suspend fun fetch(character: String): Result<CharacterJsonDto> = withContext(dispatcher) {
         if (character.isBlank()) {
             return@withContext Result.failure<CharacterJsonDto>(
                 IllegalArgumentException("Character cannot be blank."),
