@@ -168,6 +168,25 @@ object CharacterActions {
         )
         return listOf(setColor, primeStroke, animateStroke, fadeOut)
     }
+
+    fun showStroke(
+        layer: CharacterLayer,
+        strokeNum: Int,
+        durationMillis: Long,
+    ): List<Mutation> {
+        return listOf(
+            Mutation(
+                scope = "character.${layer.scope}.strokes.$strokeNum",
+                durationMillis = durationMillis,
+                force = true,
+                reducer = { state ->
+                    state.updateStroke(layer, strokeNum) {
+                        it.copy(displayPortion = 1f, opacity = 1f)
+                    }
+                },
+            ),
+        )
+    }
 }
 
 private fun RenderStateSnapshot.updateLayer(
