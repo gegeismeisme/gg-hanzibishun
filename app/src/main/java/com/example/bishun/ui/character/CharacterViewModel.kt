@@ -54,7 +54,17 @@ class CharacterViewModel(
     }
 
     fun updateQuery(input: String) {
-        _query.value = input.take(MAX_QUERY_LENGTH)
+        val trimmed = input.trim()
+        if (trimmed.isEmpty()) {
+            _query.value = ""
+            return
+        }
+        val codePoint = Character.codePointAt(trimmed, 0)
+        _query.value = String(Character.toChars(codePoint))
+    }
+
+    fun clearQuery() {
+        _query.value = ""
     }
 
     fun submitQuery() {
