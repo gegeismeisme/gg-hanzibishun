@@ -7,18 +7,17 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.Arrangement.spacedBy
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -53,12 +51,14 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.ui.input.pointer.consumeDownChange
+import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -103,7 +103,6 @@ fun CharacterRoute(
         onPlayDemoOnce = { viewModel.playDemo(loop = false) },
         onPlayDemoLoop = { viewModel.playDemo(loop = true) },
         onStopDemo = viewModel::stopDemo,
-        onReset = viewModel::resetCharacter,
         onStartPractice = viewModel::startPractice,
         onRequestHint = viewModel::requestHint,
         onStrokeStart = viewModel::onPracticeStrokeStart,
@@ -125,7 +124,6 @@ fun CharacterScreen(
     onPlayDemoOnce: () -> Unit,
     onPlayDemoLoop: () -> Unit,
     onStopDemo: () -> Unit,
-    onReset: () -> Unit,
     onStartPractice: () -> Unit,
     onRequestHint: () -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
@@ -144,13 +142,17 @@ fun CharacterScreen(
                 text = "Hanzi Stroke Order",
                 style = MaterialTheme.typography.headlineSmall,
             )
+            Spacer(modifier = Modifier.height(4.dp))
             SearchBarRow(
                 query = query,
                 uiState = uiState,
                 onQueryChange = onQueryChange,
                 onSubmit = onSubmit,
                 onClearQuery = onClearQuery,
-                onReset = onReset,
+                demoState = demoState,
+                onPlayDemoOnce = onPlayDemoOnce,
+                onPlayDemoLoop = onPlayDemoLoop,
+                onStopDemo = onStopDemo,
             )
             when (uiState) {
                 CharacterUiState.Loading -> Text("Loading...")
@@ -162,10 +164,6 @@ fun CharacterScreen(
                     definition = uiState.definition,
                     renderSnapshot = renderSnapshot,
                     practiceState = practiceState,
-                    demoState = demoState,
-                    onPlayDemoOnce = onPlayDemoOnce,
-                    onPlayDemoLoop = onPlayDemoLoop,
-                    onStopDemo = onStopDemo,
                     onStartPractice = onStartPractice,
                     onRequestHint = onRequestHint,
                     onStrokeStart = onStrokeStart,
@@ -185,7 +183,10 @@ private fun SearchBarRow(
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onClearQuery: () -> Unit,
-    onReset: () -> Unit,
+    demoState: DemoState,
+    onPlayDemoOnce: () -> Unit,
+    onPlayDemoLoop: () -> Unit,
+    onStopDemo: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -202,7 +203,10 @@ private fun SearchBarRow(
             keyboardActions = KeyboardActions(onDone = { onSubmit() }),
             modifier = Modifier.width(96.dp),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             IconActionButton(
                 icon = Icons.Filled.CloudDownload,
                 description = "Load character",
@@ -215,13 +219,16 @@ private fun SearchBarRow(
                 onClick = onClearQuery,
                 enabled = query.isNotEmpty(),
             )
-            IconActionButton(
-                icon = Icons.Filled.Refresh,
-                description = "Reset canvas",
-                onClick = onReset,
-                enabled = uiState is CharacterUiState.Success,
-            )
         }
+        Spacer(modifier = Modifier.weight(1f, fill = true))
+        DemoControlRow(
+            uiState = uiState,
+            demoState = demoState,
+            onSubmit = onSubmit,
+            onPlayOnce = onPlayDemoOnce,
+            onPlayLoop = onPlayDemoLoop,
+            onStop = onStopDemo,
+        )
     }
 }
 
@@ -230,10 +237,6 @@ private fun CharacterContent(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
-    demoState: DemoState,
-    onPlayDemoOnce: () -> Unit,
-    onPlayDemoLoop: () -> Unit,
-    onStopDemo: () -> Unit,
     onStartPractice: () -> Unit,
     onRequestHint: () -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
@@ -247,23 +250,10 @@ private fun CharacterContent(
             .fillMaxWidth()
             .fillMaxHeight(),
     ) {
-        Row(
+        CharacterInfoPanel(
+            definition = definition,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            CharacterGlyphCard(
-                definition = definition,
-                modifier = Modifier.weight(1f),
-            )
-            TeachingControls(
-                symbol = definition.symbol,
-                demoState = demoState,
-                onPlayOnce = onPlayDemoOnce,
-                onPlayLoop = onPlayDemoLoop,
-                onStop = onStopDemo,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        )
         CharacterCanvas(
             definition = definition,
             renderSnapshot = renderSnapshot,
@@ -271,17 +261,64 @@ private fun CharacterContent(
             onStrokeStart = onStrokeStart,
             onStrokeMove = onStrokeMove,
             onStrokeEnd = onStrokeEnd,
+            onStartPractice = onStartPractice,
+            onRequestHint = onRequestHint,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = true),
         )
-        PracticePanel(
-            symbol = definition.symbol,
-            practiceState = practiceState,
-            onStartPractice = onStartPractice,
-            onRequestHint = onRequestHint,
+        val summary = practiceState.toSummary()
+        PracticeSummaryBadge(
+            progressText = summary.progressText,
+            statusText = summary.statusText,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+}
+
+@Composable
+private fun DemoControlRow(
+    uiState: CharacterUiState,
+    demoState: DemoState,
+    onSubmit: () -> Unit,
+    onPlayOnce: () -> Unit,
+    onPlayLoop: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (demoState.isPlaying) {
+            IconActionButton(
+                icon = Icons.Filled.Stop,
+                description = "Stop demo",
+                onClick = onStop,
+            )
+        } else {
+            IconActionButton(
+                icon = Icons.Filled.PlayArrow,
+                description = "Play demo",
+                onClick = {
+                    if (uiState !is CharacterUiState.Success) {
+                        onSubmit()
+                    } else {
+                        onPlayOnce()
+                    }
+                },
+            )
+            IconActionButton(
+                icon = Icons.Filled.Refresh,
+                description = "Loop demo",
+                onClick = {
+                    if (uiState !is CharacterUiState.Success) {
+                        onSubmit()
+                    } else {
+                        onPlayLoop()
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -293,6 +330,9 @@ private fun CharacterCanvas(
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
+    onStartPractice: () -> Unit,
+    onRequestHint: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val outlineColor = Color(0xFFD6D6D6)
     val teachingStrokeColor = Color(0xFF0F0F0F)
@@ -301,285 +341,194 @@ private fun CharacterCanvas(
     val userStrokeColor = MaterialTheme.colorScheme.secondary
     val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth(),
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(24.dp))
+            .background(canvasBackground)
+            .onSizeChanged { canvasSizeState.value = it },
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(24.dp))
-                .background(canvasBackground)
-                .onSizeChanged { canvasSizeState.value = it },
-        ) {
-            val positioner = remember(canvasSizeState.value) {
-                val size = canvasSizeState.value
-                if (size.width == 0 || size.height == 0) {
-                    null
-                } else {
-                    Positioner(size.width.toFloat(), size.height.toFloat(), padding = 32f)
-                }
+        val positioner = remember(canvasSizeState.value) {
+            val size = canvasSizeState.value
+            if (size.width == 0 || size.height == 0) {
+                null
+            } else {
+                Positioner(size.width.toFloat(), size.height.toFloat(), padding = 32f)
             }
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(canvasBackground)
-                    .practicePointerInput(
-                        practiceState = practiceState,
-                        positioner = positioner,
-                        onStrokeStart = onStrokeStart,
-                        onStrokeMove = onStrokeMove,
-                        onStrokeEnd = onStrokeEnd,
-                    ),
-            ) {
-                val strokeWidth = 8.dp.toPx()
-                val drawPositioner = Positioner(size.width, size.height, padding = 32f)
-                drawRect(
-                    color = outlineColor,
-                    style = Stroke(width = 1.dp.toPx()),
+        }
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(canvasBackground)
+                .practicePointerInput(
+                    practiceState = practiceState,
+                    positioner = positioner,
+                    onStrokeStart = onStrokeStart,
+                    onStrokeMove = onStrokeMove,
+                    onStrokeEnd = onStrokeEnd,
+                ),
+        ) {
+            val strokeWidth = 8.dp.toPx()
+            val drawPositioner = Positioner(size.width, size.height, padding = 32f)
+            drawRect(
+                color = outlineColor,
+                style = Stroke(width = 1.dp.toPx()),
+            )
+            val snapshot = renderSnapshot
+            if (snapshot == null) {
+                definition.strokes.forEach { stroke ->
+                    val path = stroke.toFullPath(drawPositioner)
+                    val color = if (stroke.isInRadical) radicalStrokeColor else teachingStrokeColor
+                    drawStrokePath(path, color, strokeWidth)
+                }
+            } else {
+                drawLayer(
+                    definition = definition,
+                    layerState = snapshot.character.outline,
+                    baseColor = outlineColor,
+                    positioner = drawPositioner,
+                    strokeWidth = strokeWidth,
                 )
-                val snapshot = renderSnapshot
-                if (snapshot == null) {
-                    definition.strokes.forEach { stroke ->
-                        val path = stroke.toFullPath(drawPositioner)
-                        val color = if (stroke.isInRadical) radicalStrokeColor else teachingStrokeColor
-                        drawStrokePath(path, color, strokeWidth)
-                    }
-                } else {
-                    drawLayer(
-                        definition = definition,
-                        layerState = snapshot.character.outline,
-                        baseColor = outlineColor,
+                drawLayer(
+                    definition = definition,
+                    layerState = snapshot.character.main,
+                    baseColor = teachingStrokeColor,
+                    positioner = drawPositioner,
+                    strokeWidth = strokeWidth,
+                )
+                drawLayer(
+                    definition = definition,
+                    layerState = snapshot.character.highlight,
+                    baseColor = snapshot.options.highlightColor.asComposeColor(),
+                    positioner = drawPositioner,
+                    strokeWidth = strokeWidth,
+                )
+                snapshot.userStrokes.values.forEach { userStroke ->
+                    drawUserStroke(
+                        userStroke = userStroke,
                         positioner = drawPositioner,
-                        strokeWidth = strokeWidth,
+                        color = userStrokeColor,
+                        drawingWidth = snapshot.options.drawingWidth,
                     )
-                    drawLayer(
-                        definition = definition,
-                        layerState = snapshot.character.main,
-                        baseColor = teachingStrokeColor,
-                        positioner = drawPositioner,
-                        strokeWidth = strokeWidth,
-                    )
-                    drawLayer(
-                        definition = definition,
-                        layerState = snapshot.character.highlight,
-                        baseColor = snapshot.options.highlightColor.asComposeColor(),
-                        positioner = drawPositioner,
-                        strokeWidth = strokeWidth,
-                    )
-                    snapshot.userStrokes.values.forEach { userStroke ->
-                        drawUserStroke(
-                            userStroke = userStroke,
-                            positioner = drawPositioner,
-                            color = userStrokeColor,
-                            drawingWidth = snapshot.options.drawingWidth,
-                        )
-                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun PracticePanel(
-    symbol: String,
-    practiceState: PracticeState,
-    onStartPractice: () -> Unit,
-    onRequestHint: () -> Unit,
-) {
-    val statusText = when {
-        practiceState.isComplete -> "Practice complete! Total mistakes ${practiceState.totalMistakes}"
-        practiceState.isActive -> "Stroke ${practiceState.currentStrokeIndex + 1}/${max(1, practiceState.totalStrokes)}"
-        else -> "Practice not started"
-    }
-    val progressValue = when {
-        practiceState.totalStrokes <= 0 -> 0f
-        practiceState.isComplete -> 1f
-        practiceState.isActive -> practiceState.currentStrokeIndex.toFloat() / practiceState.totalStrokes
-        else -> 0f
-    }
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .align(Alignment.TopEnd)
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(symbol = symbol, label = "Practice Mode")
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconActionButton(
-                    icon = Icons.Filled.PlayArrow,
-                    description = "Start practice",
-                    onClick = onStartPractice,
-                    enabled = !practiceState.isActive,
-                )
-                IconActionButton(
-                    icon = Icons.Filled.Info,
-                    description = "Hint",
-                    onClick = onRequestHint,
-                    enabled = practiceState.isActive,
-                )
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                MistakesBadge(practiceState.totalMistakes)
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            LinearProgressIndicator(
-                progress = { progressValue },
-                modifier = Modifier.fillMaxWidth(),
+            IconActionButton(
+                icon = Icons.Filled.PlayArrow,
+                description = "Start practice",
+                onClick = onStartPractice,
+                enabled = !practiceState.isActive,
             )
-            if (practiceState.statusMessage.isNotBlank()) {
+            IconActionButton(
+                icon = Icons.Filled.Info,
+                description = "Hint",
+                onClick = onRequestHint,
+                enabled = practiceState.isActive,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CharacterInfoPanel(
+    definition: CharacterDefinition,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        tonalElevation = 2.dp,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Text(
-                    text = practiceState.statusMessage,
-                    color = MaterialTheme.colorScheme.secondary,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Current Character",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Text(
+                    text = definition.symbol,
+                    fontFamily = KaishuFontFamily,
+                    style = MaterialTheme.typography.displayLarge,
+                    color = Color(0xFF1E1E1E),
                 )
             }
         }
     }
 }
 
+private data class PracticeSummaryUi(
+    val progressText: String,
+    val statusText: String,
+)
+
+private fun PracticeState.toSummary(): PracticeSummaryUi {
+    val normalizedTotal = max(1, totalStrokes)
+    val completedCount = when {
+        isComplete -> normalizedTotal
+        currentStrokeIndex <= 0 -> 0
+        else -> min(currentStrokeIndex, normalizedTotal)
+    }
+    val defaultStatus = when {
+        isComplete -> "Practice complete"
+        isActive -> "Stroke ${completedCount + 1}/$normalizedTotal"
+        else -> "Ready to start"
+    }
+    val status = statusMessage.ifBlank { defaultStatus }
+    return PracticeSummaryUi(progressText = "$completedCount/$normalizedTotal", statusText = status)
+}
+
 @Composable
-private fun TeachingControls(
-    symbol: String,
-    demoState: DemoState,
-    onPlayOnce: () -> Unit,
-    onPlayLoop: () -> Unit,
-    onStop: () -> Unit,
+private fun PracticeSummaryBadge(
+    progressText: String,
+    statusText: String,
+    modifier: Modifier = Modifier,
 ) {
+    val containerColor = Color(0xFFE5F4EA)
+    val contentColor = Color(0xFF1E4620)
     Surface(
-        shape = RoundedCornerShape(24.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
+        color = containerColor,
+        contentColor = contentColor,
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            SectionHeader(symbol = symbol, label = "Teaching Demo")
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                IconActionButton(icon = Icons.Filled.PlayArrow, description = "Play demo", onClick = onPlayOnce)
-                IconActionButton(icon = Icons.Filled.Refresh, description = "Loop demo", onClick = onPlayLoop)
-                IconActionButton(
-                    icon = Icons.Filled.Stop,
-                    description = "Stop demo",
-                    onClick = onStop,
-                    enabled = demoState.isPlaying,
-                )
-            }
-            val demoStatus = when {
-                demoState.isPlaying && demoState.loop -> "Looping demo..."
-                demoState.isPlaying -> "Playing demo..."
-                else -> "Demo ready"
-            }
-            Text(demoStatus, style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = progressText,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+            )
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
 
 private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
-
-@Composable
-private fun CharacterGlyphCard(definition: CharacterDefinition) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Current Character",
-                style = MaterialTheme.typography.labelLarge,
-            )
-            Text(
-                text = definition.symbol,
-                fontFamily = KaishuFontFamily,
-                style = MaterialTheme.typography.displayLarge,
-                color = Color(0xFF1E1E1E),
-            )
-            Text(
-                text = "${definition.strokeCount} strokes",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SectionHeader(symbol: String, label: String) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CalligraphyGlyphBadge(symbol)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-        )
-    }
-}
-
-@Composable
-private fun CalligraphyGlyphBadge(symbol: String) {
-    Surface(
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.size(48.dp),
-    ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = symbol,
-                fontFamily = KaishuFontFamily,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MistakesBadge(count: Int) {
-    val (containerColor, contentColor) = if (count > 0) {
-        MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Surface(
-        color = containerColor,
-        contentColor = contentColor,
-        shape = RoundedCornerShape(50),
-    ) {
-        Text(
-            text = "Mistakes $count",
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-        )
-    }
-}
 
 private fun Modifier.practicePointerInput(
     practiceState: PracticeState,
@@ -595,9 +544,11 @@ private fun Modifier.practicePointerInput(
         }
         awaitEachGesture {
             val down = awaitFirstDown()
+            down.consumeDownChange()
             val charPoint = positioner.convertExternalPoint(down.position.toPoint())
             onStrokeStart(charPoint, down.position.toPoint())
             drag(down.id) { change ->
+                change.consumePositionChange()
                 val nextPoint = positioner.convertExternalPoint(change.position.toPoint())
                 onStrokeMove(nextPoint, change.position.toPoint())
             }

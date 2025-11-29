@@ -78,10 +78,13 @@ class CharacterViewModel(
         _demoState.value = DemoState(isPlaying = true, loop = loop)
         viewModelScope.launch {
             do {
-                state.run(CharacterActions.hideCharacter(CharacterLayer.MAIN, definition, 150))
-                state.run(CharacterActions.showStrokes(CharacterLayer.MAIN, definition, 0))
-                definition.strokes.forEach { stroke ->
-                    if (!_demoState.value.isPlaying) return@launch
+                state.run(CharacterActions.hideCharacter(CharacterLayer.MAIN, definition, DEMO_FADE_DURATION))
+                state.run(CharacterActions.prepareLayerForAnimation(CharacterLayer.MAIN, definition))
+                for (stroke in definition.strokes) {
+                    if (!_demoState.value.isPlaying) {
+                        _demoState.value = DemoState()
+                        return@launch
+                    }
                     state.run(
                         CharacterActions.showStroke(
                             CharacterLayer.MAIN,
@@ -91,7 +94,10 @@ class CharacterViewModel(
                     )
                     delay(DELAY_BETWEEN_STROKES)
                 }
-                state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, 0))
+                state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, DEMO_REVEAL_DURATION))
+                if (_demoState.value.loop) {
+                    delay(DEMO_LOOP_PAUSE)
+                }
             } while (_demoState.value.loop && _demoState.value.isPlaying)
             _demoState.value = DemoState()
         }
@@ -315,6 +321,9 @@ class CharacterViewModel(
         private const val PRACTICE_DISTANCE_THRESHOLD = 350.0
         private const val HINT_THRESHOLD = 3
         private const val PRACTICE_HINT_SPEED = 3.0
+        private const val DEMO_FADE_DURATION = 250L
+        private const val DEMO_REVEAL_DURATION = 120L
+        private const val DEMO_LOOP_PAUSE = 600L
 
         fun factory(appContext: Context): ViewModelProvider.Factory {
             val applicationContext = appContext.applicationContext

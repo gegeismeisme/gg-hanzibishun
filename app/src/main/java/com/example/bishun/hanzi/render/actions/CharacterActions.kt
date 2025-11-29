@@ -187,6 +187,32 @@ object CharacterActions {
             ),
         )
     }
+
+    fun prepareLayerForAnimation(
+        layer: CharacterLayer,
+        character: CharacterDefinition,
+    ): List<Mutation> {
+        return listOf(
+            Mutation(
+                scope = "character.${layer.scope}",
+                force = true,
+                reducer = { state ->
+                    state.updateLayer(layer) {
+                        it.copy(
+                            opacity = 1f,
+                            strokes = character.strokes.associate { stroke ->
+                                stroke.strokeNum to StrokeRenderState(
+                                    strokeIndex = stroke.strokeNum,
+                                    opacity = 1f,
+                                    displayPortion = 0f,
+                                )
+                            },
+                        )
+                    }
+                },
+            ),
+        )
+    }
 }
 
 private fun RenderStateSnapshot.updateLayer(
