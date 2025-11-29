@@ -31,13 +31,19 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -62,6 +68,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bishun.R
 import com.example.bishun.hanzi.core.Positioner
@@ -260,10 +267,20 @@ private fun CharacterContent(
             statusText = summary.statusText,
             modifier = Modifier.fillMaxWidth(),
         )
+        val gridState = rememberSaveable { mutableStateOf(PracticeGrid.NONE.ordinal) }
+        val colorState = rememberSaveable { mutableStateOf(StrokeColorOption.PURPLE.ordinal) }
+        val gridMode = PracticeGrid.entries[gridState.value]
+        val strokeColorOption = StrokeColorOption.entries[colorState.value]
+        val strokeColor = strokeColorOption.color
         CharacterCanvas(
             definition = definition,
             renderSnapshot = renderSnapshot,
             practiceState = practiceState,
+            gridMode = gridMode,
+            userStrokeColor = strokeColor,
+            currentColorOption = strokeColorOption,
+            onGridModeChange = { gridState.value = it.ordinal },
+            onStrokeColorChange = { colorState.value = it.ordinal },
             onStrokeStart = onStrokeStart,
             onStrokeMove = onStrokeMove,
             onStrokeEnd = onStrokeEnd,
@@ -327,6 +344,11 @@ private fun CharacterCanvas(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
+    gridMode: PracticeGrid,
+    userStrokeColor: Color,
+    currentColorOption: StrokeColorOption,
+    onGridModeChange: (PracticeGrid) -> Unit,
+    onStrokeColorChange: (StrokeColorOption) -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
@@ -338,7 +360,6 @@ private fun CharacterCanvas(
     val teachingStrokeColor = Color(0xFF0F0F0F)
     val canvasBackground = Color.White
     val radicalStrokeColor = MaterialTheme.colorScheme.primary
-    val userStrokeColor = MaterialTheme.colorScheme.secondary
     val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
 
     Box(
@@ -376,6 +397,7 @@ private fun CharacterCanvas(
                 color = outlineColor,
                 style = Stroke(width = 1.dp.toPx()),
             )
+            drawPracticeGrid(gridMode)
             val snapshot = renderSnapshot
             if (snapshot == null) {
                 definition.strokes.forEach { stroke ->
@@ -432,6 +454,12 @@ private fun CharacterCanvas(
                 description = "Hint",
                 onClick = onRequestHint,
                 enabled = practiceState.isActive,
+            )
+            CanvasSettingsMenu(
+                currentGrid = gridMode,
+                currentColor = currentColorOption,
+                onGridChange = onGridModeChange,
+                onColorChange = onStrokeColorChange,
             )
         }
     }
@@ -521,6 +549,115 @@ private fun PracticeSummaryBadge(
 private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
 
 @Composable
+private fun CanvasSettingsMenu(
+    currentGrid: PracticeGrid,
+    currentColor: StrokeColorOption,
+    onGridChange: (PracticeGrid) -> Unit,
+    onColorChange: (StrokeColorOption) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconActionButton(
+            icon = Icons.Filled.Settings,
+            description = "Canvas settings",
+            onClick = { expanded = true },
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text(
+                text = "Grid",
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            PracticeGrid.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = { Text(mode.label) },
+                    onClick = {
+                        onGridChange(mode)
+                        expanded = false
+                    },
+                    trailingIcon = if (mode == currentGrid) {
+                        { Text("✓") }
+                    } else null,
+                )
+            }
+            Text(
+                text = "Stroke color",
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            StrokeColorOption.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(option.color),
+                            )
+                            Text(option.label)
+                        }
+                    },
+                    onClick = {
+                        onColorChange(option)
+                        expanded = false
+                    },
+                    trailingIcon = if (option == currentColor) {
+                        { Text("✓") }
+                    } else null,
+                )
+            }
+        }
+    }
+}
+
+private enum class PracticeGrid(val label: String) {
+    NONE("None"),
+    RICE("Rice grid"),
+    NINE("Nine grid"),
+}
+
+private enum class StrokeColorOption(val label: String, val color: Color) {
+    PURPLE("Purple", Color(0xFF6750A4)),
+    BLUE("Blue", Color(0xFF2F80ED)),
+    GREEN("Green", Color(0xFF2F9B67)),
+    RED("Red", Color(0xFFD14343)),
+}
+
+private fun DrawScope.drawPracticeGrid(mode: PracticeGrid) {
+    val color = Color(0xFFE2D6CB)
+    when (mode) {
+        PracticeGrid.NONE -> return
+        PracticeGrid.RICE -> drawRiceGrid(color)
+        PracticeGrid.NINE -> drawNineGrid(color)
+    }
+}
+
+private fun DrawScope.drawRiceGrid(color: Color) {
+    val width = size.width
+    val height = size.height
+    val halfWidth = width / 2f
+    val halfHeight = height / 2f
+    val strokeWidth = 1.dp.toPx()
+    drawLine(color, Offset(halfWidth, 0f), Offset(halfWidth, height), strokeWidth)
+    drawLine(color, Offset(0f, halfHeight), Offset(width, halfHeight), strokeWidth)
+    drawLine(color, Offset(0f, 0f), Offset(width, height), strokeWidth)
+    drawLine(color, Offset(width, 0f), Offset(0f, height), strokeWidth)
+}
+
+private fun DrawScope.drawNineGrid(color: Color) {
+    val width = size.width
+    val height = size.height
+    val thirdWidth = width / 3f
+    val thirdHeight = height / 3f
+    val strokeWidth = 1.dp.toPx()
+    drawLine(color, Offset(thirdWidth, 0f), Offset(thirdWidth, height), strokeWidth)
+    drawLine(color, Offset(2 * thirdWidth, 0f), Offset(2 * thirdWidth, height), strokeWidth)
+    drawLine(color, Offset(0f, thirdHeight), Offset(width, thirdHeight), strokeWidth)
+    drawLine(color, Offset(0f, 2 * thirdHeight), Offset(width, 2 * thirdHeight), strokeWidth)
+}
+
+@Composable
 private fun CharacterGlyphWithGrid(symbol: String, modifier: Modifier = Modifier) {
     val gridColor = Color(0xFFD8CCC2)
     val borderColor = Color(0xFFE7DCD3)
@@ -548,7 +685,7 @@ private fun CharacterGlyphWithGrid(symbol: String, modifier: Modifier = Modifier
         Text(
             text = symbol,
             fontFamily = KaishuFontFamily,
-            style = MaterialTheme.typography.displayLarge,
+            style = MaterialTheme.typography.displayLarge.copy(fontSize = 160.sp),
             color = Color(0xFF1F1F1F),
             modifier = Modifier.align(Alignment.Center),
         )
