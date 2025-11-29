@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -446,28 +447,18 @@ private fun CharacterInfoPanel(
         tonalElevation = 2.dp,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = "Current Character",
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                Text(
-                    text = definition.symbol,
-                    fontFamily = KaishuFontFamily,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = Color(0xFF1E1E1E),
-                )
-            }
+            CharacterGlyphWithGrid(
+                symbol = definition.symbol,
+                modifier = Modifier.size(160.dp),
+            )
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -528,6 +519,41 @@ private fun PracticeSummaryBadge(
 }
 
 private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
+
+@Composable
+private fun CharacterGlyphWithGrid(symbol: String, modifier: Modifier = Modifier) {
+    val gridColor = Color(0xFFD8CCC2)
+    val borderColor = Color(0xFFE7DCD3)
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFFF7F2EE)),
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawRoundRect(
+                color = borderColor,
+                cornerRadius = CornerRadius(20.dp.toPx()),
+                style = Stroke(width = 2.dp.toPx()),
+            )
+            val width = size.width
+            val height = size.height
+            val halfWidth = width / 2f
+            val halfHeight = height / 2f
+            val strokeWidth = 1.5.dp.toPx()
+            drawLine(gridColor, Offset(halfWidth, 0f), Offset(halfWidth, height), strokeWidth)
+            drawLine(gridColor, Offset(0f, halfHeight), Offset(width, halfHeight), strokeWidth)
+            drawLine(gridColor, Offset(0f, 0f), Offset(width, height), strokeWidth)
+            drawLine(gridColor, Offset(width, 0f), Offset(0f, height), strokeWidth)
+        }
+        Text(
+            text = symbol,
+            fontFamily = KaishuFontFamily,
+            style = MaterialTheme.typography.displayLarge,
+            color = Color(0xFF1F1F1F),
+            modifier = Modifier.align(Alignment.Center),
+        )
+    }
+}
 
 private fun Modifier.practicePointerInput(
     practiceState: PracticeState,
