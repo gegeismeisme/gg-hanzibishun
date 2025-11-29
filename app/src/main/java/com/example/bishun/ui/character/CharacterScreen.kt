@@ -7,20 +7,24 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Arrangement.spacedBy
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDownload
@@ -49,13 +53,16 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bishun.R
 import com.example.bishun.hanzi.core.Positioner
 import com.example.bishun.hanzi.geometry.Geometry
 import com.example.bishun.hanzi.model.CharacterDefinition
@@ -68,6 +75,7 @@ import com.example.bishun.hanzi.render.UserStrokeRenderState
 import com.example.bishun.ui.character.components.IconActionButton
 import kotlinx.coroutines.awaitCancellation
 import kotlin.math.max
+import kotlin.math.min
 
 @Composable
 fun CharacterRoute(
@@ -129,51 +137,21 @@ fun CharacterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = "Hanzi Stroke Order",
                 style = MaterialTheme.typography.headlineSmall,
             )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    label = { Text("Hanzi") },
-                    placeholder = { Text("\u6c38") },
-                    supportingText = { Text("Single Hanzi") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-                    modifier = Modifier.width(96.dp),
-                )
-                IconActionButton(
-                    icon = Icons.Filled.CloudDownload,
-                    description = "Load character",
-                    onClick = onSubmit,
-                    enabled = query.isNotBlank(),
-                )
-                IconActionButton(
-                    icon = Icons.Filled.Clear,
-                    description = "Clear input",
-                    onClick = onClearQuery,
-                    enabled = query.isNotEmpty(),
-                )
-                IconActionButton(
-                    icon = Icons.Filled.Refresh,
-                    description = "Reset canvas",
-                    onClick = onReset,
-                    enabled = uiState is CharacterUiState.Success,
-                )
-            }
-
+            SearchBarRow(
+                query = query,
+                uiState = uiState,
+                onQueryChange = onQueryChange,
+                onSubmit = onSubmit,
+                onClearQuery = onClearQuery,
+                onReset = onReset,
+            )
             when (uiState) {
                 CharacterUiState.Loading -> Text("Loading...")
                 is CharacterUiState.Error -> Text(
@@ -193,8 +171,56 @@ fun CharacterScreen(
                     onStrokeStart = onStrokeStart,
                     onStrokeMove = onStrokeMove,
                     onStrokeEnd = onStrokeEnd,
+                    modifier = Modifier.weight(1f),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SearchBarRow(
+    query: String,
+    uiState: CharacterUiState,
+    onQueryChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onClearQuery: () -> Unit,
+    onReset: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            label = { Text("Hanzi") },
+            placeholder = { Text("\u6c38") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+            modifier = Modifier.width(96.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            IconActionButton(
+                icon = Icons.Filled.CloudDownload,
+                description = "Load character",
+                onClick = onSubmit,
+                enabled = query.isNotBlank(),
+            )
+            IconActionButton(
+                icon = Icons.Filled.Clear,
+                description = "Clear input",
+                onClick = onClearQuery,
+                enabled = query.isNotEmpty(),
+            )
+            IconActionButton(
+                icon = Icons.Filled.Refresh,
+                description = "Reset canvas",
+                onClick = onReset,
+                enabled = uiState is CharacterUiState.Success,
+            )
         }
     }
 }
@@ -213,19 +239,31 @@ private fun CharacterContent(
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
     ) {
-        CharacterGlyphCard(definition)
-        TeachingControls(
-            symbol = definition.symbol,
-            demoState = demoState,
-            onPlayOnce = onPlayDemoOnce,
-            onPlayLoop = onPlayDemoLoop,
-            onStop = onStopDemo,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            CharacterGlyphCard(
+                definition = definition,
+                modifier = Modifier.weight(1f),
+            )
+            TeachingControls(
+                symbol = definition.symbol,
+                demoState = demoState,
+                onPlayOnce = onPlayDemoOnce,
+                onPlayLoop = onPlayDemoLoop,
+                onStop = onStopDemo,
+                modifier = Modifier.weight(1f),
+            )
+        }
         CharacterCanvas(
             definition = definition,
             renderSnapshot = renderSnapshot,
@@ -233,12 +271,16 @@ private fun CharacterContent(
             onStrokeStart = onStrokeStart,
             onStrokeMove = onStrokeMove,
             onStrokeEnd = onStrokeEnd,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = true),
         )
         PracticePanel(
             symbol = definition.symbol,
             practiceState = practiceState,
             onStartPractice = onStartPractice,
             onRequestHint = onRequestHint,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -453,6 +495,8 @@ private fun TeachingControls(
     }
 }
 
+private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
+
 @Composable
 private fun CharacterGlyphCard(definition: CharacterDefinition) {
     Surface(
@@ -473,7 +517,7 @@ private fun CharacterGlyphCard(definition: CharacterDefinition) {
             )
             Text(
                 text = definition.symbol,
-                fontFamily = FontFamily.Serif,
+                fontFamily = KaishuFontFamily,
                 style = MaterialTheme.typography.displayLarge,
                 color = Color(0xFF1E1E1E),
             )
@@ -509,7 +553,7 @@ private fun CalligraphyGlyphBadge(symbol: String) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Text(
                 text = symbol,
-                fontFamily = FontFamily.Serif,
+                fontFamily = KaishuFontFamily,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
