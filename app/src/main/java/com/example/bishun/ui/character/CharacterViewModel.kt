@@ -40,6 +40,8 @@ class CharacterViewModel(
 
     private val _practiceState = MutableStateFlow(PracticeState())
     val practiceState: StateFlow<PracticeState> = _practiceState.asStateFlow()
+    private val _demoState = MutableStateFlow(DemoState())
+    val demoState: StateFlow<DemoState> = _demoState.asStateFlow()
 
     private var currentDefinition: CharacterDefinition? = null
     private var renderState: RenderState? = null
@@ -59,23 +61,34 @@ class CharacterViewModel(
         loadCharacter(_query.value)
     }
 
-    fun playDemo() {
+    fun playDemo(loop: Boolean = false) {
         val definition = currentDefinition ?: return
         val state = renderState ?: return
+        if (_demoState.value.isPlaying) return
+        _demoState.value = DemoState(isPlaying = true, loop = loop)
         viewModelScope.launch {
-            state.run(CharacterActions.hideCharacter(CharacterLayer.MAIN, definition, 150))
-            state.run(CharacterActions.showStrokes(CharacterLayer.MAIN, definition, 0))
-            definition.strokes.forEach { stroke ->
-                state.run(
-                    CharacterActions.showStroke(
-                        CharacterLayer.MAIN,
-                        stroke.strokeNum,
-                        DEFAULT_ANIMATION_DURATION,
-                    ),
-                )
-                delay(DELAY_BETWEEN_STROKES)
-            }
+            do {
+                state.run(CharacterActions.hideCharacter(CharacterLayer.MAIN, definition, 150))
+                state.run(CharacterActions.showStrokes(CharacterLayer.MAIN, definition, 0))
+                definition.strokes.forEach { stroke ->
+                    if (!_demoState.value.isPlaying) return@launch
+                    state.run(
+                        CharacterActions.showStroke(
+                            CharacterLayer.MAIN,
+                            stroke.strokeNum,
+                            DEFAULT_ANIMATION_DURATION,
+                        ),
+                    )
+                    delay(DELAY_BETWEEN_STROKES)
+                }
+                state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, 0))
+            } while (_demoState.value.loop && _demoState.value.isPlaying)
+            _demoState.value = DemoState()
         }
+    }
+
+    fun stopDemo() {
+        _demoState.value = DemoState()
     }
 
     fun resetCharacter() {
@@ -91,12 +104,14 @@ class CharacterViewModel(
         val definition = currentDefinition ?: return
         val state = renderState ?: return
         viewModelScope.launch {
+            stopDemo()
             clearUserStrokes()
             state.run(QuizActions.startQuiz(definition, PRACTICE_FADE_DURATION, 0))
             _practiceState.value = PracticeState(
                 isActive = true,
                 totalStrokes = definition.strokeCount,
                 statusMessage = "Start from stroke 1",
+                mistakeSinceHint = 0,
             )
         }
     }
@@ -196,6 +211,7 @@ class CharacterViewModel(
             currentStrokeIndex = 0,
             totalMistakes = 0,
             statusMessage = "",
+            mistakeSinceHint = 0,
         )
         activeUserStroke = null
         userStrokeIds.clear()
@@ -234,6 +250,7 @@ class CharacterViewModel(
             isComplete = complete,
             isActive = !complete,
             statusMessage = message,
+            mistakeSinceHint = 0,
         )
         if (complete) {
             state.run(QuizActions.highlightCompleteChar(definition, null, 600))
@@ -242,10 +259,33 @@ class CharacterViewModel(
 
     private fun handleMistake() {
         val practice = _practiceState.value
+        val updatedMistakes = practice.totalMistakes + 1
+        val mistakesSinceHint = practice.mistakeSinceHint + 1
+        val showHint = mistakesSinceHint >= HINT_THRESHOLD
         _practiceState.value = practice.copy(
-            totalMistakes = practice.totalMistakes + 1,
-            statusMessage = "Try again (mistakes ${practice.totalMistakes + 1})",
+            totalMistakes = updatedMistakes,
+            statusMessage = "Try again (mistakes $updatedMistakes)",
+            mistakeSinceHint = if (showHint) 0 else mistakesSinceHint,
         )
+        if (showHint) {
+            triggerHint()
+        }
+    }
+
+    fun requestHint() {
+        if (!_practiceState.value.isActive) return
+        triggerHint()
+    }
+
+    private fun triggerHint() {
+        val definition = currentDefinition ?: return
+        val state = renderState ?: return
+        val practice = _practiceState.value
+        val stroke = definition.strokes.getOrNull(practice.currentStrokeIndex) ?: return
+        viewModelScope.launch {
+            state.run(CharacterActions.highlightStroke(stroke, null, PRACTICE_HINT_SPEED))
+        }
+        _practiceState.value = practice.copy(mistakeSinceHint = 0)
     }
 
     override fun onCleared() {
@@ -263,6 +303,8 @@ class CharacterViewModel(
         private const val PRACTICE_FADE_DURATION = 150L
         private const val PRACTICE_LENIENCY = 1.0
         private const val PRACTICE_DISTANCE_THRESHOLD = 350.0
+        private const val HINT_THRESHOLD = 3
+        private const val PRACTICE_HINT_SPEED = 3.0
 
         fun factory(appContext: Context): ViewModelProvider.Factory {
             val applicationContext = appContext.applicationContext

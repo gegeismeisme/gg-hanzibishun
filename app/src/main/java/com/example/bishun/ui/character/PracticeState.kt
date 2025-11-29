@@ -7,4 +7,5 @@ data class PracticeState(
     val totalStrokes: Int = 0,
     val totalMistakes: Int = 0,
     val statusMessage: String = "",
+    val mistakeSinceHint: Int = 0,
 )

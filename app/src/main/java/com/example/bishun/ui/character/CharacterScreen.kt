@@ -10,13 +10,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -27,10 +36,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -54,6 +67,7 @@ import com.example.bishun.hanzi.render.ColorRgba
 import com.example.bishun.hanzi.render.RenderStateSnapshot
 import com.example.bishun.hanzi.render.UserStrokeRenderState
 import kotlinx.coroutines.awaitCancellation
+import com.example.bishun.ui.character.components.IconActionButton
 import kotlin.math.max
 
 @Composable
@@ -67,6 +81,7 @@ fun CharacterRoute(
     val uiState by viewModel.uiState.collectAsState()
     val renderSnapshot by viewModel.renderSnapshot.collectAsState()
     val practiceState by viewModel.practiceState.collectAsState()
+    val demoState by viewModel.demoState.collectAsState()
 
     CharacterScreen(
         modifier = modifier,
@@ -74,11 +89,15 @@ fun CharacterRoute(
         uiState = uiState,
         practiceState = practiceState,
         renderSnapshot = renderSnapshot,
+        demoState = demoState,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
-        onPlayDemo = viewModel::playDemo,
+        onPlayDemoOnce = { viewModel.playDemo(loop = false) },
+        onPlayDemoLoop = { viewModel.playDemo(loop = true) },
+        onStopDemo = viewModel::stopDemo,
         onReset = viewModel::resetCharacter,
         onStartPractice = viewModel::startPractice,
+        onRequestHint = viewModel::requestHint,
         onStrokeStart = viewModel::onPracticeStrokeStart,
         onStrokeMove = viewModel::onPracticeStrokeMove,
         onStrokeEnd = viewModel::onPracticeStrokeEnd,
@@ -91,11 +110,15 @@ fun CharacterScreen(
     uiState: CharacterUiState,
     practiceState: PracticeState,
     renderSnapshot: RenderStateSnapshot?,
+    demoState: DemoState,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onPlayDemo: () -> Unit,
+    onPlayDemoOnce: () -> Unit,
+    onPlayDemoLoop: () -> Unit,
+    onStopDemo: () -> Unit,
     onReset: () -> Unit,
     onStartPractice: () -> Unit,
+    onRequestHint: () -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
@@ -113,24 +136,40 @@ fun CharacterScreen(
                 text = "Hanzi Stroke Order",
                 style = MaterialTheme.typography.headlineSmall,
             )
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                label = { Text("Enter Hanzi") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth(),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onSubmit) { Text("Load") }
-                Button(onClick = onPlayDemo, enabled = uiState is CharacterUiState.Success) {
-                    Text("Demo")
-                }
-                Button(onClick = onReset, enabled = uiState is CharacterUiState.Success) {
-                    Text("Reset")
+            ) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    label = { Text("Enter Hanzi") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                    modifier = Modifier.weight(1f),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconActionButton(
+                        icon = Icons.Filled.PlayArrow,
+                        description = "Load",
+                        onClick = onSubmit,
+                    )
+                    IconActionButton(
+                        icon = Icons.Filled.Refresh,
+                        description = "Reset",
+                        onClick = onReset,
+                        enabled = uiState is CharacterUiState.Success,
+                    )
                 }
             }
+            TeachingControls(
+                demoState = demoState,
+                onPlayOnce = onPlayDemoOnce,
+                onPlayLoop = onPlayDemoLoop,
+                onStop = onStopDemo,
+            )
             when (uiState) {
                 CharacterUiState.Loading -> Text("Loading...")
                 is CharacterUiState.Error -> Text(
@@ -142,6 +181,7 @@ fun CharacterScreen(
                     renderSnapshot = renderSnapshot,
                     practiceState = practiceState,
                     onStartPractice = onStartPractice,
+                    onRequestHint = onRequestHint,
                     onStrokeStart = onStrokeStart,
                     onStrokeMove = onStrokeMove,
                     onStrokeEnd = onStrokeEnd,
@@ -157,16 +197,17 @@ private fun CharacterCanvas(
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
     onStartPractice: () -> Unit,
+    onRequestHint: () -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val outlineColor = colorScheme.outlineVariant
-    val strokeColor = colorScheme.onSurface
-    val gridBackground = colorScheme.surfaceVariant
-    val practiceColor = colorScheme.primary
-    val userStrokeColor = renderSnapshot?.options?.drawingColor?.asComposeColor() ?: colorScheme.primary
+    val outlineColor = Color(0xFFD6D6D6)
+    val teachingStrokeColor = Color(0xFF0F0F0F)
+    val practiceColor = Color(0xFFB8B8B8)
+    val canvasBackground = Color.White
+    val accentColor = MaterialTheme.colorScheme.primary
+    val userStrokeColor = MaterialTheme.colorScheme.secondary
     val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
 
     Column(
@@ -181,6 +222,8 @@ private fun CharacterCanvas(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(canvasBackground)
                 .onSizeChanged { canvasSizeState.value = it },
         ) {
             val positioner = remember(canvasSizeState.value) {
@@ -194,7 +237,7 @@ private fun CharacterCanvas(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(gridBackground)
+                    .background(canvasBackground)
                     .practicePointerInput(
                         practiceState = practiceState,
                         positioner = positioner,
@@ -213,7 +256,7 @@ private fun CharacterCanvas(
                 if (snapshot == null) {
                     definition.strokes.forEach { stroke ->
                         val path = stroke.toFullPath(drawPositioner)
-                        val color = if (stroke.isInRadical) practiceColor else strokeColor
+                        val color = if (stroke.isInRadical) accentColor else teachingStrokeColor
                         drawStrokePath(path, color, strokeWidth)
                     }
                 } else {
@@ -227,7 +270,7 @@ private fun CharacterCanvas(
                     drawLayer(
                         definition = definition,
                         layerState = snapshot.character.main,
-                        baseColor = strokeColor,
+                        baseColor = teachingStrokeColor,
                         positioner = drawPositioner,
                         strokeWidth = strokeWidth,
                     )
@@ -252,6 +295,7 @@ private fun CharacterCanvas(
                 practiceState = practiceState,
                 isCanvasReady = positioner != null,
                 onStartPractice = onStartPractice,
+                onRequestHint = onRequestHint,
             )
         }
         PracticeStatus(practiceState)
@@ -263,6 +307,7 @@ private fun BoxScope.PracticeControls(
     practiceState: PracticeState,
     isCanvasReady: Boolean,
     onStartPractice: () -> Unit,
+    onRequestHint: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -270,12 +315,18 @@ private fun BoxScope.PracticeControls(
             .padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Button(
+        IconActionButton(
+            icon = Icons.Filled.PlayArrow,
+            description = "Start practice",
             onClick = onStartPractice,
             enabled = isCanvasReady && !practiceState.isActive,
-        ) {
-            Text("Start Practice")
-        }
+        )
+        IconActionButton(
+            icon = Icons.Filled.Info,
+            description = "Hint",
+            onClick = onRequestHint,
+            enabled = practiceState.isActive,
+        )
     }
 }
 
@@ -290,10 +341,56 @@ private fun PracticeStatus(practiceState: PracticeState) {
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        val progressValue = when {
+            practiceState.totalStrokes <= 0 -> 0f
+            practiceState.isComplete -> 1f
+            practiceState.isActive -> practiceState.currentStrokeIndex.toFloat() /
+                practiceState.totalStrokes
+            else -> 0f
+        }
         Text(text = statusText, style = MaterialTheme.typography.bodyMedium)
+        LinearProgressIndicator(
+            progress = { progressValue },
+            modifier = Modifier.fillMaxWidth(),
+        )
         if (practiceState.statusMessage.isNotBlank()) {
             Text(text = practiceState.statusMessage, color = MaterialTheme.colorScheme.secondary)
         }
+    }
+}
+
+@Composable
+private fun TeachingControls(
+    demoState: DemoState,
+    onPlayOnce: () -> Unit,
+    onPlayLoop: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("Teaching Demo", style = MaterialTheme.typography.titleMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            IconActionButton(icon = Icons.Filled.PlayArrow, description = "Play demo", onClick = onPlayOnce)
+            IconActionButton(
+                icon = Icons.Filled.Refresh,
+                description = "Loop demo",
+                onClick = onPlayLoop,
+            )
+            IconActionButton(
+                icon = Icons.Filled.Close,
+                description = "Stop demo",
+                onClick = onStop,
+                enabled = demoState.isPlaying,
+            )
+        }
+        val demoStatus = when {
+            demoState.isPlaying && demoState.loop -> "Looping demo..."
+            demoState.isPlaying -> "Playing demo..."
+            else -> "Demo ready"
+        }
+        Text(demoStatus, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -316,7 +413,6 @@ private fun Modifier.practicePointerInput(
             drag(down.id) { change ->
                 val nextPoint = positioner.convertExternalPoint(change.position.toPoint())
                 onStrokeMove(nextPoint, change.position.toPoint())
-                change.consume()
             }
             onStrokeEnd()
         }
