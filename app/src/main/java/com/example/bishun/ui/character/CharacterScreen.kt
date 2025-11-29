@@ -136,13 +136,8 @@ fun CharacterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Hanzi Stroke Order",
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
             SearchBarRow(
                 query = query,
                 uiState = uiState,
@@ -193,6 +188,10 @@ private fun SearchBarRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
+        Text(
+            text = "Hanzi Stroke Order",
+            style = MaterialTheme.typography.headlineSmall,
+        )
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -245,13 +244,19 @@ private fun CharacterContent(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight(),
     ) {
         CharacterInfoPanel(
             definition = definition,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        val summary = practiceState.toSummary()
+        PracticeSummaryBadge(
+            progressText = summary.progressText,
+            statusText = summary.statusText,
             modifier = Modifier.fillMaxWidth(),
         )
         CharacterCanvas(
@@ -266,12 +271,6 @@ private fun CharacterContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = true),
-        )
-        val summary = practiceState.toSummary()
-        PracticeSummaryBadge(
-            progressText = summary.progressText,
-            statusText = summary.statusText,
-            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -419,7 +418,7 @@ private fun CharacterCanvas(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             IconActionButton(
                 icon = Icons.Filled.PlayArrow,
@@ -451,7 +450,7 @@ private fun CharacterInfoPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -509,8 +508,8 @@ private fun PracticeSummaryBadge(
         modifier = modifier,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
