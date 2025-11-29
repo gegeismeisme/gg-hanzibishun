@@ -135,8 +135,8 @@ fun CharacterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 48.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SearchBarRow(
                 query = query,
@@ -185,7 +185,7 @@ private fun SearchBarRow(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = "Hanzi Stroke Order",
@@ -244,7 +244,7 @@ private fun CharacterContent(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight(),
@@ -272,7 +272,6 @@ private fun CharacterContent(
                 .fillMaxWidth()
                 .weight(1f, fill = true),
         )
-        
     }
 }
 
