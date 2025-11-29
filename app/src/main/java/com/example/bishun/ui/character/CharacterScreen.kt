@@ -135,7 +135,7 @@ fun CharacterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SearchBarRow(
@@ -183,29 +183,29 @@ private fun SearchBarRow(
     onPlayDemoLoop: () -> Unit,
     onStopDemo: () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
         modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
             text = "Hanzi Stroke Order",
             style = MaterialTheme.typography.headlineSmall,
         )
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            label = { Text("Hanzi") },
-            placeholder = { Text("\u6c38") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-            modifier = Modifier.width(96.dp),
-        )
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                label = { Text("Hanzi") },
+                placeholder = { Text("\u6c38") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                modifier = Modifier.width(96.dp),
+            )
             IconActionButton(
                 icon = Icons.Filled.CloudDownload,
                 description = "Load character",
@@ -218,16 +218,16 @@ private fun SearchBarRow(
                 onClick = onClearQuery,
                 enabled = query.isNotEmpty(),
             )
+            Spacer(modifier = Modifier.weight(1f, fill = true))
+            DemoControlRow(
+                uiState = uiState,
+                demoState = demoState,
+                onSubmit = onSubmit,
+                onPlayOnce = onPlayDemoOnce,
+                onPlayLoop = onPlayDemoLoop,
+                onStop = onStopDemo,
+            )
         }
-        Spacer(modifier = Modifier.weight(1f, fill = true))
-        DemoControlRow(
-            uiState = uiState,
-            demoState = demoState,
-            onSubmit = onSubmit,
-            onPlayOnce = onPlayDemoOnce,
-            onPlayLoop = onPlayDemoLoop,
-            onStop = onStopDemo,
-        )
     }
 }
 
@@ -244,7 +244,7 @@ private fun CharacterContent(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight(),
@@ -272,6 +272,7 @@ private fun CharacterContent(
                 .fillMaxWidth()
                 .weight(1f, fill = true),
         )
+        
     }
 }
 
@@ -508,7 +509,7 @@ private fun PracticeSummaryBadge(
         modifier = modifier,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
