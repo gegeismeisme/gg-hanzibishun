@@ -1,5 +1,7 @@
 package com.example.bishun.ui.character
 
+import android.graphics.Matrix as AndroidMatrix
+import androidx.core.graphics.PathParser as AndroidPathParser
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -57,6 +59,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.consumePositionChange
@@ -66,6 +71,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -193,7 +199,7 @@ private fun SearchBarRow(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = "Hanzi Stroke Order",
@@ -219,12 +225,14 @@ private fun SearchBarRow(
                 description = "Load character",
                 onClick = onSubmit,
                 enabled = query.isNotBlank(),
+                buttonSize = 36.dp,
             )
             IconActionButton(
                 icon = Icons.Filled.Clear,
                 description = "Clear input",
                 onClick = onClearQuery,
                 enabled = query.isNotEmpty(),
+                buttonSize = 36.dp,
             )
             Spacer(modifier = Modifier.weight(1f, fill = true))
             DemoControlRow(
@@ -269,6 +277,7 @@ private fun CharacterContent(
         )
         val gridState = rememberSaveable { mutableStateOf(PracticeGrid.NONE.ordinal) }
         val colorState = rememberSaveable { mutableStateOf(StrokeColorOption.PURPLE.ordinal) }
+        val templateState = rememberSaveable { mutableStateOf(true) }
         val gridMode = PracticeGrid.entries[gridState.value]
         val strokeColorOption = StrokeColorOption.entries[colorState.value]
         val strokeColor = strokeColorOption.color
@@ -278,9 +287,11 @@ private fun CharacterContent(
             practiceState = practiceState,
             gridMode = gridMode,
             userStrokeColor = strokeColor,
+            showTemplate = templateState.value,
             currentColorOption = strokeColorOption,
             onGridModeChange = { gridState.value = it.ordinal },
             onStrokeColorChange = { colorState.value = it.ordinal },
+            onTemplateToggle = { templateState.value = it },
             onStrokeStart = onStrokeStart,
             onStrokeMove = onStrokeMove,
             onStrokeEnd = onStrokeEnd,
@@ -311,6 +322,7 @@ private fun DemoControlRow(
                 icon = Icons.Filled.Stop,
                 description = "Stop demo",
                 onClick = onStop,
+                buttonSize = 36.dp,
             )
         } else {
             IconActionButton(
@@ -323,6 +335,7 @@ private fun DemoControlRow(
                         onPlayOnce()
                     }
                 },
+                buttonSize = 36.dp,
             )
             IconActionButton(
                 icon = Icons.Filled.Refresh,
@@ -334,6 +347,7 @@ private fun DemoControlRow(
                         onPlayLoop()
                     }
                 },
+                buttonSize = 36.dp,
             )
         }
     }
@@ -346,9 +360,11 @@ private fun CharacterCanvas(
     practiceState: PracticeState,
     gridMode: PracticeGrid,
     userStrokeColor: Color,
+    showTemplate: Boolean,
     currentColorOption: StrokeColorOption,
     onGridModeChange: (PracticeGrid) -> Unit,
     onStrokeColorChange: (StrokeColorOption) -> Unit,
+    onTemplateToggle: (Boolean) -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
@@ -398,28 +414,35 @@ private fun CharacterCanvas(
                 style = Stroke(width = 1.dp.toPx()),
             )
             drawPracticeGrid(gridMode)
+            if (showTemplate) {
+                drawTemplateStrokes(definition, drawPositioner)
+            }
             val snapshot = renderSnapshot
             if (snapshot == null) {
-                definition.strokes.forEach { stroke ->
-                    val path = stroke.toFullPath(drawPositioner)
-                    val color = if (stroke.isInRadical) radicalStrokeColor else teachingStrokeColor
-                    drawStrokePath(path, color, strokeWidth)
+                if (!showTemplate) {
+                    definition.strokes.forEach { stroke ->
+                        val path = stroke.toFullPath(drawPositioner)
+                        val color = if (stroke.isInRadical) radicalStrokeColor else teachingStrokeColor
+                        drawStrokePath(path, color, strokeWidth)
+                    }
                 }
             } else {
-                drawLayer(
-                    definition = definition,
-                    layerState = snapshot.character.outline,
-                    baseColor = outlineColor,
-                    positioner = drawPositioner,
-                    strokeWidth = strokeWidth,
-                )
-                drawLayer(
-                    definition = definition,
-                    layerState = snapshot.character.main,
-                    baseColor = teachingStrokeColor,
-                    positioner = drawPositioner,
-                    strokeWidth = strokeWidth,
-                )
+                if (!showTemplate) {
+                    drawLayer(
+                        definition = definition,
+                        layerState = snapshot.character.outline,
+                        baseColor = outlineColor,
+                        positioner = drawPositioner,
+                        strokeWidth = strokeWidth,
+                    )
+                    drawLayer(
+                        definition = definition,
+                        layerState = snapshot.character.main,
+                        baseColor = teachingStrokeColor,
+                        positioner = drawPositioner,
+                        strokeWidth = strokeWidth,
+                    )
+                }
                 drawLayer(
                     definition = definition,
                     layerState = snapshot.character.highlight,
@@ -448,18 +471,23 @@ private fun CharacterCanvas(
                 description = "Start practice",
                 onClick = onStartPractice,
                 enabled = !practiceState.isActive,
+                buttonSize = 36.dp,
             )
             IconActionButton(
                 icon = Icons.Filled.Info,
                 description = "Hint",
                 onClick = onRequestHint,
                 enabled = practiceState.isActive,
+                buttonSize = 36.dp,
             )
             CanvasSettingsMenu(
                 currentGrid = gridMode,
                 currentColor = currentColorOption,
+                showTemplate = showTemplate,
                 onGridChange = onGridModeChange,
                 onColorChange = onStrokeColorChange,
+                onTemplateToggle = onTemplateToggle,
+                buttonSize = 36.dp,
             )
         }
     }
@@ -473,18 +501,19 @@ private fun CharacterInfoPanel(
     Surface(
         shape = RoundedCornerShape(24.dp),
         tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 16.dp),
+                .padding(vertical = 8.dp, horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CharacterGlyphWithGrid(
                 symbol = definition.symbol,
-                modifier = Modifier.size(160.dp),
+                modifier = Modifier.size(120.dp),
             )
             Spacer(modifier = Modifier.weight(1f))
         }
@@ -552,8 +581,11 @@ private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
 private fun CanvasSettingsMenu(
     currentGrid: PracticeGrid,
     currentColor: StrokeColorOption,
+    showTemplate: Boolean,
     onGridChange: (PracticeGrid) -> Unit,
     onColorChange: (StrokeColorOption) -> Unit,
+    onTemplateToggle: (Boolean) -> Unit,
+    buttonSize: Dp = 40.dp,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
@@ -561,6 +593,7 @@ private fun CanvasSettingsMenu(
             icon = Icons.Filled.Settings,
             description = "Canvas settings",
             onClick = { expanded = true },
+            buttonSize = buttonSize,
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             Text(
@@ -607,6 +640,13 @@ private fun CanvasSettingsMenu(
                     } else null,
                 )
             }
+            DropdownMenuItem(
+                text = { Text(if (showTemplate) "Hide calligraphy template" else "Show calligraphy template") },
+                onClick = {
+                    onTemplateToggle(!showTemplate)
+                    expanded = false
+                },
+            )
         }
     }
 }
@@ -631,6 +671,28 @@ private fun DrawScope.drawPracticeGrid(mode: PracticeGrid) {
         PracticeGrid.NONE -> return
         PracticeGrid.RICE -> drawRiceGrid(color, inset)
         PracticeGrid.NINE -> drawNineGrid(color, inset)
+    }
+}
+
+private fun DrawScope.drawTemplateStrokes(
+    definition: CharacterDefinition,
+    positioner: Positioner,
+) {
+    val templateColor = Color(0x33AA6A39)
+    val strokeStyle = Stroke(
+        width = 12.dp.toPx(),
+        cap = StrokeCap.Round,
+        join = StrokeJoin.Round,
+    )
+    definition.strokes.forEach { stroke ->
+        val androidPath = AndroidPathParser.createPathFromPathData(stroke.path)
+        val matrix = AndroidMatrix().apply {
+            postTranslate(positioner.transformTranslateX, positioner.transformTranslateY)
+            postScale(positioner.transformScale, -positioner.transformScale)
+        }
+        androidPath.transform(matrix)
+        val composePath = androidPath.asComposePath()
+        drawPath(path = composePath, color = templateColor, style = strokeStyle)
     }
 }
 
@@ -696,7 +758,7 @@ private fun CharacterGlyphWithGrid(symbol: String, modifier: Modifier = Modifier
         Text(
             text = symbol,
             fontFamily = KaishuFontFamily,
-            style = MaterialTheme.typography.displayLarge.copy(fontSize = 160.sp),
+            style = MaterialTheme.typography.displayLarge.copy(fontSize = 120.sp),
             color = Color(0xFF1F1F1F),
             modifier = Modifier.align(Alignment.Center),
         )

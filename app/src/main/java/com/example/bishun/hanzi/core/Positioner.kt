@@ -46,6 +46,10 @@ class Positioner(
         return Offset(x.toFloat(), y.toFloat())
     }
 
+    internal val transformScale: Float get() = scale.toFloat()
+    internal val transformTranslateX: Float get() = xOffset.toFloat()
+    internal val transformTranslateY: Float get() = (canvasHeight - yOffset).toFloat()
+
     companion object {
         private val CHARACTER_BOUNDS = arrayOf(
             Point(0.0, -124.0),
