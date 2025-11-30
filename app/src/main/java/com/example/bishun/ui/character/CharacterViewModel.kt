@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.bishun.data.characters.CharacterDefinitionRepository
 import com.example.bishun.data.characters.di.CharacterDataModule
+import com.example.bishun.data.word.WordEntry
+import com.example.bishun.data.word.WordRepository
 import com.example.bishun.hanzi.core.HanziCounter
 import com.example.bishun.hanzi.model.CharacterDefinition
 import com.example.bishun.hanzi.model.Point
@@ -27,6 +29,7 @@ import kotlin.math.min
 
 class CharacterViewModel(
     private val repository: CharacterDefinitionRepository,
+    private val wordRepository: WordRepository,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow(DEFAULT_CHAR)
@@ -42,6 +45,8 @@ class CharacterViewModel(
     val practiceState: StateFlow<PracticeState> = _practiceState.asStateFlow()
     private val _demoState = MutableStateFlow(DemoState())
     val demoState: StateFlow<DemoState> = _demoState.asStateFlow()
+    private val _wordEntry = MutableStateFlow<WordEntry?>(null)
+    val wordEntry: StateFlow<WordEntry?> = _wordEntry.asStateFlow()
 
     private var currentDefinition: CharacterDefinition? = null
     private var renderState: RenderState? = null
@@ -199,10 +204,12 @@ class CharacterViewModel(
                     currentDefinition = it
                     setupRenderState(it)
                     resetPracticeState(it)
+                    loadWordInfo(it.symbol)
                 },
                 onFailure = {
                     val message = it.message ?: "加载失败，请稍后再试"
                     _uiState.value = CharacterUiState.Error(message)
+                    _wordEntry.value = null
                 },
             )
         }
@@ -233,6 +240,18 @@ class CharacterViewModel(
         )
         activeUserStroke = null
         userStrokeIds.clear()
+    }
+
+    private fun loadWordInfo(symbol: String) {
+        viewModelScope.launch {
+            runCatching {
+                wordRepository.getWord(symbol)
+            }.onSuccess {
+                _wordEntry.value = it
+            }.onFailure {
+                _wordEntry.value = null
+            }
+        }
     }
 
     private suspend fun clearUserStrokes() {
@@ -334,7 +353,8 @@ class CharacterViewModel(
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val repo = CharacterDataModule.provideDefinitionRepository(applicationContext)
-                    return CharacterViewModel(repo) as T
+                    val wordRepo = WordRepository(applicationContext)
+                    return CharacterViewModel(repo, wordRepo) as T
                 }
             }
         }

@@ -1,12 +1,17 @@
 package com.example.bishun.ui.character
-
 import android.graphics.Matrix as AndroidMatrix
+import android.os.Handler
+import android.os.Looper
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import androidx.core.graphics.PathParser as AndroidPathParser
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
@@ -31,17 +36,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -80,6 +92,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bishun.R
+import com.example.bishun.data.word.WordEntry
 import com.example.bishun.hanzi.core.Positioner
 import com.example.bishun.hanzi.geometry.Geometry
 import com.example.bishun.hanzi.model.CharacterDefinition
@@ -94,7 +107,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlin.math.max
 import kotlin.math.min
-
+import java.util.Locale
 @Composable
 fun CharacterRoute(
     modifier: Modifier = Modifier,
@@ -107,7 +120,7 @@ fun CharacterRoute(
     val renderSnapshot by viewModel.renderSnapshot.collectAsState()
     val practiceState by viewModel.practiceState.collectAsState()
     val demoState by viewModel.demoState.collectAsState()
-
+    val wordEntry by viewModel.wordEntry.collectAsState()
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -115,6 +128,7 @@ fun CharacterRoute(
         practiceState = practiceState,
         renderSnapshot = renderSnapshot,
         demoState = demoState,
+        wordEntry = wordEntry,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
         onClearQuery = viewModel::clearQuery,
@@ -128,7 +142,6 @@ fun CharacterRoute(
         onStrokeEnd = viewModel::onPracticeStrokeEnd,
     )
 }
-
 @Composable
 fun CharacterScreen(
     query: String,
@@ -136,6 +149,7 @@ fun CharacterScreen(
     practiceState: PracticeState,
     renderSnapshot: RenderStateSnapshot?,
     demoState: DemoState,
+    wordEntry: WordEntry?,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onClearQuery: () -> Unit,
@@ -162,7 +176,6 @@ fun CharacterScreen(
     val useCalligraphyDemo = showTemplateState.value && calligraphyDemoController != null
     val playCalligraphyDemo: (Boolean) -> Unit = calligraphyDemoController?.play ?: {}
     val stopCalligraphyDemo: () -> Unit = calligraphyDemoController?.stop ?: {}
-
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -196,6 +209,7 @@ fun CharacterScreen(
                     definition = uiState.definition,
                     renderSnapshot = renderSnapshot,
                     practiceState = practiceState,
+                    wordEntry = wordEntry,
                     showTemplate = showTemplateState.value,
                     onTemplateToggle = {
                         showTemplateState.value = it
@@ -216,7 +230,6 @@ fun CharacterScreen(
         }
     }
 }
-
 @Composable
 private fun SearchBarRow(
     query: String,
@@ -238,10 +251,17 @@ private fun SearchBarRow(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = "Hanzi Stroke Order",
-            style = MaterialTheme.typography.headlineSmall,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Hanzi Stroke Order",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f),
+            )
+            ProfileAvatarMenu()
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -288,12 +308,33 @@ private fun SearchBarRow(
         }
     }
 }
-
+@Composable
+private fun ProfileAvatarMenu() {
+    var expanded by remember { mutableStateOf(false) }
+    val menuItems = listOf("Courses...", "Progress...", "Dict...", "Help...", "Privacy...", "Feedback...")
+    Box {
+        IconActionButton(
+            icon = Icons.Filled.Person,
+            description = "Profile",
+            onClick = { expanded = true },
+            buttonSize = 36.dp,
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            menuItems.forEach { label ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = { expanded = false },
+                )
+            }
+        }
+    }
+}
 @Composable
 private fun CharacterContent(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
+    wordEntry: WordEntry?,
     showTemplate: Boolean,
     onTemplateToggle: (Boolean) -> Unit,
     calligraphyDemoState: CalligraphyDemoState,
@@ -305,6 +346,11 @@ private fun CharacterContent(
     onStrokeEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showWordInfo by rememberSaveable(definition.symbol) { mutableStateOf(false) }
+    val ttsController = rememberTextToSpeechController()
+    if (wordEntry == null && showWordInfo) {
+        showWordInfo = false
+    }
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
@@ -313,6 +359,8 @@ private fun CharacterContent(
     ) {
         CharacterInfoPanel(
             definition = definition,
+            wordEntry = wordEntry,
+            onWordInfoClick = { if (wordEntry != null) showWordInfo = true },
             modifier = Modifier.fillMaxWidth(),
         )
         val summary = practiceState.toSummary()
@@ -353,8 +401,14 @@ private fun CharacterContent(
                 .weight(1f, fill = true),
         )
     }
+    if (showWordInfo && wordEntry != null) {
+        WordInfoDialog(
+            entry = wordEntry,
+            onDismiss = { showWordInfo = false },
+            ttsController = ttsController,
+        )
+    }
 }
-
 @Composable
 private fun DemoControlRow(
     uiState: CharacterUiState,
@@ -420,7 +474,6 @@ private fun DemoControlRow(
         }
     }
 }
-
 @Composable
 private fun CharacterCanvas(
     definition: CharacterDefinition,
@@ -446,7 +499,6 @@ private fun CharacterCanvas(
     val canvasBackground = Color.White
     val radicalStrokeColor = MaterialTheme.colorScheme.primary
     val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -567,10 +619,11 @@ private fun CharacterCanvas(
         }
     }
 }
-
 @Composable
 private fun CharacterInfoPanel(
     definition: CharacterDefinition,
+    wordEntry: WordEntry?,
+    onWordInfoClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -590,16 +643,278 @@ private fun CharacterInfoPanel(
                 symbol = definition.symbol,
                 modifier = Modifier.size(120.dp),
             )
-            Spacer(modifier = Modifier.weight(1f))
+            if (wordEntry != null) {
+                WordInfoPreview(
+                    entry = wordEntry,
+                    onClick = onWordInfoClick,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Text(
+                    text = "Info...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                )
+            }
         }
     }
+}
+@Composable
+private fun WordInfoPreview(
+    entry: WordEntry,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFEDE6F5),
+        modifier = modifier
+            .height(96.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = entry.pinyin.ifBlank { "Pinyin..." },
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${entry.radicals.ifBlank { "Rad." }} / ${entry.strokes.ifBlank { "?" }} strokes...",
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = entry.explanation.condense(40),
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+@Composable
+private fun WordInfoDialog(
+    entry: WordEntry,
+    onDismiss: () -> Unit,
+    ttsController: TextToSpeechController,
+) {
+    val speakingAlpha by animateFloatAsState(
+        targetValue = if (ttsController.isSpeaking.value) 1f else 0.5f,
+        label = "speakingAlpha",
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = entry.word,
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Text(
+                        text = entry.pinyin.ifBlank { "Pinyin..." },
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                IconButton(
+                    onClick = { ttsController.speak(entry.word) },
+                    modifier = Modifier.size(28.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.VolumeUp,
+                        contentDescription = "Speaker",
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = speakingAlpha),
+                    )
+                }
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                WordInfoStat("Radical", entry.radicals)
+                WordInfoStat("Strokes", entry.strokes)
+                WordInfoStat("Variant", entry.oldword)
+                WordInfoStat("Meaning", entry.explanation.condense(80))
+                WordInfoStat("More", entry.more.condense(100))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        },
+    )
+}
+
+@Composable
+private fun WordInfoStat(label: String, value: String) {
+    if (value.isBlank()) return
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "$label",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+private data class TextToSpeechController(
+    val speak: (String) -> Unit,
+    val isSpeaking: State<Boolean>,
+)
+@Composable
+private fun rememberTextToSpeechController(): TextToSpeechController {
+    val context = LocalContext.current
+    val speakingState = remember { mutableStateOf(false) }
+    val handler = remember { Handler(Looper.getMainLooper()) }
+    val textToSpeech = remember { TextToSpeech(context) { } }
+    DisposableEffect(textToSpeech) {
+        textToSpeech.language = Locale.CHINA
+        val listener = object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                handler.post { speakingState.value = true }
+            }
+            override fun onDone(utteranceId: String?) {
+                handler.post { speakingState.value = false }
+            }
+            override fun onError(utteranceId: String?) {
+                handler.post { speakingState.value = false }
+            }
+        }
+        textToSpeech.setOnUtteranceProgressListener(listener)
+        onDispose {
+            textToSpeech.stop()
+            textToSpeech.shutdown()
+        }
+    }
+    val speak: (String) -> Unit = { word ->
+        if (word.isNotBlank()) {
+            textToSpeech.speak(word, TextToSpeech.QUEUE_FLUSH, null, "word-$word")
+        }
+    }
+    return TextToSpeechController(speak = speak, isSpeaking = speakingState)
+}
+private fun String.condense(maxChars: Int): String {
+    val cleaned = replace("\\s+".toRegex(), " ").trim()
+    if (cleaned.isEmpty()) return "..."
+    if (cleaned.length <= maxChars) return cleaned
+    return cleaned.take(maxChars).trimEnd() + "..."
+}
+private data class CalligraphyDemoState(
+    val isPlaying: Boolean = false,
+    val strokeProgress: List<Float> = emptyList(),
+)
+
+private data class CalligraphyDemoCommand(val loop: Boolean, val token: Int)
+
+private class CalligraphyDemoController(
+    val state: State<CalligraphyDemoState>,
+    val play: (Boolean) -> Unit,
+    val stop: () -> Unit,
+)
+
+@Composable
+private fun rememberCalligraphyDemoController(
+    strokeCount: Int,
+    definitionKey: Any,
+): CalligraphyDemoController {
+    val demoState = remember(definitionKey, strokeCount) {
+        mutableStateOf(
+            CalligraphyDemoState(
+                isPlaying = false,
+                strokeProgress = List(strokeCount) { 0f },
+            ),
+        )
+    }
+    var command by remember(definitionKey) { mutableStateOf<CalligraphyDemoCommand?>(null) }
+    var tokenCounter by remember(definitionKey) { mutableStateOf(0) }
+
+    LaunchedEffect(definitionKey, strokeCount) {
+        command = null
+        demoState.value = CalligraphyDemoState(
+            isPlaying = false,
+            strokeProgress = List(strokeCount) { 0f },
+        )
+    }
+
+    LaunchedEffect(command, strokeCount, definitionKey) {
+        val cmd = command ?: return@LaunchedEffect
+        if (strokeCount <= 0) {
+            demoState.value = CalligraphyDemoState(isPlaying = false, strokeProgress = emptyList())
+            command = null
+            return@LaunchedEffect
+        }
+        val progress = FloatArray(strokeCount) { 0f }
+        demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
+        outer@ while (command == cmd) {
+            for (index in 0 until strokeCount) {
+                val anim = Animatable(progress[index])
+                anim.snapTo(0f)
+                anim.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = CALLIGRAPHY_DEMO_STROKE_DURATION, easing = LinearEasing),
+                ) {
+                    progress[index] = value
+                    demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
+                }
+                if (command != cmd) break@outer
+                delay(CALLIGRAPHY_DEMO_STROKE_GAP)
+            }
+            if (cmd.loop && command == cmd) {
+                delay(CALLIGRAPHY_DEMO_LOOP_PAUSE)
+                for (i in 0 until strokeCount) {
+                    progress[i] = 0f
+                }
+                demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
+            } else {
+                break
+            }
+        }
+        if (command == cmd) {
+            command = null
+            demoState.value = CalligraphyDemoState(
+                isPlaying = false,
+                strokeProgress = List(strokeCount) { 0f },
+            )
+        }
+    }
+
+    val play: (Boolean) -> Unit = { loop ->
+        tokenCounter += 1
+        command = CalligraphyDemoCommand(loop = loop, token = tokenCounter)
+        demoState.value = demoState.value.copy(isPlaying = true)
+    }
+    val stop: () -> Unit = {
+        command = null
+        demoState.value = CalligraphyDemoState(
+            isPlaying = false,
+            strokeProgress = List(strokeCount) { 0f },
+        )
+    }
+
+    return CalligraphyDemoController(state = demoState, play = play, stop = stop)
 }
 
 private data class PracticeSummaryUi(
     val progressText: String,
     val statusText: String,
 )
-
 private fun PracticeState.toSummary(): PracticeSummaryUi {
     val normalizedTotal = max(1, totalStrokes)
     val completedCount = when {
@@ -615,7 +930,6 @@ private fun PracticeState.toSummary(): PracticeSummaryUi {
     val status = statusMessage.ifBlank { defaultStatus }
     return PracticeSummaryUi(progressText = "$completedCount/$normalizedTotal", statusText = status)
 }
-
 @Composable
 private fun PracticeSummaryBadge(
     progressText: String,
@@ -649,113 +963,7 @@ private fun PracticeSummaryBadge(
         }
     }
 }
-
 private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
-
-private data class CalligraphyDemoState(
-    val isPlaying: Boolean = false,
-    val strokeProgress: List<Float> = emptyList(),
-)
-
-private data class CalligraphyDemoCommand(val loop: Boolean, val token: Int)
-
-private class CalligraphyDemoController(
-    val state: State<CalligraphyDemoState>,
-    val play: (Boolean) -> Unit,
-    val stop: () -> Unit,
-)
-
-@Composable
-private fun rememberCalligraphyDemoController(
-    strokeCount: Int,
-    definitionKey: Any,
-): CalligraphyDemoController {
-    val demoState = remember(definitionKey, strokeCount) {
-        mutableStateOf(
-            CalligraphyDemoState(
-                isPlaying = false,
-                strokeProgress = List(strokeCount) { 0f },
-            ),
-        )
-    }
-    var command by remember(definitionKey) { mutableStateOf<CalligraphyDemoCommand?>(null) }
-    var token by remember(definitionKey) { mutableStateOf(0) }
-
-    LaunchedEffect(definitionKey, strokeCount) {
-        command = null
-        demoState.value = CalligraphyDemoState(
-            isPlaying = false,
-            strokeProgress = List(strokeCount) { 0f },
-        )
-    }
-
-    LaunchedEffect(command, strokeCount, definitionKey) {
-        val cmd = command ?: return@LaunchedEffect
-        if (strokeCount <= 0) {
-            demoState.value = CalligraphyDemoState(isPlaying = false, strokeProgress = emptyList())
-            command = null
-            return@LaunchedEffect
-        }
-        val progress = FloatArray(strokeCount) { 0f }
-        demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
-        outer@ while (command == cmd) {
-            for (index in 0 until strokeCount) {
-                val anim = Animatable(progress[index])
-                anim.snapTo(0f)
-                anim.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = CALLIGRAPHY_DEMO_STROKE_DURATION,
-                        easing = LinearEasing,
-                    ),
-                ) {
-                    progress[index] = value
-                    demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
-                }
-                if (command != cmd) {
-                    break@outer
-                }
-                delay(CALLIGRAPHY_DEMO_STROKE_GAP)
-            }
-            if (cmd.loop && command == cmd) {
-                delay(CALLIGRAPHY_DEMO_LOOP_PAUSE)
-                for (i in 0 until strokeCount) {
-                    progress[i] = 0f
-                }
-                demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
-            } else {
-                break
-            }
-        }
-        if (command == cmd) {
-            command = null
-            demoState.value = CalligraphyDemoState(
-                isPlaying = false,
-                strokeProgress = List(strokeCount) { 0f },
-            )
-        }
-    }
-
-    val play: (Boolean) -> Unit = { loop ->
-        token += 1
-        command = CalligraphyDemoCommand(loop = loop, token = token)
-        demoState.value = demoState.value.copy(isPlaying = true)
-    }
-    val stop: () -> Unit = {
-        command = null
-        demoState.value = CalligraphyDemoState(
-            isPlaying = false,
-            strokeProgress = List(strokeCount) { 0f },
-        )
-    }
-
-    return CalligraphyDemoController(
-        state = demoState,
-        play = play,
-        stop = stop,
-    )
-}
-
 @Composable
 private fun CanvasSettingsMenu(
     currentGrid: PracticeGrid,
@@ -788,7 +996,7 @@ private fun CanvasSettingsMenu(
                         expanded = false
                     },
                     trailingIcon = if (mode == currentGrid) {
-                        { Text("✓") }
+                        { Text("*") }
                     } else null,
                 )
             }
@@ -815,7 +1023,7 @@ private fun CanvasSettingsMenu(
                         expanded = false
                     },
                     trailingIcon = if (option == currentColor) {
-                        { Text("✓") }
+                        { Text("*") }
                     } else null,
                 )
             }
@@ -829,24 +1037,20 @@ private fun CanvasSettingsMenu(
         }
     }
 }
-
 private enum class PracticeGrid(val label: String) {
     NONE("None"),
     RICE("Rice grid"),
     NINE("Nine grid"),
 }
-
 private enum class StrokeColorOption(val label: String, val color: Color) {
     PURPLE("Purple", Color(0xFF6750A4)),
     BLUE("Blue", Color(0xFF2F80ED)),
     GREEN("Green", Color(0xFF2F9B67)),
     RED("Red", Color(0xFFD14343)),
 }
-
 private const val CALLIGRAPHY_DEMO_STROKE_DURATION = 600
 private const val CALLIGRAPHY_DEMO_STROKE_GAP = 120L
 private const val CALLIGRAPHY_DEMO_LOOP_PAUSE = 400L
-
 private fun DrawScope.drawPracticeGrid(mode: PracticeGrid) {
     val color = Color(0xFFE2D6CB)
     val inset = 4.dp.toPx()
@@ -856,7 +1060,6 @@ private fun DrawScope.drawPracticeGrid(mode: PracticeGrid) {
         PracticeGrid.NINE -> drawNineGrid(color, inset)
     }
 }
-
 private fun DrawScope.drawTemplateStrokes(
     definition: CharacterDefinition,
     positioner: Positioner,
@@ -910,7 +1113,6 @@ private fun DrawScope.drawTemplateStrokes(
         }
     }
 }
-
 private fun DrawScope.drawRiceGrid(color: Color, inset: Float) {
     val left = inset
     val right = size.width - inset
@@ -924,7 +1126,6 @@ private fun DrawScope.drawRiceGrid(color: Color, inset: Float) {
     drawLine(color, Offset(left, top), Offset(right, bottom), strokeWidth)
     drawLine(color, Offset(right, top), Offset(left, bottom), strokeWidth)
 }
-
 private fun DrawScope.drawNineGrid(color: Color, inset: Float) {
     val left = inset
     val right = size.width - inset
@@ -944,7 +1145,6 @@ private fun DrawScope.drawNineGrid(color: Color, inset: Float) {
     drawLine(color, Offset(left, y1), Offset(right, y1), strokeWidth)
     drawLine(color, Offset(left, y2), Offset(right, y2), strokeWidth)
 }
-
 @Composable
 private fun CharacterGlyphWithGrid(symbol: String, modifier: Modifier = Modifier) {
     val gridColor = Color(0xFFD8CCC2)
@@ -979,7 +1179,6 @@ private fun CharacterGlyphWithGrid(symbol: String, modifier: Modifier = Modifier
         )
     }
 }
-
 private fun Modifier.practicePointerInput(
     practiceState: PracticeState,
     positioner: Positioner?,
@@ -1006,7 +1205,6 @@ private fun Modifier.practicePointerInput(
         }
     }
 }
-
 private fun DrawScope.drawLayer(
     definition: CharacterDefinition,
     layerState: CharacterRenderState,
@@ -1029,7 +1227,6 @@ private fun DrawScope.drawLayer(
         }
     }
 }
-
 private fun DrawScope.drawUserStroke(
     userStroke: UserStrokeRenderState,
     positioner: Positioner,
@@ -1047,7 +1244,6 @@ private fun DrawScope.drawUserStroke(
     }
     drawStrokePath(path, color.copy(alpha = userStroke.opacity), drawingWidth)
 }
-
 private fun DrawScope.drawStrokePath(path: Path, color: Color, strokeWidth: Float) {
     drawPath(
         path = path,
@@ -1059,11 +1255,9 @@ private fun DrawScope.drawStrokePath(path: Path, color: Color, strokeWidth: Floa
         ),
     )
 }
-
 private fun ModelStroke.toFullPath(positioner: Positioner): Path {
     return toPartialPath(positioner, 1f) ?: Path()
 }
-
 private fun ModelStroke.toPartialPath(positioner: Positioner, portion: Float): Path? {
     val clampedPortion = portion.coerceIn(0f, 1f)
     if (clampedPortion <= 0f) return null
@@ -1098,7 +1292,6 @@ private fun ModelStroke.toPartialPath(positioner: Positioner, portion: Float): P
     }
     return path
 }
-
 private fun ColorRgba.asComposeColor(alphaMultiplier: Float = 1f): Color {
     val alpha = (a * alphaMultiplier).coerceIn(0f, 1f)
     return Color(
@@ -1108,5 +1301,4 @@ private fun ColorRgba.asComposeColor(alphaMultiplier: Float = 1f): Color {
         alpha = alpha,
     )
 }
-
 private fun Offset.toPoint(): Point = Point(x.toDouble(), y.toDouble())
