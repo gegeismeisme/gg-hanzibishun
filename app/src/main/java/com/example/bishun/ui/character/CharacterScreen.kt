@@ -2,6 +2,9 @@ package com.example.bishun.ui.character
 
 import android.graphics.Matrix as AndroidMatrix
 import androidx.core.graphics.PathParser as AndroidPathParser
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -20,12 +23,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDownload
@@ -41,13 +42,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,6 +91,7 @@ import com.example.bishun.hanzi.render.RenderStateSnapshot
 import com.example.bishun.hanzi.render.UserStrokeRenderState
 import com.example.bishun.ui.character.components.IconActionButton
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlin.math.max
 import kotlin.math.min
 
@@ -146,6 +149,20 @@ fun CharacterScreen(
     onStrokeEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val showTemplateState = rememberSaveable { mutableStateOf(true) }
+    val calligraphyDemoController = if (uiState is CharacterUiState.Success && showTemplateState.value) {
+        rememberCalligraphyDemoController(
+            strokeCount = uiState.definition.strokeCount,
+            definitionKey = uiState.definition.symbol,
+        )
+    } else {
+        null
+    }
+    val calligraphyDemoState = calligraphyDemoController?.state?.value ?: CalligraphyDemoState()
+    val useCalligraphyDemo = showTemplateState.value && calligraphyDemoController != null
+    val playCalligraphyDemo: (Boolean) -> Unit = calligraphyDemoController?.play ?: {}
+    val stopCalligraphyDemo: () -> Unit = calligraphyDemoController?.stop ?: {}
+
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -160,9 +177,14 @@ fun CharacterScreen(
                 onSubmit = onSubmit,
                 onClearQuery = onClearQuery,
                 demoState = demoState,
+                calligraphyDemoState = calligraphyDemoState,
+                useCalligraphyDemo = useCalligraphyDemo,
                 onPlayDemoOnce = onPlayDemoOnce,
                 onPlayDemoLoop = onPlayDemoLoop,
                 onStopDemo = onStopDemo,
+                onPlayCalligraphyDemoOnce = { playCalligraphyDemo(false) },
+                onPlayCalligraphyDemoLoop = { playCalligraphyDemo(true) },
+                onStopCalligraphyDemo = stopCalligraphyDemo,
             )
             when (uiState) {
                 CharacterUiState.Loading -> Text("Loading...")
@@ -174,6 +196,15 @@ fun CharacterScreen(
                     definition = uiState.definition,
                     renderSnapshot = renderSnapshot,
                     practiceState = practiceState,
+                    showTemplate = showTemplateState.value,
+                    onTemplateToggle = {
+                        showTemplateState.value = it
+                        if (!it) {
+                            stopCalligraphyDemo()
+                        }
+                    },
+                    calligraphyDemoState = calligraphyDemoState,
+                    onStopCalligraphyDemo = stopCalligraphyDemo,
                     onStartPractice = onStartPractice,
                     onRequestHint = onRequestHint,
                     onStrokeStart = onStrokeStart,
@@ -194,9 +225,14 @@ private fun SearchBarRow(
     onSubmit: () -> Unit,
     onClearQuery: () -> Unit,
     demoState: DemoState,
+    calligraphyDemoState: CalligraphyDemoState,
+    useCalligraphyDemo: Boolean,
     onPlayDemoOnce: () -> Unit,
     onPlayDemoLoop: () -> Unit,
     onStopDemo: () -> Unit,
+    onPlayCalligraphyDemoOnce: () -> Unit,
+    onPlayCalligraphyDemoLoop: () -> Unit,
+    onStopCalligraphyDemo: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -239,10 +275,15 @@ private fun SearchBarRow(
             DemoControlRow(
                 uiState = uiState,
                 demoState = demoState,
+                calligraphyDemoState = calligraphyDemoState,
+                useCalligraphyDemo = useCalligraphyDemo,
                 onSubmit = onSubmit,
                 onPlayOnce = onPlayDemoOnce,
                 onPlayLoop = onPlayDemoLoop,
                 onStop = onStopDemo,
+                onPlayCalligraphyOnce = onPlayCalligraphyDemoOnce,
+                onPlayCalligraphyLoop = onPlayCalligraphyDemoLoop,
+                onStopCalligraphy = onStopCalligraphyDemo,
             )
         }
     }
@@ -253,6 +294,10 @@ private fun CharacterContent(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
+    showTemplate: Boolean,
+    onTemplateToggle: (Boolean) -> Unit,
+    calligraphyDemoState: CalligraphyDemoState,
+    onStopCalligraphyDemo: () -> Unit,
     onStartPractice: () -> Unit,
     onRequestHint: () -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
@@ -278,7 +323,6 @@ private fun CharacterContent(
         )
         val gridState = rememberSaveable { mutableStateOf(PracticeGrid.NONE.ordinal) }
         val colorState = rememberSaveable { mutableStateOf(StrokeColorOption.PURPLE.ordinal) }
-        val templateState = rememberSaveable { mutableStateOf(true) }
         val gridMode = PracticeGrid.entries[gridState.value]
         val strokeColorOption = StrokeColorOption.entries[colorState.value]
         val strokeColor = strokeColorOption.color
@@ -288,11 +332,17 @@ private fun CharacterContent(
             practiceState = practiceState,
             gridMode = gridMode,
             userStrokeColor = strokeColor,
-            showTemplate = templateState.value,
+            showTemplate = showTemplate,
+            calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
             currentColorOption = strokeColorOption,
             onGridModeChange = { gridState.value = it.ordinal },
             onStrokeColorChange = { colorState.value = it.ordinal },
-            onTemplateToggle = { templateState.value = it },
+            onTemplateToggle = {
+                onTemplateToggle(it)
+                if (!it) {
+                    onStopCalligraphyDemo()
+                }
+            },
             onStrokeStart = onStrokeStart,
             onStrokeMove = onStrokeMove,
             onStrokeEnd = onStrokeEnd,
@@ -309,45 +359,62 @@ private fun CharacterContent(
 private fun DemoControlRow(
     uiState: CharacterUiState,
     demoState: DemoState,
+    calligraphyDemoState: CalligraphyDemoState,
+    useCalligraphyDemo: Boolean,
     onSubmit: () -> Unit,
     onPlayOnce: () -> Unit,
     onPlayLoop: () -> Unit,
     onStop: () -> Unit,
+    onPlayCalligraphyOnce: () -> Unit,
+    onPlayCalligraphyLoop: () -> Unit,
+    onStopCalligraphy: () -> Unit,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (demoState.isPlaying) {
+        val isPlaying = if (useCalligraphyDemo) calligraphyDemoState.isPlaying else demoState.isPlaying
+        if (isPlaying) {
+            val stopHandler = if (useCalligraphyDemo) onStopCalligraphy else onStop
             IconActionButton(
                 icon = Icons.Filled.Stop,
                 description = "Stop demo",
-                onClick = onStop,
+                onClick = stopHandler,
                 buttonSize = 36.dp,
             )
         } else {
-            IconActionButton(
-                icon = Icons.Filled.PlayArrow,
-                description = "Play demo",
-                onClick = {
+            val playOnce = if (useCalligraphyDemo) {
+                onPlayCalligraphyOnce
+            } else {
+                {
                     if (uiState !is CharacterUiState.Success) {
                         onSubmit()
                     } else {
                         onPlayOnce()
                     }
-                },
-                buttonSize = 36.dp,
-            )
-            IconActionButton(
-                icon = Icons.Filled.Refresh,
-                description = "Loop demo",
-                onClick = {
+                }
+            }
+            val playLoop = if (useCalligraphyDemo) {
+                onPlayCalligraphyLoop
+            } else {
+                {
                     if (uiState !is CharacterUiState.Success) {
                         onSubmit()
                     } else {
                         onPlayLoop()
                     }
-                },
+                }
+            }
+            IconActionButton(
+                icon = Icons.Filled.PlayArrow,
+                description = "Play demo",
+                onClick = playOnce,
+                buttonSize = 36.dp,
+            )
+            IconActionButton(
+                icon = Icons.Filled.Refresh,
+                description = "Loop demo",
+                onClick = playLoop,
                 buttonSize = 36.dp,
             )
         }
@@ -362,6 +429,7 @@ private fun CharacterCanvas(
     gridMode: PracticeGrid,
     userStrokeColor: Color,
     showTemplate: Boolean,
+    calligraphyDemoProgress: List<Float>,
     currentColorOption: StrokeColorOption,
     onGridModeChange: (PracticeGrid) -> Unit,
     onStrokeColorChange: (StrokeColorOption) -> Unit,
@@ -421,6 +489,7 @@ private fun CharacterCanvas(
                     positioner = drawPositioner,
                     completedStrokes = practiceState.completedStrokes,
                     completedFillColor = userStrokeColor,
+                    demoProgress = calligraphyDemoProgress,
                 )
             }
             val snapshot = renderSnapshot
@@ -583,6 +652,110 @@ private fun PracticeSummaryBadge(
 
 private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
 
+private data class CalligraphyDemoState(
+    val isPlaying: Boolean = false,
+    val strokeProgress: List<Float> = emptyList(),
+)
+
+private data class CalligraphyDemoCommand(val loop: Boolean, val token: Int)
+
+private class CalligraphyDemoController(
+    val state: State<CalligraphyDemoState>,
+    val play: (Boolean) -> Unit,
+    val stop: () -> Unit,
+)
+
+@Composable
+private fun rememberCalligraphyDemoController(
+    strokeCount: Int,
+    definitionKey: Any,
+): CalligraphyDemoController {
+    val demoState = remember(definitionKey, strokeCount) {
+        mutableStateOf(
+            CalligraphyDemoState(
+                isPlaying = false,
+                strokeProgress = List(strokeCount) { 0f },
+            ),
+        )
+    }
+    var command by remember(definitionKey) { mutableStateOf<CalligraphyDemoCommand?>(null) }
+    var token by remember(definitionKey) { mutableStateOf(0) }
+
+    LaunchedEffect(definitionKey, strokeCount) {
+        command = null
+        demoState.value = CalligraphyDemoState(
+            isPlaying = false,
+            strokeProgress = List(strokeCount) { 0f },
+        )
+    }
+
+    LaunchedEffect(command, strokeCount, definitionKey) {
+        val cmd = command ?: return@LaunchedEffect
+        if (strokeCount <= 0) {
+            demoState.value = CalligraphyDemoState(isPlaying = false, strokeProgress = emptyList())
+            command = null
+            return@LaunchedEffect
+        }
+        val progress = FloatArray(strokeCount) { 0f }
+        demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
+        outer@ while (command == cmd) {
+            for (index in 0 until strokeCount) {
+                val anim = Animatable(progress[index])
+                anim.snapTo(0f)
+                anim.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = CALLIGRAPHY_DEMO_STROKE_DURATION,
+                        easing = LinearEasing,
+                    ),
+                ) {
+                    progress[index] = value
+                    demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
+                }
+                if (command != cmd) {
+                    break@outer
+                }
+                delay(CALLIGRAPHY_DEMO_STROKE_GAP)
+            }
+            if (cmd.loop && command == cmd) {
+                delay(CALLIGRAPHY_DEMO_LOOP_PAUSE)
+                for (i in 0 until strokeCount) {
+                    progress[i] = 0f
+                }
+                demoState.value = CalligraphyDemoState(isPlaying = true, strokeProgress = progress.toList())
+            } else {
+                break
+            }
+        }
+        if (command == cmd) {
+            command = null
+            demoState.value = CalligraphyDemoState(
+                isPlaying = false,
+                strokeProgress = List(strokeCount) { 0f },
+            )
+        }
+    }
+
+    val play: (Boolean) -> Unit = { loop ->
+        token += 1
+        command = CalligraphyDemoCommand(loop = loop, token = token)
+        demoState.value = demoState.value.copy(isPlaying = true)
+    }
+    val stop: () -> Unit = {
+        command = null
+        demoState.value = CalligraphyDemoState(
+            isPlaying = false,
+            strokeProgress = List(strokeCount) { 0f },
+        )
+    }
+
+    return CalligraphyDemoController(
+        state = demoState,
+        play = play,
+        stop = stop,
+    )
+}
+
 @Composable
 private fun CanvasSettingsMenu(
     currentGrid: PracticeGrid,
@@ -670,6 +843,10 @@ private enum class StrokeColorOption(val label: String, val color: Color) {
     RED("Red", Color(0xFFD14343)),
 }
 
+private const val CALLIGRAPHY_DEMO_STROKE_DURATION = 600
+private const val CALLIGRAPHY_DEMO_STROKE_GAP = 120L
+private const val CALLIGRAPHY_DEMO_LOOP_PAUSE = 400L
+
 private fun DrawScope.drawPracticeGrid(mode: PracticeGrid) {
     val color = Color(0xFFE2D6CB)
     val inset = 4.dp.toPx()
@@ -685,6 +862,7 @@ private fun DrawScope.drawTemplateStrokes(
     positioner: Positioner,
     completedStrokes: Set<Int>,
     completedFillColor: Color,
+    demoProgress: List<Float>,
 ) {
     val templateColor = Color(0x33AA6A39)
     val strokeStyle = Stroke(
@@ -719,9 +897,14 @@ private fun DrawScope.drawTemplateStrokes(
         }
         androidPath.transform(matrix)
         val composePath = androidPath.asComposePath()
-        if (completedStrokes.contains(stroke.strokeNum)) {
-            drawPath(path = composePath, color = completedFill, style = Fill)
-            drawPath(path = composePath, color = completedOutline, style = completedOutlineStyle)
+        val progress = when {
+            completedStrokes.contains(stroke.strokeNum) -> 1f
+            else -> demoProgress.getOrNull(stroke.strokeNum) ?: 0f
+        }
+        if (progress > 0f) {
+            val fillAlpha = if (progress >= 1f) 1f else progress
+            drawPath(path = composePath, color = completedFill.copy(alpha = completedFill.alpha * fillAlpha), style = Fill)
+            drawPath(path = composePath, color = completedOutline.copy(alpha = completedOutline.alpha * fillAlpha), style = completedOutlineStyle)
         } else {
             drawPath(path = composePath, color = templateColor, style = strokeStyle)
         }
