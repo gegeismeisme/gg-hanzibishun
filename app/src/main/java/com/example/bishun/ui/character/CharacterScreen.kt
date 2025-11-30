@@ -626,35 +626,46 @@ private enum class StrokeColorOption(val label: String, val color: Color) {
 
 private fun DrawScope.drawPracticeGrid(mode: PracticeGrid) {
     val color = Color(0xFFE2D6CB)
+    val inset = 4.dp.toPx()
     when (mode) {
         PracticeGrid.NONE -> return
-        PracticeGrid.RICE -> drawRiceGrid(color)
-        PracticeGrid.NINE -> drawNineGrid(color)
+        PracticeGrid.RICE -> drawRiceGrid(color, inset)
+        PracticeGrid.NINE -> drawNineGrid(color, inset)
     }
 }
 
-private fun DrawScope.drawRiceGrid(color: Color) {
-    val width = size.width
-    val height = size.height
-    val halfWidth = width / 2f
-    val halfHeight = height / 2f
+private fun DrawScope.drawRiceGrid(color: Color, inset: Float) {
+    val left = inset
+    val right = size.width - inset
+    val top = inset
+    val bottom = size.height - inset
+    val halfWidth = (left + right) / 2f
+    val halfHeight = (top + bottom) / 2f
     val strokeWidth = 1.dp.toPx()
-    drawLine(color, Offset(halfWidth, 0f), Offset(halfWidth, height), strokeWidth)
-    drawLine(color, Offset(0f, halfHeight), Offset(width, halfHeight), strokeWidth)
-    drawLine(color, Offset(0f, 0f), Offset(width, height), strokeWidth)
-    drawLine(color, Offset(width, 0f), Offset(0f, height), strokeWidth)
+    drawLine(color, Offset(halfWidth, top), Offset(halfWidth, bottom), strokeWidth)
+    drawLine(color, Offset(left, halfHeight), Offset(right, halfHeight), strokeWidth)
+    drawLine(color, Offset(left, top), Offset(right, bottom), strokeWidth)
+    drawLine(color, Offset(right, top), Offset(left, bottom), strokeWidth)
 }
 
-private fun DrawScope.drawNineGrid(color: Color) {
-    val width = size.width
-    val height = size.height
+private fun DrawScope.drawNineGrid(color: Color, inset: Float) {
+    val left = inset
+    val right = size.width - inset
+    val top = inset
+    val bottom = size.height - inset
+    val width = right - left
+    val height = bottom - top
     val thirdWidth = width / 3f
     val thirdHeight = height / 3f
     val strokeWidth = 1.dp.toPx()
-    drawLine(color, Offset(thirdWidth, 0f), Offset(thirdWidth, height), strokeWidth)
-    drawLine(color, Offset(2 * thirdWidth, 0f), Offset(2 * thirdWidth, height), strokeWidth)
-    drawLine(color, Offset(0f, thirdHeight), Offset(width, thirdHeight), strokeWidth)
-    drawLine(color, Offset(0f, 2 * thirdHeight), Offset(width, 2 * thirdHeight), strokeWidth)
+    val x1 = left + thirdWidth
+    val x2 = left + 2 * thirdWidth
+    val y1 = top + thirdHeight
+    val y2 = top + 2 * thirdHeight
+    drawLine(color, Offset(x1, top), Offset(x1, bottom), strokeWidth)
+    drawLine(color, Offset(x2, top), Offset(x2, bottom), strokeWidth)
+    drawLine(color, Offset(left, y1), Offset(right, y1), strokeWidth)
+    drawLine(color, Offset(left, y2), Offset(right, y2), strokeWidth)
 }
 
 @Composable
