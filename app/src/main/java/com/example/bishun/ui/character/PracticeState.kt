@@ -8,4 +8,5 @@ data class PracticeState(
     val totalMistakes: Int = 0,
     val statusMessage: String = "",
     val mistakeSinceHint: Int = 0,
+    val completedStrokes: Set<Int> = emptySet(),
 )

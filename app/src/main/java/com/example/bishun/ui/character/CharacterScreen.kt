@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.asComposePath
@@ -415,7 +416,12 @@ private fun CharacterCanvas(
             )
             drawPracticeGrid(gridMode)
             if (showTemplate) {
-                drawTemplateStrokes(definition, drawPositioner)
+                drawTemplateStrokes(
+                    definition = definition,
+                    positioner = drawPositioner,
+                    completedStrokes = practiceState.completedStrokes,
+                    completedFillColor = userStrokeColor,
+                )
             }
             val snapshot = renderSnapshot
             if (snapshot == null) {
@@ -677,10 +683,19 @@ private fun DrawScope.drawPracticeGrid(mode: PracticeGrid) {
 private fun DrawScope.drawTemplateStrokes(
     definition: CharacterDefinition,
     positioner: Positioner,
+    completedStrokes: Set<Int>,
+    completedFillColor: Color,
 ) {
     val templateColor = Color(0x33AA6A39)
     val strokeStyle = Stroke(
         width = 12.dp.toPx(),
+        cap = StrokeCap.Round,
+        join = StrokeJoin.Round,
+    )
+    val completedFill = completedFillColor.copy(alpha = 0.65f)
+    val completedOutline = completedFillColor.copy(alpha = 0.9f)
+    val completedOutlineStyle = Stroke(
+        width = 6.dp.toPx(),
         cap = StrokeCap.Round,
         join = StrokeJoin.Round,
     )
@@ -704,7 +719,12 @@ private fun DrawScope.drawTemplateStrokes(
         }
         androidPath.transform(matrix)
         val composePath = androidPath.asComposePath()
-        drawPath(path = composePath, color = templateColor, style = strokeStyle)
+        if (completedStrokes.contains(stroke.strokeNum)) {
+            drawPath(path = composePath, color = completedFill, style = Fill)
+            drawPath(path = composePath, color = completedOutline, style = completedOutlineStyle)
+        } else {
+            drawPath(path = composePath, color = templateColor, style = strokeStyle)
+        }
     }
 }
 

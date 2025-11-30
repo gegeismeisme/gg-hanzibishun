@@ -128,6 +128,7 @@ class CharacterViewModel(
                 totalStrokes = definition.strokeCount,
                 statusMessage = "Start from stroke 1",
                 mistakeSinceHint = 0,
+                completedStrokes = emptySet(),
             )
         }
     }
@@ -228,6 +229,7 @@ class CharacterViewModel(
             totalMistakes = 0,
             statusMessage = "",
             mistakeSinceHint = 0,
+            completedStrokes = emptySet(),
         )
         activeUserStroke = null
         userStrokeIds.clear()
@@ -267,6 +269,7 @@ class CharacterViewModel(
             isActive = !complete,
             statusMessage = message,
             mistakeSinceHint = 0,
+            completedStrokes = practice.completedStrokes + strokeIndex,
         )
         if (complete) {
             state.run(QuizActions.highlightCompleteChar(definition, null, 600))
