@@ -686,9 +686,21 @@ private fun DrawScope.drawTemplateStrokes(
     )
     definition.strokes.forEach { stroke ->
         val androidPath = AndroidPathParser.createPathFromPathData(stroke.path)
+        val scale = positioner.transformScale
         val matrix = AndroidMatrix().apply {
-            postTranslate(positioner.transformTranslateX, positioner.transformTranslateY)
-            postScale(positioner.transformScale, -positioner.transformScale)
+            setValues(
+                floatArrayOf(
+                    scale,
+                    0f,
+                    positioner.transformTranslateX,
+                    0f,
+                    -scale,
+                    positioner.transformTranslateY,
+                    0f,
+                    0f,
+                    1f,
+                ),
+            )
         }
         androidPath.transform(matrix)
         val composePath = androidPath.asComposePath()
