@@ -28,13 +28,20 @@ import com.example.bishun.hanzi.render.actions.QuizActions
 import com.example.bishun.hanzi.quiz.StrokeMatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.min
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class CharacterViewModel(
+    private val appContext: Context,
     private val repository: CharacterDefinitionRepository,
     private val wordRepository: WordRepository,
     private val hskRepository: HskRepository,
@@ -350,11 +357,27 @@ class CharacterViewModel(
                 message = message.trim(),
                 contact = contact.trim(),
             )
+            logFeedbackToFile(topic, message, contact)
         }
     }
 
     fun consumeFeedbackSubmission() {
         _feedbackSubmission.value = null
+    }
+
+    private suspend fun logFeedbackToFile(topic: String, message: String, contact: String) {
+        val file = File(appContext.filesDir, "feedback-log.txt")
+        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val summary = buildString {
+            appendLine("----")
+            appendLine("time=$timestamp")
+            appendLine("topic=${topic.trim()}")
+            appendLine("contact=${contact.trim()}")
+            appendLine("message=${message.trim()}")
+        }
+        withContext(Dispatchers.IO) {
+            file.appendText(summary)
+        }
     }
 
     private suspend fun clearUserStrokes() {
@@ -474,6 +497,7 @@ class CharacterViewModel(
                     val historyStore = PracticeHistoryStore(applicationContext)
                     val prefsStore = UserPreferencesStore(applicationContext)
                     return CharacterViewModel(
+                        applicationContext,
                         repo,
                         wordRepo,
                         hskRepo,
