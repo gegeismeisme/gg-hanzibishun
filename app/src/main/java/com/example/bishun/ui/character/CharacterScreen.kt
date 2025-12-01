@@ -1152,6 +1152,10 @@ private fun ProfileActionDialog(
                 onDismiss = onDismiss,
             )
         }
+        ProfileMenuAction.SHARE_LOG -> {
+            onShareLog()
+            onDismiss()
+        }
         else -> {
             AlertDialog(
                 onDismissRequest = onDismiss,
@@ -1661,7 +1665,8 @@ private enum class ProfileMenuAction(val label: String, val description: String)
     DICT("Dict...", "Open the embedded dictionary for full definitions, examples, and audio. Later, Word info can deep-link here."),
     HELP("Help...", "Tips, gestures, and onboarding videos live here so newcomers understand practice modes quickly."),
     PRIVACY("Privacy...", "Access the privacy policy, data safety notes, and toggles for analytics/log sharing before Play Store submission."),
-    FEEDBACK("Feedback...", "Send bugs or feature ideas. We'll attach optional logs so it's easy to iterate together.");
+    FEEDBACK("Feedback...", "Send bugs or feature ideas. We'll attach optional logs so it's easy to iterate together."),
+    SHARE_LOG("Share log...", "Quickly share the local feedback log if email wasn't available when submitting.");
 }
 private data class TextToSpeechController(
     val speak: (String) -> Unit,
