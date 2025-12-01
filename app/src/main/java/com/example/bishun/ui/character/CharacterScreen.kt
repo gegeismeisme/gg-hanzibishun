@@ -172,6 +172,7 @@ fun CharacterScreen(
     modifier: Modifier = Modifier,
 ) {
     val showTemplateState = rememberSaveable { mutableStateOf(true) }
+    var activeProfileAction by rememberSaveable { mutableStateOf<ProfileMenuAction?>(null) }
     val calligraphyDemoController = if (uiState is CharacterUiState.Success && showTemplateState.value) {
         rememberCalligraphyDemoController(
             strokeCount = uiState.definition.strokeCount,
@@ -198,6 +199,7 @@ fun CharacterScreen(
                 onSubmit = onSubmit,
                 onClearQuery = onClearQuery,
                 demoState = demoState,
+                onProfileAction = { activeProfileAction = it },
                 calligraphyDemoState = calligraphyDemoState,
                 useCalligraphyDemo = useCalligraphyDemo,
                 onPlayDemoOnce = onPlayDemoOnce,
@@ -237,6 +239,12 @@ fun CharacterScreen(
                 )
             }
         }
+        activeProfileAction?.let { action ->
+            ProfileActionDialog(
+                action = action,
+                onDismiss = { activeProfileAction = null },
+            )
+        }
     }
 }
 @Composable
@@ -247,6 +255,7 @@ private fun SearchBarRow(
     onSubmit: () -> Unit,
     onClearQuery: () -> Unit,
     demoState: DemoState,
+    onProfileAction: (ProfileMenuAction) -> Unit,
     calligraphyDemoState: CalligraphyDemoState,
     useCalligraphyDemo: Boolean,
     onPlayDemoOnce: () -> Unit,
@@ -269,7 +278,7 @@ private fun SearchBarRow(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f),
             )
-            ProfileAvatarMenu()
+            ProfileAvatarMenu(onProfileAction = onProfileAction)
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -318,9 +327,9 @@ private fun SearchBarRow(
     }
 }
 @Composable
-private fun ProfileAvatarMenu() {
+private fun ProfileAvatarMenu(onProfileAction: (ProfileMenuAction) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val menuItems = listOf("Courses...", "Progress...", "Dict...", "Help...", "Privacy...", "Feedback...")
+    val menuItems = ProfileMenuAction.values()
     Box {
         IconActionButton(
             icon = Icons.Filled.Person,
@@ -329,10 +338,13 @@ private fun ProfileAvatarMenu() {
             buttonSize = 36.dp,
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            menuItems.forEach { label ->
+            menuItems.forEach { action ->
                 DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = { expanded = false },
+                    text = { Text(action.label) },
+                    onClick = {
+                        expanded = false
+                        onProfileAction(action)
+                    },
                 )
             }
         }
@@ -357,17 +369,15 @@ private fun CharacterContent(
     modifier: Modifier = Modifier,
 ) {
     var showWordInfo by rememberSaveable(definition.symbol) { mutableStateOf(false) }
-    var showHskBadge by rememberSaveable(definition.symbol) { mutableStateOf(true) }
+    var showHskHint by rememberSaveable(definition.symbol) { mutableStateOf(false) }
     val ttsController = rememberTextToSpeechController()
     if (wordEntry == null && showWordInfo) {
         showWordInfo = false
     }
     LaunchedEffect(definition.symbol, hskEntry) {
-        showHskBadge = hskEntry != null
-        if (hskEntry != null) {
-            kotlinx.coroutines.delay(3500)
-            showHskBadge = false
-        }
+        showHskHint = true
+        delay(3500)
+        showHskHint = false
     }
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -400,8 +410,8 @@ private fun CharacterContent(
             userStrokeColor = strokeColor,
             showTemplate = showTemplate,
             calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
-             hskEntry = hskEntry,
-             showHskBadge = showHskBadge,
+            hskEntry = hskEntry,
+            showHskHint = showHskHint,
             currentColorOption = strokeColorOption,
             onGridModeChange = { gridState.value = it.ordinal },
             onStrokeColorChange = { colorState.value = it.ordinal },
@@ -504,7 +514,7 @@ private fun CharacterCanvas(
     showTemplate: Boolean,
     calligraphyDemoProgress: List<Float>,
     hskEntry: HskEntry?,
-    showHskBadge: Boolean,
+    showHskHint: Boolean,
     currentColorOption: StrokeColorOption,
     onGridModeChange: (PracticeGrid) -> Unit,
     onStrokeColorChange: (StrokeColorOption) -> Unit,
@@ -639,9 +649,10 @@ private fun CharacterCanvas(
                 buttonSize = 36.dp,
             )
         }
-        if (hskEntry != null && showHskBadge) {
+        if (showHskHint) {
             HskBadge(
                 entry = hskEntry,
+                fallbackSymbol = definition.symbol,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 12.dp),
@@ -734,7 +745,8 @@ private fun WordInfoPreview(
 
 @Composable
 private fun HskBadge(
-    entry: HskEntry,
+    entry: HskEntry?,
+    fallbackSymbol: String,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -748,16 +760,17 @@ private fun HskBadge(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            val title = entry?.let { "HSK ${it.level}" } ?: "HSK"
             Text(
-                text = "HSK ${entry.level}",
+                text = title,
                 style = MaterialTheme.typography.labelLarge,
             )
-            val highlight = entry.examples
-                .split(' ', '，', '、', '；')
-                .firstOrNull { it.isNotBlank() }
-                ?: entry.symbol
             Text(
-                text = highlight,
+                text = entry?.examples
+                    ?.split(' ', '，', '、', '；')
+                    ?.firstOrNull { it.isNotBlank() }
+                    ?: entry?.symbol
+                    ?: "$fallbackSymbol · reference coming soon",
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -850,6 +863,31 @@ private fun WordInfoStat(label: String, value: String) {
             overflow = TextOverflow.Ellipsis,
         )
     }
+}
+
+@Composable
+private fun ProfileActionDialog(
+    action: ProfileMenuAction,
+    onDismiss: () -> Unit,
+) {
+    val description = action.description
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(action.label) },
+        text = { Text(description) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
+}
+
+private enum class ProfileMenuAction(val label: String, val description: String) {
+    COURSES("Courses…", "Browse curated HSK lessons. We’ll package staged practice lists so you can study without typing every character."),
+    PROGRESS("Progress…", "See which strokes you’ve mastered. We’ll save local stats per HSK level and streak information."),
+    DICT("Dict…", "Open the embedded dictionary for full definitions, examples, and audio. Later, Word info can deep-link here."),
+    HELP("Help…", "Tips, gestures, and onboarding videos live here so newcomers understand practice modes quickly."),
+    PRIVACY("Privacy…", "Access the privacy policy, data safety notes, and toggles for analytics/log sharing before Play Store submission."),
+    FEEDBACK("Feedback…", "Send bugs or feature ideas. We’ll attach optional logs so it’s easy to iterate together.");
 }
 private data class TextToSpeechController(
     val speak: (String) -> Unit,
