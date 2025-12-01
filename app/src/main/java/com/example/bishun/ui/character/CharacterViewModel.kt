@@ -8,6 +8,8 @@ import com.example.bishun.data.characters.CharacterDefinitionRepository
 import com.example.bishun.data.characters.di.CharacterDataModule
 import com.example.bishun.data.word.WordEntry
 import com.example.bishun.data.word.WordRepository
+import com.example.bishun.data.hsk.HskEntry
+import com.example.bishun.data.hsk.HskRepository
 import com.example.bishun.hanzi.core.HanziCounter
 import com.example.bishun.hanzi.model.CharacterDefinition
 import com.example.bishun.hanzi.model.Point
@@ -30,6 +32,7 @@ import kotlin.math.min
 class CharacterViewModel(
     private val repository: CharacterDefinitionRepository,
     private val wordRepository: WordRepository,
+    private val hskRepository: HskRepository,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow(DEFAULT_CHAR)
@@ -47,6 +50,8 @@ class CharacterViewModel(
     val demoState: StateFlow<DemoState> = _demoState.asStateFlow()
     private val _wordEntry = MutableStateFlow<WordEntry?>(null)
     val wordEntry: StateFlow<WordEntry?> = _wordEntry.asStateFlow()
+    private val _hskEntry = MutableStateFlow<HskEntry?>(null)
+    val hskEntry: StateFlow<HskEntry?> = _hskEntry.asStateFlow()
 
     private var currentDefinition: CharacterDefinition? = null
     private var renderState: RenderState? = null
@@ -205,11 +210,13 @@ class CharacterViewModel(
                     setupRenderState(it)
                     resetPracticeState(it)
                     loadWordInfo(it.symbol)
+                    loadHskInfo(it.symbol)
                 },
                 onFailure = {
                     val message = it.message ?: "加载失败，请稍后再试"
                     _uiState.value = CharacterUiState.Error(message)
                     _wordEntry.value = null
+                    _hskEntry.value = null
                 },
             )
         }
@@ -244,13 +251,17 @@ class CharacterViewModel(
 
     private fun loadWordInfo(symbol: String) {
         viewModelScope.launch {
-            runCatching {
-                wordRepository.getWord(symbol)
-            }.onSuccess {
-                _wordEntry.value = it
-            }.onFailure {
-                _wordEntry.value = null
-            }
+            runCatching { wordRepository.getWord(symbol) }
+                .onSuccess { _wordEntry.value = it }
+                .onFailure { _wordEntry.value = null }
+        }
+    }
+
+    private fun loadHskInfo(symbol: String) {
+        viewModelScope.launch {
+            runCatching { hskRepository.get(symbol) }
+                .onSuccess { _hskEntry.value = it }
+                .onFailure { _hskEntry.value = null }
         }
     }
 
@@ -354,7 +365,8 @@ class CharacterViewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val repo = CharacterDataModule.provideDefinitionRepository(applicationContext)
                     val wordRepo = WordRepository(applicationContext)
-                    return CharacterViewModel(repo, wordRepo) as T
+                    val hskRepo = HskRepository(applicationContext)
+                    return CharacterViewModel(repo, wordRepo, hskRepo) as T
                 }
             }
         }

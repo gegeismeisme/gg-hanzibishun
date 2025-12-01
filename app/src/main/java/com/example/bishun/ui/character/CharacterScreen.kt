@@ -97,6 +97,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bishun.R
 import com.example.bishun.data.word.WordEntry
+import com.example.bishun.data.hsk.HskEntry
 import com.example.bishun.hanzi.core.Positioner
 import com.example.bishun.hanzi.geometry.Geometry
 import com.example.bishun.hanzi.model.CharacterDefinition
@@ -125,6 +126,7 @@ fun CharacterRoute(
     val practiceState by viewModel.practiceState.collectAsState()
     val demoState by viewModel.demoState.collectAsState()
     val wordEntry by viewModel.wordEntry.collectAsState()
+    val hskEntry by viewModel.hskEntry.collectAsState()
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -133,6 +135,7 @@ fun CharacterRoute(
         renderSnapshot = renderSnapshot,
         demoState = demoState,
         wordEntry = wordEntry,
+        hskEntry = hskEntry,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
         onClearQuery = viewModel::clearQuery,
@@ -154,6 +157,7 @@ fun CharacterScreen(
     renderSnapshot: RenderStateSnapshot?,
     demoState: DemoState,
     wordEntry: WordEntry?,
+    hskEntry: HskEntry?,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onClearQuery: () -> Unit,
@@ -214,6 +218,7 @@ fun CharacterScreen(
                     renderSnapshot = renderSnapshot,
                     practiceState = practiceState,
                     wordEntry = wordEntry,
+                    hskEntry = hskEntry,
                     showTemplate = showTemplateState.value,
                     onTemplateToggle = {
                         showTemplateState.value = it
@@ -339,6 +344,7 @@ private fun CharacterContent(
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
     wordEntry: WordEntry?,
+    hskEntry: HskEntry?,
     showTemplate: Boolean,
     onTemplateToggle: (Boolean) -> Unit,
     calligraphyDemoState: CalligraphyDemoState,
@@ -351,9 +357,17 @@ private fun CharacterContent(
     modifier: Modifier = Modifier,
 ) {
     var showWordInfo by rememberSaveable(definition.symbol) { mutableStateOf(false) }
+    var showHskBadge by rememberSaveable(definition.symbol) { mutableStateOf(true) }
     val ttsController = rememberTextToSpeechController()
     if (wordEntry == null && showWordInfo) {
         showWordInfo = false
+    }
+    LaunchedEffect(definition.symbol, hskEntry) {
+        showHskBadge = hskEntry != null
+        if (hskEntry != null) {
+            kotlinx.coroutines.delay(3500)
+            showHskBadge = false
+        }
     }
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -386,6 +400,8 @@ private fun CharacterContent(
             userStrokeColor = strokeColor,
             showTemplate = showTemplate,
             calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
+             hskEntry = hskEntry,
+             showHskBadge = showHskBadge,
             currentColorOption = strokeColorOption,
             onGridModeChange = { gridState.value = it.ordinal },
             onStrokeColorChange = { colorState.value = it.ordinal },
@@ -487,6 +503,8 @@ private fun CharacterCanvas(
     userStrokeColor: Color,
     showTemplate: Boolean,
     calligraphyDemoProgress: List<Float>,
+    hskEntry: HskEntry?,
+    showHskBadge: Boolean,
     currentColorOption: StrokeColorOption,
     onGridModeChange: (PracticeGrid) -> Unit,
     onStrokeColorChange: (StrokeColorOption) -> Unit,
@@ -621,6 +639,14 @@ private fun CharacterCanvas(
                 buttonSize = 36.dp,
             )
         }
+        if (hskEntry != null && showHskBadge) {
+            HskBadge(
+                entry = hskEntry,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp),
+            )
+        }
     }
 }
 @Composable
@@ -698,6 +724,40 @@ private fun WordInfoPreview(
             )
             Text(
                 text = entry.explanation.condense(40),
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HskBadge(
+    entry: HskEntry,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = Color(0xFF1E1E1E).copy(alpha = 0.8f),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "HSK ${entry.level}",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            val highlight = entry.examples
+                .split(' ', '，', '、', '；')
+                .firstOrNull { it.isNotBlank() }
+                ?: entry.symbol
+            Text(
+                text = highlight,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
