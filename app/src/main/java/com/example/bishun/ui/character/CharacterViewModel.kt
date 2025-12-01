@@ -92,6 +92,10 @@ class CharacterViewModel(
         if (_demoState.value.isPlaying) return
         _demoState.value = DemoState(isPlaying = true, loop = loop)
         viewModelScope.launch {
+            if (_practiceState.value.isActive || _practiceState.value.completedStrokes.isNotEmpty()) {
+                clearUserStrokes()
+                resetPracticeState(definition)
+            }
             do {
                 state.run(CharacterActions.hideCharacter(CharacterLayer.MAIN, definition, DEMO_FADE_DURATION))
                 state.run(CharacterActions.prepareLayerForAnimation(CharacterLayer.MAIN, definition))
@@ -136,6 +140,7 @@ class CharacterViewModel(
         val state = renderState ?: return
         viewModelScope.launch {
             stopDemo()
+            state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, PRACTICE_FADE_DURATION))
             clearUserStrokes()
             state.run(QuizActions.startQuiz(definition, PRACTICE_FADE_DURATION, 0))
             _practiceState.value = PracticeState(
