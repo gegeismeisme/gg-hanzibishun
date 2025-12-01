@@ -1098,11 +1098,11 @@ private fun ProfileActionDialog(
             )
         }
         ProfileMenuAction.FEEDBACK -> {
-                FeedbackDialog(
-                    prefs = userPreferences,
-                    lastSubmittedAt = lastFeedbackTimestamp,
-                    onDraftChange = onFeedbackDraftChange,
-                    onSubmit = onFeedbackSubmit,
+            FeedbackDialog(
+                prefs = userPreferences,
+                lastSubmittedAt = lastFeedbackTimestamp,
+                onDraftChange = onFeedbackDraftChange,
+                onSubmit = onFeedbackSubmit,
                 onDismiss = onDismiss,
             )
         }
