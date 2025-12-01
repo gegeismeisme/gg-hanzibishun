@@ -190,7 +190,6 @@ fun CharacterScreen(
     hskProgress: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
     userPreferences: UserPreferences,
-    wordEntry: WordEntry?,
     feedbackSubmission: FeedbackSubmission?,
     onLoadCharacter: (String) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -1026,6 +1025,7 @@ private fun ProfileActionDialog(
     hskProgress: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
     userPreferences: UserPreferences,
+    wordEntry: WordEntry?,
     onJumpToChar: (String) -> Unit,
     onAnalyticsChange: (Boolean) -> Unit,
     onCrashReportsChange: (Boolean) -> Unit,
@@ -1066,6 +1066,22 @@ private fun ProfileActionDialog(
         }
         ProfileMenuAction.HELP -> {
             HelpDialog(onDismiss = onDismiss)
+        }
+        ProfileMenuAction.DICT -> {
+            val entry = wordEntry
+            if (entry != null) {
+                val ttsController = rememberTextToSpeechController()
+                WordInfoDialog(entry = entry, onDismiss = onDismiss, ttsController = ttsController)
+            } else {
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { Text("Dictionary") },
+                    text = { Text("No dictionary data available for this character yet.") },
+                    confirmButton = {
+                        TextButton(onClick = onDismiss) { Text("Close") }
+                    },
+                )
+            }
         }
         ProfileMenuAction.PRIVACY -> {
             PrivacyDialog(
