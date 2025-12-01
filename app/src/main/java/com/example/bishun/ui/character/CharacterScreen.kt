@@ -145,6 +145,7 @@ fun CharacterRoute(
     val practiceHistory by viewModel.practiceHistory.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
     val feedbackSubmission by viewModel.feedbackSubmission.collectAsState()
+    val lastFeedbackTimestamp by viewModel.lastFeedbackSubmission.collectAsState()
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -157,6 +158,7 @@ fun CharacterRoute(
         hskProgress = hskProgress,
         practiceHistory = practiceHistory,
         userPreferences = userPreferences,
+        lastFeedbackTimestamp = lastFeedbackTimestamp,
         feedbackSubmission = feedbackSubmission,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
@@ -190,6 +192,7 @@ fun CharacterScreen(
     hskProgress: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
     userPreferences: UserPreferences,
+    lastFeedbackTimestamp: Long?,
     feedbackSubmission: FeedbackSubmission?,
     onLoadCharacter: (String) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -314,6 +317,7 @@ fun CharacterScreen(
                 practiceHistory = practiceHistory,
                 userPreferences = userPreferences,
                 wordEntry = wordEntry,
+                lastFeedbackTimestamp = lastFeedbackTimestamp,
                 onJumpToChar = onLoadCharacter,
                 onAnalyticsChange = onAnalyticsOptInChange,
                 onCrashReportsChange = onCrashOptInChange,
@@ -1026,6 +1030,7 @@ private fun ProfileActionDialog(
     practiceHistory: List<PracticeHistoryEntry>,
     userPreferences: UserPreferences,
     wordEntry: WordEntry?,
+    lastFeedbackTimestamp: Long?,
     onJumpToChar: (String) -> Unit,
     onAnalyticsChange: (Boolean) -> Unit,
     onCrashReportsChange: (Boolean) -> Unit,
@@ -1093,10 +1098,11 @@ private fun ProfileActionDialog(
             )
         }
         ProfileMenuAction.FEEDBACK -> {
-            FeedbackDialog(
-                prefs = userPreferences,
-                onDraftChange = onFeedbackDraftChange,
-                onSubmit = onFeedbackSubmit,
+                FeedbackDialog(
+                    prefs = userPreferences,
+                    lastSubmittedAt = lastFeedbackTimestamp,
+                    onDraftChange = onFeedbackDraftChange,
+                    onSubmit = onFeedbackSubmit,
                 onDismiss = onDismiss,
             )
         }
@@ -1495,6 +1501,7 @@ private fun PrivacyToggleRow(
 @Composable
 private fun FeedbackDialog(
     prefs: UserPreferences,
+    lastSubmittedAt: Long?,
     onDraftChange: (String, String, String) -> Unit,
     onSubmit: (String, String, String) -> Unit,
     onDismiss: () -> Unit,
@@ -1524,6 +1531,13 @@ private fun FeedbackDialog(
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (lastSubmittedAt != null) {
+                    Text(
+                        text = "Last sent: ${formatHistoryTimestamp(lastSubmittedAt)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (submitted) {
                     Text(
                         text = "We stored your note locally. The next release will bundle it with diagnostic exports so nothing gets lost.",

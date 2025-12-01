@@ -73,6 +73,8 @@ class CharacterViewModel(
     val practiceHistory: StateFlow<List<PracticeHistoryEntry>> = _practiceHistory.asStateFlow()
     private val _feedbackSubmission = MutableStateFlow<FeedbackSubmission?>(null)
     val feedbackSubmission: StateFlow<FeedbackSubmission?> = _feedbackSubmission.asStateFlow()
+    private val _lastFeedbackSubmission = MutableStateFlow<Long?>(null)
+    val lastFeedbackSubmission: StateFlow<Long?> = _lastFeedbackSubmission.asStateFlow()
     private val _userPreferences = MutableStateFlow(UserPreferences())
     val userPreferences: StateFlow<UserPreferences> = _userPreferences.asStateFlow()
 
@@ -86,6 +88,7 @@ class CharacterViewModel(
         observeHskProgress()
         observePracticeHistory()
         observeUserPreferences()
+        preloadLastFeedbackTimestamp()
         loadCharacter(DEFAULT_CHAR)
     }
 
@@ -352,12 +355,17 @@ class CharacterViewModel(
     fun submitFeedback(topic: String, message: String, contact: String) {
         viewModelScope.launch {
             userPreferencesStore.clearFeedbackDraft()
+            val timestamp = System.currentTimeMillis()
+            val trimmedTopic = topic.trim()
+            val trimmedMessage = message.trim()
+            val trimmedContact = contact.trim()
             _feedbackSubmission.value = FeedbackSubmission(
-                topic = topic.trim(),
-                message = message.trim(),
-                contact = contact.trim(),
+                topic = trimmedTopic,
+                message = trimmedMessage,
+                contact = trimmedContact,
             )
-            logFeedbackToFile(topic, message, contact)
+            _lastFeedbackSubmission.value = timestamp
+            logFeedbackToFile(trimmedTopic, trimmedMessage, trimmedContact, timestamp)
         }
     }
 
@@ -365,15 +373,31 @@ class CharacterViewModel(
         _feedbackSubmission.value = null
     }
 
-    private suspend fun logFeedbackToFile(topic: String, message: String, contact: String) {
-        val file = File(appContext.filesDir, "feedback-log.txt")
-        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+    private fun preloadLastFeedbackTimestamp() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val file = File(appContext.filesDir, FEEDBACK_LOG_FILE)
+            if (!file.exists()) return@launch
+            val epochLine = file.readLines()
+                .asReversed()
+                .firstOrNull { it.startsWith("epoch=") }
+                ?: return@launch
+            val millis = epochLine.substringAfter("epoch=").toLongOrNull()
+            if (millis != null) {
+                _lastFeedbackSubmission.value = millis
+            }
+        }
+    }
+
+    private suspend fun logFeedbackToFile(topic: String, message: String, contact: String, timestamp: Long) {
+        val file = File(appContext.filesDir, FEEDBACK_LOG_FILE)
+        val readable = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
         val summary = buildString {
             appendLine("----")
-            appendLine("time=$timestamp")
-            appendLine("topic=${topic.trim()}")
-            appendLine("contact=${contact.trim()}")
-            appendLine("message=${message.trim()}")
+            appendLine("epoch=$timestamp")
+            appendLine("time=$readable")
+            appendLine("topic=$topic")
+            appendLine("contact=$contact")
+            appendLine("message=$message")
         }
         withContext(Dispatchers.IO) {
             file.appendText(summary)
@@ -484,6 +508,7 @@ class CharacterViewModel(
         private const val DEMO_FADE_DURATION = 250L
         private const val DEMO_REVEAL_DURATION = 120L
         private const val DEMO_LOOP_PAUSE = 600L
+        private const val FEEDBACK_LOG_FILE = "feedback-log.txt"
 
         fun factory(appContext: Context): ViewModelProvider.Factory {
             val applicationContext = appContext.applicationContext
