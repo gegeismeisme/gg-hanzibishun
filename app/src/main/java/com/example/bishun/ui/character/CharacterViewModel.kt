@@ -86,6 +86,10 @@ class CharacterViewModel(
         loadCharacter(_query.value)
     }
 
+    fun jumpToCharacter(symbol: String) {
+        loadCharacter(symbol)
+    }
+
     fun playDemo(loop: Boolean = false) {
         val definition = currentDefinition ?: return
         val state = renderState ?: return
@@ -279,11 +283,15 @@ class CharacterViewModel(
         viewModelScope.launch {
             hskProgressStore.completed.collect { completed ->
                 val entries = hskRepository.allEntries()
-                val levelMap = entries.groupBy { it.level }.mapValues { (_, items) ->
+                val perLevel = mutableMapOf<Int, HskLevelSummary>()
+                val nextTargets = mutableMapOf<Int, String?>()
+                entries.groupBy { it.level }.forEach { (level, items) ->
+                    val sorted = items.sortedBy { it.writingLevel ?: Int.MAX_VALUE }
                     val done = items.count { completed.contains(it.symbol) }
-                    HskLevelSummary(done, items.size)
+                    perLevel[level] = HskLevelSummary(done, items.size)
+                    nextTargets[level] = sorted.firstOrNull { !completed.contains(it.symbol) }?.symbol
                 }
-                _hskProgress.value = HskProgressSummary(levelMap)
+                _hskProgress.value = HskProgressSummary(perLevel, nextTargets)
             }
         }
     }
@@ -407,6 +415,7 @@ data class HskLevelSummary(
 
 data class HskProgressSummary(
     val perLevel: Map<Int, HskLevelSummary> = emptyMap(),
+    val nextTargets: Map<Int, String?> = emptyMap(),
 ) {
     val totalCompleted: Int get() = perLevel.values.sumOf { it.completed }
     val totalCharacters: Int get() = perLevel.values.sumOf { it.total }

@@ -150,6 +150,7 @@ fun CharacterRoute(
         onStrokeStart = viewModel::onPracticeStrokeStart,
         onStrokeMove = viewModel::onPracticeStrokeMove,
         onStrokeEnd = viewModel::onPracticeStrokeEnd,
+        onLoadCharacter = viewModel::jumpToCharacter,
     )
 }
 @Composable
@@ -162,6 +163,7 @@ fun CharacterScreen(
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
     hskProgress: HskProgressSummary,
+    onLoadCharacter: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onClearQuery: () -> Unit,
@@ -247,6 +249,7 @@ fun CharacterScreen(
             ProfileActionDialog(
                 action = action,
                 hskProgress = hskProgress,
+                onJumpToChar = onLoadCharacter,
                 onDismiss = { activeProfileAction = null },
             )
         }
@@ -950,24 +953,44 @@ private fun WordInfoStat(label: String, value: String) {
 private fun ProfileActionDialog(
     action: ProfileMenuAction,
     hskProgress: HskProgressSummary,
+    onJumpToChar: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val body: @Composable () -> Unit = when (action) {
+    when (action) {
+        ProfileMenuAction.COURSES -> {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text("HSK Courses") },
+                text = { CoursePlannerView(summary = hskProgress, onSelect = { symbol ->
+                    onDismiss()
+                    onJumpToChar(symbol)
+                }) },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) { Text("Close") }
+                },
+            )
+        }
         ProfileMenuAction.PROGRESS -> {
-            { HskProgressView(hskProgress) }
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text(action.label) },
+                text = { HskProgressView(hskProgress) },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) { Text("Close") }
+                },
+            )
         }
         else -> {
-            { Text(action.description) }
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text(action.label) },
+                text = { Text(action.description) },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) { Text("Close") }
+                },
+            )
         }
     }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(action.label) },
-        text = { body() },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
-        },
-    )
 }
 
 @Composable
@@ -988,6 +1011,41 @@ private fun HskProgressView(summary: HskProgressSummary) {
             ) {
                 Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
                 Text("${stats.completed}/${stats.total}")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CoursePlannerView(
+    summary: HskProgressSummary,
+    onSelect: (String) -> Unit,
+) {
+    if (summary.perLevel.isEmpty()) {
+        Text("Start practicing to unlock HSK courses.")
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Pick your next character:", style = MaterialTheme.typography.titleMedium)
+        summary.nextTargets.toSortedMap().forEach { (level, symbol) ->
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column {
+                    Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = symbol ?: "All characters complete",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                IconButton(
+                    onClick = { symbol?.let(onSelect) },
+                    enabled = symbol != null,
+                ) {
+                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "Load")
+                }
             }
         }
     }
