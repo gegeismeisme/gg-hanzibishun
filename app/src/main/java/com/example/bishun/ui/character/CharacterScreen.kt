@@ -38,6 +38,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Create
@@ -146,6 +148,7 @@ fun CharacterRoute(
     val hskEntry by viewModel.hskEntry.collectAsState()
     val hskProgress by viewModel.hskProgress.collectAsState()
     val practiceHistory by viewModel.practiceHistory.collectAsState()
+    val courseSession by viewModel.courseSession.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
     val feedbackSubmission by viewModel.feedbackSubmission.collectAsState()
     val lastFeedbackTimestamp by viewModel.lastFeedbackSubmission.collectAsState()
@@ -160,6 +163,7 @@ fun CharacterRoute(
         hskEntry = hskEntry,
         hskProgress = hskProgress,
         practiceHistory = practiceHistory,
+        courseSession = courseSession,
         userPreferences = userPreferences,
         lastFeedbackTimestamp = lastFeedbackTimestamp,
         feedbackSubmission = feedbackSubmission,
@@ -181,6 +185,9 @@ fun CharacterRoute(
         onFeedbackSubmit = viewModel::submitFeedback,
         onFeedbackHandled = viewModel::consumeFeedbackSubmission,
         onLoadFeedbackLog = { viewModel.readFeedbackLog() },
+        onCourseSelect = viewModel::startCourse,
+        onCourseNext = viewModel::goToNextCourseCharacter,
+        onCoursePrev = viewModel::goToPreviousCourseCharacter,
         onLoadCharacter = viewModel::jumpToCharacter,
     )
 }
@@ -195,6 +202,7 @@ fun CharacterScreen(
     hskEntry: HskEntry?,
     hskProgress: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
+    courseSession: CourseSession?,
     userPreferences: UserPreferences,
     lastFeedbackTimestamp: Long?,
     feedbackSubmission: FeedbackSubmission?,
@@ -217,6 +225,9 @@ fun CharacterScreen(
     onFeedbackSubmit: (String, String, String) -> Unit,
     onFeedbackHandled: () -> Unit,
     onLoadFeedbackLog: suspend () -> String,
+    onCourseSelect: (Int, String) -> Unit,
+    onCourseNext: () -> Unit,
+    onCoursePrev: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val showTemplateState = rememberSaveable { mutableStateOf(true) }
@@ -321,6 +332,7 @@ fun CharacterScreen(
                     definition = uiState.definition,
                     renderSnapshot = renderSnapshot,
                     practiceState = practiceState,
+                    courseSession = courseSession,
                     wordEntry = wordEntry,
                     hskEntry = hskEntry,
                     showTemplate = showTemplateState.value,
@@ -341,6 +353,8 @@ fun CharacterScreen(
                     onStrokeStart = onStrokeStart,
                     onStrokeMove = onStrokeMove,
                     onStrokeEnd = onStrokeEnd,
+                    onCourseNext = onCourseNext,
+                    onCoursePrev = onCoursePrev,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -354,6 +368,7 @@ fun CharacterScreen(
                 wordEntry = wordEntry,
                 lastFeedbackTimestamp = lastFeedbackTimestamp,
                 onShareLog = shareFeedbackLog,
+                onCourseSelect = onCourseSelect,
                 onJumpToChar = onLoadCharacter,
                 onAnalyticsChange = onAnalyticsOptInChange,
                 onCrashReportsChange = onCrashOptInChange,
@@ -475,6 +490,7 @@ private fun CharacterContent(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
+    courseSession: CourseSession?,
     isDemoPlaying: Boolean,
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
@@ -487,6 +503,8 @@ private fun CharacterContent(
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
+    onCourseNext: () -> Unit,
+    onCoursePrev: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showWordInfo by rememberSaveable(definition.symbol) { mutableStateOf(false) }
@@ -536,6 +554,7 @@ private fun CharacterContent(
             definition = definition,
             renderSnapshot = renderSnapshot,
             practiceState = practiceState,
+            courseSession = courseSession,
             isDemoPlaying = isDemoPlaying,
             gridMode = gridMode,
             userStrokeColor = strokeColor,
@@ -559,6 +578,8 @@ private fun CharacterContent(
             onStrokeEnd = onStrokeEnd,
             onStartPractice = onStartPractice,
             onRequestHint = onRequestHint,
+            onCourseNext = onCourseNext,
+            onCoursePrev = onCoursePrev,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = true),
@@ -651,6 +672,7 @@ private fun CharacterCanvas(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
+    courseSession: CourseSession?,
     isDemoPlaying: Boolean,
     gridMode: PracticeGrid,
     userStrokeColor: Color,
@@ -669,6 +691,8 @@ private fun CharacterCanvas(
     onStrokeEnd: () -> Unit,
     onStartPractice: () -> Unit,
     onRequestHint: () -> Unit,
+    onCourseNext: () -> Unit,
+    onCoursePrev: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val outlineColor = Color(0xFFD6D6D6)
@@ -770,20 +794,37 @@ private fun CharacterCanvas(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            val boardButtonSize = 32.dp
             IconActionButton(
                 icon = Icons.Filled.Create,
                 description = "Start practice",
                 onClick = onStartPractice,
                 enabled = !practiceState.isActive && !isDemoPlaying,
-                buttonSize = 36.dp,
+                buttonSize = boardButtonSize,
             )
             IconActionButton(
                 icon = Icons.Filled.Info,
                 description = "Hint",
                 onClick = onRequestHint,
                 enabled = practiceState.isActive && !isDemoPlaying,
-                buttonSize = 36.dp,
+                buttonSize = boardButtonSize,
             )
+            courseSession?.let { session ->
+                IconActionButton(
+                    icon = Icons.Filled.ChevronLeft,
+                    description = "Previous word",
+                    onClick = onCoursePrev,
+                    enabled = session.hasPrevious,
+                    buttonSize = boardButtonSize,
+                )
+                IconActionButton(
+                    icon = Icons.Filled.ChevronRight,
+                    description = "Next word",
+                    onClick = onCourseNext,
+                    enabled = session.hasNext,
+                    buttonSize = boardButtonSize,
+                )
+            }
             CanvasSettingsMenu(
                 currentGrid = gridMode,
                 currentColor = currentColorOption,
@@ -791,14 +832,14 @@ private fun CharacterCanvas(
                 onGridChange = onGridModeChange,
                 onColorChange = onStrokeColorChange,
                 onTemplateToggle = onTemplateToggle,
-                buttonSize = 36.dp,
+                buttonSize = boardButtonSize,
             )
             if (showHskIcon && hskEntry != null) {
                 IconActionButton(
                     icon = Icons.Filled.School,
                     description = "HSK info",
                     onClick = onHskInfoClick,
-                    buttonSize = 36.dp,
+                    buttonSize = boardButtonSize,
                 )
             }
         }
@@ -1076,6 +1117,7 @@ private fun ProfileActionDialog(
     wordEntry: WordEntry?,
     lastFeedbackTimestamp: Long?,
     onShareLog: () -> Unit,
+    onCourseSelect: (Int, String) -> Unit,
     onJumpToChar: (String) -> Unit,
     onAnalyticsChange: (Boolean) -> Unit,
     onCrashReportsChange: (Boolean) -> Unit,
@@ -1089,10 +1131,15 @@ private fun ProfileActionDialog(
             AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("HSK Courses") },
-                text = { CoursePlannerView(summary = hskProgress, onSelect = { symbol ->
-                    onDismiss()
-                    onJumpToChar(symbol)
-                }) },
+                text = {
+                    CoursePlannerView(
+                        summary = hskProgress,
+                        onSelect = { level, symbol ->
+                            onDismiss()
+                            onCourseSelect(level, symbol)
+                        },
+                    )
+                },
                 confirmButton = {
                     TextButton(onClick = onDismiss) { Text("Close") }
                 },
@@ -1287,7 +1334,7 @@ private fun PracticeHistoryRow(
 @Composable
 private fun CoursePlannerView(
     summary: HskProgressSummary,
-    onSelect: (String) -> Unit,
+    onSelect: (Int, String) -> Unit,
 ) {
     if (summary.perLevel.isEmpty()) {
         Text("Start practicing to unlock HSK courses.")
@@ -1314,7 +1361,7 @@ private fun CoursePlannerView(
                 level = level,
                 stats = stats,
                 nextSymbol = nextSymbol,
-                onSelect = onSelect,
+                onSelect = { symbol -> onSelect(level, symbol) },
             )
         }
     }
@@ -2130,6 +2177,35 @@ private fun DrawScope.drawLayer(
                 path = path,
                 color = baseColor.copy(alpha = baseColor.alpha * effectiveOpacity),
                 strokeWidth = strokeWidth,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CourseProgressBadge(
+    level: Int,
+    progressText: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "HSK $level",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = progressText,
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }

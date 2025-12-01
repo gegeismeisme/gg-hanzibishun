@@ -71,6 +71,8 @@ class CharacterViewModel(
     val hskProgress: StateFlow<HskProgressSummary> = _hskProgress.asStateFlow()
     private val _practiceHistory = MutableStateFlow<List<PracticeHistoryEntry>>(emptyList())
     val practiceHistory: StateFlow<List<PracticeHistoryEntry>> = _practiceHistory.asStateFlow()
+    private val _courseSession = MutableStateFlow<CourseSession?>(null)
+    val courseSession: StateFlow<CourseSession?> = _courseSession.asStateFlow()
     private val _feedbackSubmission = MutableStateFlow<FeedbackSubmission?>(null)
     val feedbackSubmission: StateFlow<FeedbackSubmission?> = _feedbackSubmission.asStateFlow()
     private val _lastFeedbackSubmission = MutableStateFlow<Long?>(null)
@@ -83,6 +85,7 @@ class CharacterViewModel(
     private var renderStateJob: Job? = null
     private var activeUserStroke: UserStroke? = null
     private val userStrokeIds = mutableListOf<Int>()
+    private var courseEntries: Map<Int, List<String>> = emptyMap()
 
     init {
         observeHskProgress()
@@ -112,6 +115,25 @@ class CharacterViewModel(
 
     fun jumpToCharacter(symbol: String) {
         loadCharacter(symbol)
+    }
+
+    fun startCourse(level: Int, symbol: String) {
+        val symbols = courseEntries[level] ?: return
+        if (symbols.isEmpty()) return
+        val targetSymbol = symbol.takeIf { symbols.contains(it) } ?: symbols.first()
+        val index = symbols.indexOf(targetSymbol).takeIf { it >= 0 } ?: 0
+        _courseSession.value = CourseSession(level = level, symbols = symbols, index = index)
+        if (currentDefinition?.symbol != targetSymbol) {
+            loadCharacter(targetSymbol)
+        }
+    }
+
+    fun goToNextCourseCharacter() {
+        navigateCourse(1)
+    }
+
+    fun goToPreviousCourseCharacter() {
+        navigateCourse(-1)
     }
 
     fun playDemo(loop: Boolean = false) {
@@ -249,6 +271,7 @@ class CharacterViewModel(
                     resetPracticeState(it)
                     loadWordInfo(it.symbol)
                     loadHskInfo(it.symbol)
+                    alignCourseSession(it.symbol)
                 },
                 onFailure = {
                     val message = it.message ?: "加载失败，请稍后再试"
@@ -307,6 +330,13 @@ class CharacterViewModel(
         viewModelScope.launch {
             hskProgressStore.completed.collect { completed ->
                 val entries = hskRepository.allEntries()
+                courseEntries = entries
+                    .groupBy { it.level }
+                    .mapValues { (_, items) ->
+                        items
+                            .sortedBy { it.writingLevel ?: Int.MAX_VALUE }
+                            .map { it.symbol }
+                    }
                 val perLevel = mutableMapOf<Int, HskLevelSummary>()
                 val nextTargets = mutableMapOf<Int, String?>()
                 entries.groupBy { it.level }.forEach { (level, items) ->
@@ -333,6 +363,24 @@ class CharacterViewModel(
             userPreferencesStore.data.collect { prefs ->
                 _userPreferences.value = prefs
             }
+        }
+    }
+
+    private fun navigateCourse(delta: Int) {
+        val session = _courseSession.value ?: return
+        val newIndex = (session.index + delta).coerceIn(0, session.symbols.size - 1)
+        if (newIndex == session.index) return
+        _courseSession.value = session.copy(index = newIndex)
+        loadCharacter(session.symbols[newIndex])
+    }
+
+    private fun alignCourseSession(symbol: String) {
+        val session = _courseSession.value ?: return
+        val index = session.symbols.indexOf(symbol)
+        if (index == -1) {
+            _courseSession.value = null
+        } else if (index != session.index) {
+            _courseSession.value = session.copy(index = index)
         }
     }
 
@@ -463,7 +511,21 @@ class CharacterViewModel(
                 )
             }
             state.run(QuizActions.highlightCompleteChar(definition, null, 600))
+            advanceCourseAfterCompletion()
         }
+    }
+
+    private fun advanceCourseAfterCompletion() {
+        val session = _courseSession.value ?: return
+        val symbol = currentDefinition?.symbol ?: return
+        if (session.symbols.getOrNull(session.index) != symbol) return
+        if (session.index >= session.symbols.lastIndex) {
+            _courseSession.value = null
+            return
+        }
+        val nextIndex = session.index + 1
+        _courseSession.value = session.copy(index = nextIndex)
+        loadCharacter(session.symbols[nextIndex])
     }
 
     private fun handleMistake() {
@@ -565,3 +627,14 @@ data class FeedbackSubmission(
     val message: String,
     val contact: String,
 )
+
+data class CourseSession(
+    val level: Int,
+    val symbols: List<String>,
+    val index: Int,
+) {
+    val progressText: String get() = "${(index + 1).coerceAtLeast(1)}/${symbols.size}"
+    val currentSymbol: String? get() = symbols.getOrNull(index)
+    val hasPrevious: Boolean get() = index > 0
+    val hasNext: Boolean get() = index < symbols.lastIndex
+}
