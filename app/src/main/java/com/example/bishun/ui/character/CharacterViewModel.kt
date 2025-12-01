@@ -11,6 +11,8 @@ import com.example.bishun.data.word.WordRepository
 import com.example.bishun.data.hsk.HskEntry
 import com.example.bishun.data.hsk.HskRepository
 import com.example.bishun.data.hsk.HskProgressStore
+import com.example.bishun.data.settings.UserPreferences
+import com.example.bishun.data.settings.UserPreferencesStore
 import com.example.bishun.hanzi.core.HanziCounter
 import com.example.bishun.hanzi.model.CharacterDefinition
 import com.example.bishun.hanzi.model.Point
@@ -35,6 +37,7 @@ class CharacterViewModel(
     private val wordRepository: WordRepository,
     private val hskRepository: HskRepository,
     private val hskProgressStore: HskProgressStore,
+    private val userPreferencesStore: UserPreferencesStore,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow(DEFAULT_CHAR)
@@ -56,6 +59,8 @@ class CharacterViewModel(
     val hskEntry: StateFlow<HskEntry?> = _hskEntry.asStateFlow()
     private val _hskProgress = MutableStateFlow(HskProgressSummary())
     val hskProgress: StateFlow<HskProgressSummary> = _hskProgress.asStateFlow()
+    private val _userPreferences = MutableStateFlow(UserPreferences())
+    val userPreferences: StateFlow<UserPreferences> = _userPreferences.asStateFlow()
 
     private var currentDefinition: CharacterDefinition? = null
     private var renderState: RenderState? = null
@@ -65,6 +70,7 @@ class CharacterViewModel(
 
     init {
         observeHskProgress()
+        observeUserPreferences()
         loadCharacter(DEFAULT_CHAR)
     }
 
@@ -296,6 +302,34 @@ class CharacterViewModel(
         }
     }
 
+    private fun observeUserPreferences() {
+        viewModelScope.launch {
+            userPreferencesStore.data.collect { prefs ->
+                _userPreferences.value = prefs
+            }
+        }
+    }
+
+    fun setAnalyticsOptIn(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesStore.setAnalyticsOptIn(enabled) }
+    }
+
+    fun setCrashReportsOptIn(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesStore.setCrashReportsOptIn(enabled) }
+    }
+
+    fun setNetworkPrefetch(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesStore.setNetworkPrefetch(enabled) }
+    }
+
+    fun saveFeedbackDraft(topic: String, message: String, contact: String) {
+        viewModelScope.launch { userPreferencesStore.saveFeedbackDraft(topic, message, contact) }
+    }
+
+    fun clearFeedbackDraft() {
+        viewModelScope.launch { userPreferencesStore.clearFeedbackDraft() }
+    }
+
     private suspend fun clearUserStrokes() {
         val ids = userStrokeIds.toList()
         if (ids.isNotEmpty()) {
@@ -399,7 +433,8 @@ class CharacterViewModel(
                     val wordRepo = WordRepository(applicationContext)
                     val hskRepo = HskRepository(applicationContext)
                     val progressStore = HskProgressStore(applicationContext)
-                    return CharacterViewModel(repo, wordRepo, hskRepo, progressStore) as T
+                    val prefsStore = UserPreferencesStore(applicationContext)
+                    return CharacterViewModel(repo, wordRepo, hskRepo, progressStore, prefsStore) as T
                 }
             }
         }

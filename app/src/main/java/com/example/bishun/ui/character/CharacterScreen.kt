@@ -104,6 +104,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bishun.R
 import com.example.bishun.data.word.WordEntry
 import com.example.bishun.data.hsk.HskEntry
+import com.example.bishun.data.settings.UserPreferences
 import com.example.bishun.hanzi.core.Positioner
 import com.example.bishun.hanzi.geometry.Geometry
 import com.example.bishun.hanzi.model.CharacterDefinition
@@ -134,6 +135,7 @@ fun CharacterRoute(
     val wordEntry by viewModel.wordEntry.collectAsState()
     val hskEntry by viewModel.hskEntry.collectAsState()
     val hskProgress by viewModel.hskProgress.collectAsState()
+    val userPreferences by viewModel.userPreferences.collectAsState()
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -144,6 +146,7 @@ fun CharacterRoute(
         wordEntry = wordEntry,
         hskEntry = hskEntry,
         hskProgress = hskProgress,
+        userPreferences = userPreferences,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
         onClearQuery = viewModel::clearQuery,
@@ -155,6 +158,11 @@ fun CharacterRoute(
         onStrokeStart = viewModel::onPracticeStrokeStart,
         onStrokeMove = viewModel::onPracticeStrokeMove,
         onStrokeEnd = viewModel::onPracticeStrokeEnd,
+        onAnalyticsOptInChange = viewModel::setAnalyticsOptIn,
+        onCrashOptInChange = viewModel::setCrashReportsOptIn,
+        onPrefetchChange = viewModel::setNetworkPrefetch,
+        onFeedbackDraftChange = viewModel::saveFeedbackDraft,
+        onFeedbackSubmit = viewModel::clearFeedbackDraft,
         onLoadCharacter = viewModel::jumpToCharacter,
     )
 }
@@ -168,6 +176,7 @@ fun CharacterScreen(
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
     hskProgress: HskProgressSummary,
+    userPreferences: UserPreferences,
     onLoadCharacter: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -180,6 +189,11 @@ fun CharacterScreen(
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
+    onAnalyticsOptInChange: (Boolean) -> Unit,
+    onCrashOptInChange: (Boolean) -> Unit,
+    onPrefetchChange: (Boolean) -> Unit,
+    onFeedbackDraftChange: (String, String, String) -> Unit,
+    onFeedbackSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val showTemplateState = rememberSaveable { mutableStateOf(true) }
@@ -254,7 +268,13 @@ fun CharacterScreen(
             ProfileActionDialog(
                 action = action,
                 hskProgress = hskProgress,
+                userPreferences = userPreferences,
                 onJumpToChar = onLoadCharacter,
+                onAnalyticsChange = onAnalyticsOptInChange,
+                onCrashReportsChange = onCrashOptInChange,
+                onPrefetchChange = onPrefetchChange,
+                onFeedbackDraftChange = onFeedbackDraftChange,
+                onFeedbackSubmit = onFeedbackSubmit,
                 onDismiss = { activeProfileAction = null },
             )
         }
@@ -958,7 +978,13 @@ private fun WordInfoStat(label: String, value: String) {
 private fun ProfileActionDialog(
     action: ProfileMenuAction,
     hskProgress: HskProgressSummary,
+    userPreferences: UserPreferences,
     onJumpToChar: (String) -> Unit,
+    onAnalyticsChange: (Boolean) -> Unit,
+    onCrashReportsChange: (Boolean) -> Unit,
+    onPrefetchChange: (Boolean) -> Unit,
+    onFeedbackDraftChange: (String, String, String) -> Unit,
+    onFeedbackSubmit: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (action) {
@@ -989,10 +1015,21 @@ private fun ProfileActionDialog(
             HelpDialog(onDismiss = onDismiss)
         }
         ProfileMenuAction.PRIVACY -> {
-            PrivacyDialog(onDismiss = onDismiss)
+            PrivacyDialog(
+                prefs = userPreferences,
+                onAnalyticsChange = onAnalyticsChange,
+                onCrashChange = onCrashReportsChange,
+                onPrefetchChange = onPrefetchChange,
+                onDismiss = onDismiss,
+            )
         }
         ProfileMenuAction.FEEDBACK -> {
-            FeedbackDialog(onDismiss = onDismiss)
+            FeedbackDialog(
+                prefs = userPreferences,
+                onDraftChange = onFeedbackDraftChange,
+                onSubmit = onFeedbackSubmit,
+                onDismiss = onDismiss,
+            )
         }
         else -> {
             AlertDialog(
@@ -1222,10 +1259,13 @@ private fun HelpTipCard(
 }
 
 @Composable
-private fun PrivacyDialog(onDismiss: () -> Unit) {
-    var analyticsAllowed by rememberSaveable { mutableStateOf(true) }
-    var crashReportsAllowed by rememberSaveable { mutableStateOf(true) }
-    var networkPrefetch by rememberSaveable { mutableStateOf(false) }
+private fun PrivacyDialog(
+    prefs: UserPreferences,
+    onAnalyticsChange: (Boolean) -> Unit,
+    onCrashChange: (Boolean) -> Unit,
+    onPrefetchChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Privacy preferences") },
@@ -1241,20 +1281,20 @@ private fun PrivacyDialog(onDismiss: () -> Unit) {
                 PrivacyToggleRow(
                     title = "Usage analytics",
                     description = "Anonymous counters for upcoming features.",
-                    checked = analyticsAllowed,
-                    onCheckedChange = { analyticsAllowed = it },
+                    checked = prefs.analyticsOptIn,
+                    onCheckedChange = onAnalyticsChange,
                 )
                 PrivacyToggleRow(
                     title = "Crash reports",
                     description = "Share lightweight logs if rendering fails.",
-                    checked = crashReportsAllowed,
-                    onCheckedChange = { crashReportsAllowed = it },
+                    checked = prefs.crashReportsOptIn,
+                    onCheckedChange = onCrashChange,
                 )
                 PrivacyToggleRow(
                     title = "Network prefetch",
                     description = "Allow Wi-Fi downloads of future packs.",
-                    checked = networkPrefetch,
-                    onCheckedChange = { networkPrefetch = it },
+                    checked = prefs.networkPrefetchEnabled,
+                    onCheckedChange = onPrefetchChange,
                 )
             }
         },
@@ -1292,13 +1332,27 @@ private fun PrivacyToggleRow(
 }
 
 @Composable
-private fun FeedbackDialog(onDismiss: () -> Unit) {
+private fun FeedbackDialog(
+    prefs: UserPreferences,
+    onDraftChange: (String, String, String) -> Unit,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     var topic by rememberSaveable { mutableStateOf("") }
     var message by rememberSaveable { mutableStateOf("") }
     var contact by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf(false) }
     val canSubmit = message.trim().length >= 6
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(prefs.feedbackTopic, prefs.feedbackMessage, prefs.feedbackContact) {
+        if (!submitted) {
+            topic = prefs.feedbackTopic
+            message = prefs.feedbackMessage
+            contact = prefs.feedbackContact
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (submitted) "Thanks!" else "Send feedback") },
@@ -1317,21 +1371,33 @@ private fun FeedbackDialog(onDismiss: () -> Unit) {
                 } else {
                     OutlinedTextField(
                         value = topic,
-                        onValueChange = { topic = it.take(60) },
+                        onValueChange = {
+                            val value = it.take(60)
+                            topic = value
+                            onDraftChange(value, message, contact)
+                        },
                         label = { Text("Topic") },
                         placeholder = { Text("Feature request, bug...") },
                         singleLine = true,
                     )
                     OutlinedTextField(
                         value = message,
-                        onValueChange = { message = it.take(600) },
+                        onValueChange = {
+                            val value = it.take(600)
+                            message = value
+                            onDraftChange(topic, value, contact)
+                        },
                         label = { Text("Details") },
                         placeholder = { Text("Describe the idea or issue") },
                         minLines = 4,
                     )
                     OutlinedTextField(
                         value = contact,
-                        onValueChange = { contact = it.take(80) },
+                        onValueChange = {
+                            val value = it.take(80)
+                            contact = value
+                            onDraftChange(topic, message, value)
+                        },
                         label = { Text("Contact (optional)") },
                         placeholder = { Text("Email or handle") },
                         singleLine = true,
@@ -1343,7 +1409,13 @@ private fun FeedbackDialog(onDismiss: () -> Unit) {
             if (submitted) {
                 TextButton(onClick = onDismiss) { Text("Close") }
             } else {
-                TextButton(onClick = { submitted = true }, enabled = canSubmit) {
+                TextButton(
+                    onClick = {
+                        onSubmit()
+                        submitted = true
+                    },
+                    enabled = canSubmit,
+                ) {
                     Text("Send")
                 }
             }
