@@ -48,11 +48,11 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -89,9 +89,10 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.consumePositionChange
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
@@ -278,10 +279,10 @@ fun CharacterScreen(
         if (canHandle) {
             runCatching { context.startActivity(chooser) }
                 .onFailure {
-                    Toast.makeText(context, "Unable to open email app.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Couldn't open email. Log saved locally—share from Profile later.", Toast.LENGTH_LONG).show()
                 }
         } else {
-            Toast.makeText(context, "No email app found.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "No email app installed. Log saved locally—share from Profile later.", Toast.LENGTH_LONG).show()
         }
         onFeedbackHandled()
     }
@@ -963,7 +964,7 @@ private fun WordInfoDialog(
                     modifier = Modifier.size(28.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.VolumeUp,
+                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Speaker",
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = speakingAlpha),
                     )
@@ -1195,7 +1196,7 @@ private fun HskProgressView(
                 }
             }
         }
-        Divider()
+        HorizontalDivider()
         PracticeHistorySection(history = practiceHistory, onJumpToChar = onJumpToChar)
     }
 }
@@ -2094,11 +2095,11 @@ private fun Modifier.practicePointerInput(
         }
         awaitEachGesture {
             val down = awaitFirstDown()
-            down.consumeDownChange()
+            down.consumeAllChanges()
             val charPoint = positioner.convertExternalPoint(down.position.toPoint())
             onStrokeStart(charPoint, down.position.toPoint())
             drag(down.id) { change ->
-                change.consumePositionChange()
+                change.consumeAllChanges()
                 val nextPoint = positioner.convertExternalPoint(change.position.toPoint())
                 onStrokeMove(nextPoint, change.position.toPoint())
             }
@@ -2127,6 +2128,12 @@ private fun DrawScope.drawLayer(
             )
         }
     }
+}
+
+@Suppress("DEPRECATION")
+private fun PointerInputChange.consumeAllChanges() {
+    consumeDownChange()
+    consumePositionChange()
 }
 private fun DrawScope.drawUserStroke(
     userStroke: UserStrokeRenderState,
