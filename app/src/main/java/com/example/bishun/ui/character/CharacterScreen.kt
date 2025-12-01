@@ -200,6 +200,8 @@ fun CharacterRoute(
         onCourseSelect = viewModel::startCourse,
         onCourseNext = viewModel::goToNextCourseCharacter,
         onCoursePrev = viewModel::goToPreviousCourseCharacter,
+        onCourseSkip = viewModel::skipCourseCharacter,
+        onCourseRestart = viewModel::restartCourseLevel,
         onCourseExit = viewModel::clearCourseSession,
         onLoadCharacter = viewModel::jumpToCharacter,
     )
@@ -247,6 +249,8 @@ fun CharacterScreen(
     onCourseSelect: (Int, String) -> Unit,
     onCourseNext: () -> Unit,
     onCoursePrev: () -> Unit,
+    onCourseSkip: () -> Unit,
+    onCourseRestart: () -> Unit,
     onCourseExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -373,13 +377,17 @@ fun CharacterScreen(
                     onRequestHint = onRequestHint,
                     onStrokeStart = onStrokeStart,
                     onStrokeMove = onStrokeMove,
-                    onStrokeEnd = onStrokeEnd,
-                    onGridModeChange = onGridModeChange,
+                onStrokeEnd = onStrokeEnd,
+                onGridModeChange = onGridModeChange,
                     onStrokeColorChange = onStrokeColorChange,
                     onCourseNext = onCourseNext,
                     onCoursePrev = onCoursePrev,
-                    modifier = Modifier.weight(1f),
-                )
+                    onCourseSkip = onCourseSkip,
+                    onCourseRestart = onCourseRestart,
+                    onResumeCourse = onLoadCharacter,
+                    onCourseExit = onCourseExit,
+                modifier = Modifier.weight(1f),
+            )
             }
         }
         activeProfileAction?.let { action ->
@@ -394,6 +402,15 @@ fun CharacterScreen(
                 wordEntry = wordEntry,
                 lastFeedbackTimestamp = lastFeedbackTimestamp,
                 onShareLog = shareFeedbackLog,
+                onResumeCourse = {
+                    val symbol = courseSession?.currentSymbol
+                    if (symbol != null) {
+                        onLoadCharacter(symbol)
+                    }
+                },
+                onExitCourse = onCourseExit,
+                onSkipCourse = onCourseSkip,
+                onRestartCourse = onCourseRestart,
                 onCourseSelect = onCourseSelect,
                 onJumpToChar = onLoadCharacter,
                 onAnalyticsChange = onAnalyticsOptInChange,
@@ -534,6 +551,10 @@ private fun CharacterContent(
     onStrokeColorChange: (StrokeColorOption) -> Unit,
     onCourseNext: () -> Unit,
     onCoursePrev: () -> Unit,
+    onCourseSkip: () -> Unit,
+    onCourseRestart: () -> Unit,
+    onResumeCourse: (String) -> Unit,
+    onCourseExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showWordInfo by rememberSaveable(definition.symbol) { mutableStateOf(false) }
@@ -562,6 +583,16 @@ private fun CharacterContent(
             .fillMaxWidth()
             .fillMaxHeight(),
     ) {
+        courseSession?.currentSymbol?.let { symbol ->
+            CourseResumeCard(
+                session = courseSession,
+                onResume = { onResumeCourse(symbol) },
+                onExit = onCourseExit,
+                onSkip = onCourseSkip,
+                onRestart = onCourseRestart,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         CharacterInfoPanel(
             definition = definition,
             wordEntry = wordEntry,
@@ -699,14 +730,6 @@ private fun DemoControlRow(
                 buttonSize = 36.dp,
             )
         }
-    }
-    courseSession?.currentSymbol?.let { currentSymbol ->
-        CourseResumeCard(
-            session = courseSession,
-            onResume = { onLoadCharacter(currentSymbol) },
-            onExit = onCourseExit,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 @Composable
@@ -1158,6 +1181,10 @@ private fun ProfileActionDialog(
     courseCatalog: Map<Int, List<String>>,
     completedSymbols: Set<String>,
     activeSession: CourseSession?,
+    onResumeCourse: () -> Unit,
+    onExitCourse: () -> Unit,
+    onSkipCourse: () -> Unit,
+    onRestartCourse: () -> Unit,
     userPreferences: UserPreferences,
     wordEntry: WordEntry?,
     lastFeedbackTimestamp: Long?,
@@ -1177,16 +1204,31 @@ private fun ProfileActionDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("HSK Courses") },
                 text = {
-                    CoursePlannerView(
-                        summary = hskProgress,
-                        catalog = courseCatalog,
-                        completedSymbols = completedSymbols,
-                        activeSession = activeSession,
-                        onSelect = { level, symbol ->
-                            onDismiss()
-                            onCourseSelect(level, symbol)
-                        },
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        activeSession?.let { session ->
+                            CourseResumeCard(
+                                session = session,
+                                onResume = {
+                                    onDismiss()
+                                    onResumeCourse()
+                                },
+                                onExit = onExitCourse,
+                                onSkip = onSkipCourse,
+                                onRestart = onRestartCourse,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        CoursePlannerView(
+                            summary = hskProgress,
+                            catalog = courseCatalog,
+                            completedSymbols = completedSymbols,
+                            activeSession = activeSession,
+                            onSelect = { level, symbol ->
+                                onDismiss()
+                                onCourseSelect(level, symbol)
+                            },
+                        )
+                    }
                 },
                 confirmButton = {
                     TextButton(onClick = onDismiss) { Text("Close") }
@@ -2027,6 +2069,8 @@ private fun CourseResumeCard(
     session: CourseSession,
     onResume: () -> Unit,
     onExit: () -> Unit,
+    onSkip: (() -> Unit)? = null,
+    onRestart: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -2053,6 +2097,12 @@ private fun CourseResumeCard(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                onRestart?.let {
+                    TextButton(onClick = it) { Text("Restart") }
+                }
+                onSkip?.let {
+                    TextButton(onClick = it) { Text("Skip") }
+                }
                 TextButton(onClick = onExit) { Text("Exit") }
                 TextButton(onClick = onResume) { Text("Resume") }
             }

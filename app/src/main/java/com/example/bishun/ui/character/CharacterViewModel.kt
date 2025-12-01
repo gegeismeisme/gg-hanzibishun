@@ -143,6 +143,19 @@ class CharacterViewModel(
         navigateCourse(-1)
     }
 
+    fun skipCourseCharacter() {
+        navigateCourse(1)
+    }
+
+    fun restartCourseLevel() {
+        val session = _courseSession.value ?: return
+        if (session.symbols.isEmpty()) return
+        _courseSession.value = session.copy(index = 0)
+        val symbol = session.symbols.first()
+        viewModelScope.launch { userPreferencesStore.saveCourseSession(session.level, symbol) }
+        loadCharacter(symbol)
+    }
+
     fun playDemo(loop: Boolean = false) {
         val definition = currentDefinition ?: return
         val state = renderState ?: return
