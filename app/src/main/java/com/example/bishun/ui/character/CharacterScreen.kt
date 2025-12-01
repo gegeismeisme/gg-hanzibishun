@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -104,7 +105,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bishun.R
 import com.example.bishun.data.word.WordEntry
 import com.example.bishun.data.hsk.HskEntry
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import com.example.bishun.data.settings.UserPreferences
+import com.example.bishun.data.history.PracticeHistoryEntry
 import com.example.bishun.hanzi.core.Positioner
 import com.example.bishun.hanzi.geometry.Geometry
 import com.example.bishun.hanzi.model.CharacterDefinition
@@ -119,6 +124,8 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlin.math.max
 import kotlin.math.min
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 @Composable
 fun CharacterRoute(
@@ -135,7 +142,9 @@ fun CharacterRoute(
     val wordEntry by viewModel.wordEntry.collectAsState()
     val hskEntry by viewModel.hskEntry.collectAsState()
     val hskProgress by viewModel.hskProgress.collectAsState()
+    val practiceHistory by viewModel.practiceHistory.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
+    val feedbackSubmission by viewModel.feedbackSubmission.collectAsState()
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -146,7 +155,9 @@ fun CharacterRoute(
         wordEntry = wordEntry,
         hskEntry = hskEntry,
         hskProgress = hskProgress,
+        practiceHistory = practiceHistory,
         userPreferences = userPreferences,
+        feedbackSubmission = feedbackSubmission,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
         onClearQuery = viewModel::clearQuery,
@@ -162,7 +173,8 @@ fun CharacterRoute(
         onCrashOptInChange = viewModel::setCrashReportsOptIn,
         onPrefetchChange = viewModel::setNetworkPrefetch,
         onFeedbackDraftChange = viewModel::saveFeedbackDraft,
-        onFeedbackSubmit = viewModel::clearFeedbackDraft,
+        onFeedbackSubmit = viewModel::submitFeedback,
+        onFeedbackHandled = viewModel::consumeFeedbackSubmission,
         onLoadCharacter = viewModel::jumpToCharacter,
     )
 }
@@ -176,7 +188,10 @@ fun CharacterScreen(
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
     hskProgress: HskProgressSummary,
+    practiceHistory: List<PracticeHistoryEntry>,
     userPreferences: UserPreferences,
+    wordEntry: WordEntry?,
+    feedbackSubmission: FeedbackSubmission?,
     onLoadCharacter: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -193,7 +208,8 @@ fun CharacterScreen(
     onCrashOptInChange: (Boolean) -> Unit,
     onPrefetchChange: (Boolean) -> Unit,
     onFeedbackDraftChange: (String, String, String) -> Unit,
-    onFeedbackSubmit: () -> Unit,
+    onFeedbackSubmit: (String, String, String) -> Unit,
+    onFeedbackHandled: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val showTemplateState = rememberSaveable { mutableStateOf(true) }
@@ -210,6 +226,34 @@ fun CharacterScreen(
     val useCalligraphyDemo = showTemplateState.value && calligraphyDemoController != null
     val playCalligraphyDemo: (Boolean) -> Unit = calligraphyDemoController?.play ?: {}
     val stopCalligraphyDemo: () -> Unit = calligraphyDemoController?.stop ?: {}
+    val context = LocalContext.current
+    LaunchedEffect(feedbackSubmission) {
+        val submission = feedbackSubmission ?: return@LaunchedEffect
+        val subject = if (submission.topic.isNotBlank()) {
+            "Hanzi Stroke Order feedback: ${submission.topic}"
+        } else {
+            "Hanzi Stroke Order feedback"
+        }
+        val contactLine = submission.contact.takeIf { it.isNotBlank() }?.let { "\n\nContact: $it" } ?: ""
+        val body = submission.message.ifBlank { "(No message)" } + contactLine
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(SUPPORT_EMAIL))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+        }
+        val chooser = Intent.createChooser(intent, "Send feedback")
+        val canHandle = intent.resolveActivity(context.packageManager) != null
+        if (canHandle) {
+            runCatching { context.startActivity(chooser) }
+                .onFailure {
+                    Toast.makeText(context, "Unable to open email app.", Toast.LENGTH_LONG).show()
+                }
+        } else {
+            Toast.makeText(context, "No email app found.", Toast.LENGTH_LONG).show()
+        }
+        onFeedbackHandled()
+    }
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -268,7 +312,9 @@ fun CharacterScreen(
             ProfileActionDialog(
                 action = action,
                 hskProgress = hskProgress,
+                practiceHistory = practiceHistory,
                 userPreferences = userPreferences,
+                wordEntry = wordEntry,
                 onJumpToChar = onLoadCharacter,
                 onAnalyticsChange = onAnalyticsOptInChange,
                 onCrashReportsChange = onCrashOptInChange,
@@ -978,13 +1024,14 @@ private fun WordInfoStat(label: String, value: String) {
 private fun ProfileActionDialog(
     action: ProfileMenuAction,
     hskProgress: HskProgressSummary,
+    practiceHistory: List<PracticeHistoryEntry>,
     userPreferences: UserPreferences,
     onJumpToChar: (String) -> Unit,
     onAnalyticsChange: (Boolean) -> Unit,
     onCrashReportsChange: (Boolean) -> Unit,
     onPrefetchChange: (Boolean) -> Unit,
     onFeedbackDraftChange: (String, String, String) -> Unit,
-    onFeedbackSubmit: () -> Unit,
+    onFeedbackSubmit: (String, String, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (action) {
@@ -1005,7 +1052,13 @@ private fun ProfileActionDialog(
             AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text(action.label) },
-                text = { HskProgressView(hskProgress) },
+                text = {
+                    HskProgressView(
+                        summary = hskProgress,
+                        practiceHistory = practiceHistory,
+                        onJumpToChar = onJumpToChar,
+                    )
+                },
                 confirmButton = {
                     TextButton(onClick = onDismiss) { Text("Close") }
                 },
@@ -1045,25 +1098,117 @@ private fun ProfileActionDialog(
 }
 
 @Composable
-private fun HskProgressView(summary: HskProgressSummary) {
-    if (summary.perLevel.isEmpty()) {
-        Text("Practice characters to start tracking HSK progress.")
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Learned ${summary.totalCompleted}/${summary.totalCharacters}",
-            style = MaterialTheme.typography.titleMedium,
-        )
-        summary.perLevel.toSortedMap().forEach { (level, stats) ->
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
-                Text("${stats.completed}/${stats.total}")
+private fun HskProgressView(
+    summary: HskProgressSummary,
+    practiceHistory: List<PracticeHistoryEntry>,
+    onJumpToChar: (String) -> Unit,
+) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 420.dp)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (summary.perLevel.isEmpty()) {
+            Text("Practice characters to start tracking HSK progress.")
+        } else {
+            Text(
+                text = "Learned ${summary.totalCompleted}/${summary.totalCharacters}",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            summary.perLevel.toSortedMap().forEach { (level, stats) ->
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
+                    Text("${stats.completed}/${stats.total}")
+                }
             }
         }
+        Divider()
+        PracticeHistorySection(history = practiceHistory, onJumpToChar = onJumpToChar)
+    }
+}
+
+@Composable
+private fun PracticeHistorySection(
+    history: List<PracticeHistoryEntry>,
+    onJumpToChar: (String) -> Unit,
+) {
+    Text("Recent practice", style = MaterialTheme.typography.titleMedium)
+    if (history.isEmpty()) {
+        Text(
+            text = "Start a practice session to build your timeline.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    history.asReversed().take(12).forEach { entry ->
+        PracticeHistoryRow(entry = entry, onJumpToChar = onJumpToChar)
+    }
+}
+
+@Composable
+private fun PracticeHistoryRow(
+    entry: PracticeHistoryEntry,
+    onJumpToChar: (String) -> Unit,
+) {
+    val timeLabel = remember(entry.timestamp) { formatHistoryTimestamp(entry.timestamp) }
+    val mistakesLabel = if (entry.mistakes == 0) {
+        "Perfect run"
+    } else {
+        "${entry.mistakes} mistakes"
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                tonalElevation = 2.dp,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = entry.symbol,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontFamily = KaishuFontFamily,
+                    )
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = timeLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "${entry.totalStrokes} strokes • $mistakesLabel",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+        IconActionButton(
+            icon = Icons.Filled.PlayArrow,
+            description = "Load ${entry.symbol}",
+            onClick = { onJumpToChar(entry.symbol) },
+            buttonSize = 36.dp,
+        )
     }
 }
 
@@ -1335,7 +1480,7 @@ private fun PrivacyToggleRow(
 private fun FeedbackDialog(
     prefs: UserPreferences,
     onDraftChange: (String, String, String) -> Unit,
-    onSubmit: () -> Unit,
+    onSubmit: (String, String, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var topic by rememberSaveable { mutableStateOf("") }
@@ -1411,7 +1556,7 @@ private fun FeedbackDialog(
             } else {
                 TextButton(
                     onClick = {
-                        onSubmit()
+                        onSubmit(topic, message, contact)
                         submitted = true
                     },
                     enabled = canSubmit,
@@ -1480,6 +1625,17 @@ private fun String.condense(maxChars: Int): String {
 }
 
 private fun String.normalizeWhitespace(): String = replace("\\s+".toRegex(), " ").trim()
+
+private fun formatHistoryTimestamp(timestamp: Long): String {
+    return try {
+        val formatter = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+        formatter.format(Date(timestamp))
+    } catch (_: Exception) {
+        "-"
+    }
+}
+
+private const val SUPPORT_EMAIL = "qq260316514@gmail.com"
 private data class CalligraphyDemoState(
     val isPlaying: Boolean = false,
     val strokeProgress: List<Float> = emptyList(),

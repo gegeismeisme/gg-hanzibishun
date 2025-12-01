@@ -11,6 +11,8 @@ import com.example.bishun.data.word.WordRepository
 import com.example.bishun.data.hsk.HskEntry
 import com.example.bishun.data.hsk.HskRepository
 import com.example.bishun.data.hsk.HskProgressStore
+import com.example.bishun.data.history.PracticeHistoryEntry
+import com.example.bishun.data.history.PracticeHistoryStore
 import com.example.bishun.data.settings.UserPreferences
 import com.example.bishun.data.settings.UserPreferencesStore
 import com.example.bishun.hanzi.core.HanziCounter
@@ -37,6 +39,7 @@ class CharacterViewModel(
     private val wordRepository: WordRepository,
     private val hskRepository: HskRepository,
     private val hskProgressStore: HskProgressStore,
+    private val practiceHistoryStore: PracticeHistoryStore,
     private val userPreferencesStore: UserPreferencesStore,
 ) : ViewModel() {
 
@@ -59,6 +62,10 @@ class CharacterViewModel(
     val hskEntry: StateFlow<HskEntry?> = _hskEntry.asStateFlow()
     private val _hskProgress = MutableStateFlow(HskProgressSummary())
     val hskProgress: StateFlow<HskProgressSummary> = _hskProgress.asStateFlow()
+    private val _practiceHistory = MutableStateFlow<List<PracticeHistoryEntry>>(emptyList())
+    val practiceHistory: StateFlow<List<PracticeHistoryEntry>> = _practiceHistory.asStateFlow()
+    private val _feedbackSubmission = MutableStateFlow<FeedbackSubmission?>(null)
+    val feedbackSubmission: StateFlow<FeedbackSubmission?> = _feedbackSubmission.asStateFlow()
     private val _userPreferences = MutableStateFlow(UserPreferences())
     val userPreferences: StateFlow<UserPreferences> = _userPreferences.asStateFlow()
 
@@ -70,6 +77,7 @@ class CharacterViewModel(
 
     init {
         observeHskProgress()
+        observePracticeHistory()
         observeUserPreferences()
         loadCharacter(DEFAULT_CHAR)
     }
@@ -302,6 +310,14 @@ class CharacterViewModel(
         }
     }
 
+    private fun observePracticeHistory() {
+        viewModelScope.launch {
+            practiceHistoryStore.history.collect { entries ->
+                _practiceHistory.value = entries
+            }
+        }
+    }
+
     private fun observeUserPreferences() {
         viewModelScope.launch {
             userPreferencesStore.data.collect { prefs ->
@@ -326,8 +342,19 @@ class CharacterViewModel(
         viewModelScope.launch { userPreferencesStore.saveFeedbackDraft(topic, message, contact) }
     }
 
-    fun clearFeedbackDraft() {
-        viewModelScope.launch { userPreferencesStore.clearFeedbackDraft() }
+    fun submitFeedback(topic: String, message: String, contact: String) {
+        viewModelScope.launch {
+            userPreferencesStore.clearFeedbackDraft()
+            _feedbackSubmission.value = FeedbackSubmission(
+                topic = topic.trim(),
+                message = message.trim(),
+                contact = contact.trim(),
+            )
+        }
+    }
+
+    fun consumeFeedbackSubmission() {
+        _feedbackSubmission.value = null
     }
 
     private suspend fun clearUserStrokes() {
@@ -367,7 +394,18 @@ class CharacterViewModel(
             completedStrokes = practice.completedStrokes + strokeIndex,
         )
         if (complete) {
-            viewModelScope.launch { hskProgressStore.add(definition.symbol) }
+            viewModelScope.launch {
+                hskProgressStore.add(definition.symbol)
+                practiceHistoryStore.record(
+                    PracticeHistoryEntry(
+                        symbol = definition.symbol,
+                        timestamp = System.currentTimeMillis(),
+                        totalStrokes = definition.strokeCount,
+                        mistakes = practice.totalMistakes,
+                        completed = true,
+                    ),
+                )
+            }
             state.run(QuizActions.highlightCompleteChar(definition, null, 600))
         }
     }
@@ -433,8 +471,16 @@ class CharacterViewModel(
                     val wordRepo = WordRepository(applicationContext)
                     val hskRepo = HskRepository(applicationContext)
                     val progressStore = HskProgressStore(applicationContext)
+                    val historyStore = PracticeHistoryStore(applicationContext)
                     val prefsStore = UserPreferencesStore(applicationContext)
-                    return CharacterViewModel(repo, wordRepo, hskRepo, progressStore, prefsStore) as T
+                    return CharacterViewModel(
+                        repo,
+                        wordRepo,
+                        hskRepo,
+                        progressStore,
+                        historyStore,
+                        prefsStore,
+                    ) as T
                 }
             }
         }
@@ -455,3 +501,9 @@ data class HskProgressSummary(
     val totalCompleted: Int get() = perLevel.values.sumOf { it.completed }
     val totalCharacters: Int get() = perLevel.values.sumOf { it.total }
 }
+
+data class FeedbackSubmission(
+    val topic: String,
+    val message: String,
+    val contact: String,
+)
