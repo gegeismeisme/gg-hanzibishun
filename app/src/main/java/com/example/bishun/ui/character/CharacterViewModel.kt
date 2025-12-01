@@ -373,6 +373,15 @@ class CharacterViewModel(
         _feedbackSubmission.value = null
     }
 
+    suspend fun readFeedbackLog(): String = withContext(Dispatchers.IO) {
+        val file = File(appContext.filesDir, FEEDBACK_LOG_FILE)
+        if (!file.exists()) {
+            ""
+        } else {
+            file.readText().trim()
+        }
+    }
+
     private fun preloadLastFeedbackTimestamp() {
         viewModelScope.launch(Dispatchers.IO) {
             val file = File(appContext.filesDir, FEEDBACK_LOG_FILE)

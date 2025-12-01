@@ -71,6 +71,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -122,6 +123,7 @@ import com.example.bishun.hanzi.render.UserStrokeRenderState
 import com.example.bishun.ui.character.components.IconActionButton
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import java.text.SimpleDateFormat
@@ -177,6 +179,7 @@ fun CharacterRoute(
         onFeedbackDraftChange = viewModel::saveFeedbackDraft,
         onFeedbackSubmit = viewModel::submitFeedback,
         onFeedbackHandled = viewModel::consumeFeedbackSubmission,
+        onLoadFeedbackLog = { viewModel.readFeedbackLog() },
         onLoadCharacter = viewModel::jumpToCharacter,
     )
 }
@@ -212,6 +215,7 @@ fun CharacterScreen(
     onFeedbackDraftChange: (String, String, String) -> Unit,
     onFeedbackSubmit: (String, String, String) -> Unit,
     onFeedbackHandled: () -> Unit,
+    onLoadFeedbackLog: suspend () -> String,
     modifier: Modifier = Modifier,
 ) {
     val showTemplateState = rememberSaveable { mutableStateOf(true) }
@@ -229,6 +233,31 @@ fun CharacterScreen(
     val playCalligraphyDemo: (Boolean) -> Unit = calligraphyDemoController?.play ?: {}
     val stopCalligraphyDemo: () -> Unit = calligraphyDemoController?.stop ?: {}
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val shareFeedbackLog: () -> Unit = {
+        coroutineScope.launch {
+            val logText = onLoadFeedbackLog().takeIf { it.isNotBlank() }
+            if (logText.isNullOrBlank()) {
+                Toast.makeText(context, "Feedback log is empty.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "Hanzi feedback log")
+                putExtra(Intent.EXTRA_TEXT, logText)
+            }
+            val chooser = Intent.createChooser(shareIntent, "Share feedback log")
+            val canHandle = shareIntent.resolveActivity(context.packageManager) != null
+            if (canHandle) {
+                runCatching { context.startActivity(chooser) }
+                    .onFailure {
+                        Toast.makeText(context, "Unable to share log.", Toast.LENGTH_LONG).show()
+                    }
+            } else {
+                Toast.makeText(context, "No apps available to share log.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     LaunchedEffect(feedbackSubmission) {
         val submission = feedbackSubmission ?: return@LaunchedEffect
         val subject = if (submission.topic.isNotBlank()) {
@@ -270,6 +299,7 @@ fun CharacterScreen(
                 onSubmit = onSubmit,
                 onClearQuery = onClearQuery,
                 demoState = demoState,
+                isPracticeActive = practiceState.isActive,
                 onProfileAction = { activeProfileAction = it },
                 calligraphyDemoState = calligraphyDemoState,
                 useCalligraphyDemo = useCalligraphyDemo,
@@ -300,8 +330,12 @@ fun CharacterScreen(
                         }
                     },
                     calligraphyDemoState = calligraphyDemoState,
+                    isDemoPlaying = demoState.isPlaying || calligraphyDemoState.isPlaying,
                     onStopCalligraphyDemo = stopCalligraphyDemo,
-                    onStartPractice = onStartPractice,
+                    onStartPractice = {
+                        stopCalligraphyDemo()
+                        onStartPractice()
+                    },
                     onRequestHint = onRequestHint,
                     onStrokeStart = onStrokeStart,
                     onStrokeMove = onStrokeMove,
@@ -318,6 +352,7 @@ fun CharacterScreen(
                 userPreferences = userPreferences,
                 wordEntry = wordEntry,
                 lastFeedbackTimestamp = lastFeedbackTimestamp,
+                onShareLog = shareFeedbackLog,
                 onJumpToChar = onLoadCharacter,
                 onAnalyticsChange = onAnalyticsOptInChange,
                 onCrashReportsChange = onCrashOptInChange,
@@ -337,6 +372,7 @@ private fun SearchBarRow(
     onSubmit: () -> Unit,
     onClearQuery: () -> Unit,
     demoState: DemoState,
+    isPracticeActive: Boolean,
     onProfileAction: (ProfileMenuAction) -> Unit,
     calligraphyDemoState: CalligraphyDemoState,
     useCalligraphyDemo: Boolean,
@@ -397,6 +433,7 @@ private fun SearchBarRow(
                 demoState = demoState,
                 calligraphyDemoState = calligraphyDemoState,
                 useCalligraphyDemo = useCalligraphyDemo,
+                practiceActive = isPracticeActive,
                 onSubmit = onSubmit,
                 onPlayOnce = onPlayDemoOnce,
                 onPlayLoop = onPlayDemoLoop,
@@ -437,6 +474,7 @@ private fun CharacterContent(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
+    isDemoPlaying: Boolean,
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
     showTemplate: Boolean,
@@ -497,6 +535,7 @@ private fun CharacterContent(
             definition = definition,
             renderSnapshot = renderSnapshot,
             practiceState = practiceState,
+            isDemoPlaying = isDemoPlaying,
             gridMode = gridMode,
             userStrokeColor = strokeColor,
             showTemplate = showTemplate,
@@ -544,6 +583,7 @@ private fun DemoControlRow(
     demoState: DemoState,
     calligraphyDemoState: CalligraphyDemoState,
     useCalligraphyDemo: Boolean,
+    practiceActive: Boolean,
     onSubmit: () -> Unit,
     onPlayOnce: () -> Unit,
     onPlayLoop: () -> Unit,
@@ -592,12 +632,14 @@ private fun DemoControlRow(
                 icon = Icons.Filled.PlayArrow,
                 description = "Play demo",
                 onClick = playOnce,
+                enabled = !practiceActive,
                 buttonSize = 36.dp,
             )
             IconActionButton(
                 icon = Icons.Filled.Refresh,
                 description = "Loop demo",
                 onClick = playLoop,
+                enabled = !practiceActive,
                 buttonSize = 36.dp,
             )
         }
@@ -608,6 +650,7 @@ private fun CharacterCanvas(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
+    isDemoPlaying: Boolean,
     gridMode: PracticeGrid,
     userStrokeColor: Color,
     showTemplate: Boolean,
@@ -730,14 +773,14 @@ private fun CharacterCanvas(
                 icon = Icons.Filled.Create,
                 description = "Start practice",
                 onClick = onStartPractice,
-                enabled = !practiceState.isActive,
+                enabled = !practiceState.isActive && !isDemoPlaying,
                 buttonSize = 36.dp,
             )
             IconActionButton(
                 icon = Icons.Filled.Info,
                 description = "Hint",
                 onClick = onRequestHint,
-                enabled = practiceState.isActive,
+                enabled = practiceState.isActive && !isDemoPlaying,
                 buttonSize = 36.dp,
             )
             CanvasSettingsMenu(
@@ -1031,6 +1074,7 @@ private fun ProfileActionDialog(
     userPreferences: UserPreferences,
     wordEntry: WordEntry?,
     lastFeedbackTimestamp: Long?,
+    onShareLog: () -> Unit,
     onJumpToChar: (String) -> Unit,
     onAnalyticsChange: (Boolean) -> Unit,
     onCrashReportsChange: (Boolean) -> Unit,
@@ -1101,6 +1145,7 @@ private fun ProfileActionDialog(
             FeedbackDialog(
                 prefs = userPreferences,
                 lastSubmittedAt = lastFeedbackTimestamp,
+                onShareLog = onShareLog,
                 onDraftChange = onFeedbackDraftChange,
                 onSubmit = onFeedbackSubmit,
                 onDismiss = onDismiss,
@@ -1502,6 +1547,7 @@ private fun PrivacyToggleRow(
 private fun FeedbackDialog(
     prefs: UserPreferences,
     lastSubmittedAt: Long?,
+    onShareLog: () -> Unit,
     onDraftChange: (String, String, String) -> Unit,
     onSubmit: (String, String, String) -> Unit,
     onDismiss: () -> Unit,
@@ -1596,8 +1642,13 @@ private fun FeedbackDialog(
             }
         },
         dismissButton = {
-            if (!submitted) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (lastSubmittedAt != null) {
+                    TextButton(onClick = onShareLog) { Text("Share log") }
+                }
+                if (!submitted) {
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                }
             }
         },
     )
