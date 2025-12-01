@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
@@ -32,9 +33,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -593,11 +597,11 @@ private fun CharacterCanvas(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            IconActionButton(
-                icon = Icons.Filled.PlayArrow,
-                description = "Start practice",
-                onClick = onStartPractice,
-                enabled = !practiceState.isActive,
+                IconActionButton(
+                    icon = Icons.Filled.Create,
+                    description = "Start practice",
+                    onClick = onStartPractice,
+                    enabled = !practiceState.isActive,
                 buttonSize = 36.dp,
             )
             IconActionButton(
@@ -707,6 +711,7 @@ private fun WordInfoDialog(
     onDismiss: () -> Unit,
     ttsController: TextToSpeechController,
 ) {
+    val scrollState = rememberScrollState()
     val speakingAlpha by animateFloatAsState(
         targetValue = if (ttsController.isSpeaking.value) 1f else 0.5f,
         label = "speakingAlpha",
@@ -741,12 +746,24 @@ private fun WordInfoDialog(
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(scrollState),
+            ) {
                 WordInfoStat("Radical", entry.radicals)
                 WordInfoStat("Strokes", entry.strokes)
                 WordInfoStat("Variant", entry.oldword)
-                WordInfoStat("Meaning", entry.explanation.condense(80))
-                WordInfoStat("More", entry.more.condense(100))
+                Text(
+                    text = "Meaning",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = entry.explanation.normalizeWhitespace().ifBlank { "Meaning unavailable." },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         },
         confirmButton = {
@@ -816,6 +833,8 @@ private fun String.condense(maxChars: Int): String {
     if (cleaned.length <= maxChars) return cleaned
     return cleaned.take(maxChars).trimEnd() + "..."
 }
+
+private fun String.normalizeWhitespace(): String = replace("\\s+".toRegex(), " ").trim()
 private data class CalligraphyDemoState(
     val isPlaying: Boolean = false,
     val strokeProgress: List<Float> = emptyList(),
