@@ -127,6 +127,7 @@ fun CharacterRoute(
     val demoState by viewModel.demoState.collectAsState()
     val wordEntry by viewModel.wordEntry.collectAsState()
     val hskEntry by viewModel.hskEntry.collectAsState()
+    val hskProgress by viewModel.hskProgress.collectAsState()
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -136,6 +137,7 @@ fun CharacterRoute(
         demoState = demoState,
         wordEntry = wordEntry,
         hskEntry = hskEntry,
+        hskProgress = hskProgress,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
         onClearQuery = viewModel::clearQuery,
@@ -158,6 +160,7 @@ fun CharacterScreen(
     demoState: DemoState,
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
+    hskProgress: HskProgressSummary,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onClearQuery: () -> Unit,
@@ -242,6 +245,7 @@ fun CharacterScreen(
         activeProfileAction?.let { action ->
             ProfileActionDialog(
                 action = action,
+                hskProgress = hskProgress,
                 onDismiss = { activeProfileAction = null },
             )
         }
@@ -868,26 +872,57 @@ private fun WordInfoStat(label: String, value: String) {
 @Composable
 private fun ProfileActionDialog(
     action: ProfileMenuAction,
+    hskProgress: HskProgressSummary,
     onDismiss: () -> Unit,
 ) {
-    val description = action.description
+    val body: @Composable () -> Unit = when (action) {
+        ProfileMenuAction.PROGRESS -> {
+            { HskProgressView(hskProgress) }
+        }
+        else -> {
+            { Text(action.description) }
+        }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(action.label) },
-        text = { Text(description) },
+        text = { body() },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
         },
     )
 }
 
+@Composable
+private fun HskProgressView(summary: HskProgressSummary) {
+    if (summary.perLevel.isEmpty()) {
+        Text("Practice characters to start tracking HSK progress.")
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Learned ${summary.totalCompleted}/${summary.totalCharacters}",
+            style = MaterialTheme.typography.titleMedium,
+        )
+        summary.perLevel.toSortedMap().forEach { (level, stats) ->
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
+                Text("${stats.completed}/${stats.total}")
+            }
+        }
+    }
+}
+
 private enum class ProfileMenuAction(val label: String, val description: String) {
-    COURSES("Courses…", "Browse curated HSK lessons. We’ll package staged practice lists so you can study without typing every character."),
-    PROGRESS("Progress…", "See which strokes you’ve mastered. We’ll save local stats per HSK level and streak information."),
-    DICT("Dict…", "Open the embedded dictionary for full definitions, examples, and audio. Later, Word info can deep-link here."),
-    HELP("Help…", "Tips, gestures, and onboarding videos live here so newcomers understand practice modes quickly."),
-    PRIVACY("Privacy…", "Access the privacy policy, data safety notes, and toggles for analytics/log sharing before Play Store submission."),
-    FEEDBACK("Feedback…", "Send bugs or feature ideas. We’ll attach optional logs so it’s easy to iterate together.");
+    COURSES("Courses...", "Browse curated HSK lessons. We'll package staged practice lists so you can study without typing every character."),
+    PROGRESS("Progress...", "See which strokes you've mastered. We'll save local stats per HSK level and streak information."),
+    DICT("Dict...", "Open the embedded dictionary for full definitions, examples, and audio. Later, Word info can deep-link here."),
+    HELP("Help...", "Tips, gestures, and onboarding videos live here so newcomers understand practice modes quickly."),
+    PRIVACY("Privacy...", "Access the privacy policy, data safety notes, and toggles for analytics/log sharing before Play Store submission."),
+    FEEDBACK("Feedback...", "Send bugs or feature ideas. We'll attach optional logs so it's easy to iterate together.");
 }
 private data class TextToSpeechController(
     val speak: (String) -> Unit,

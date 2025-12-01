@@ -39,6 +39,13 @@ class HskRepository(
         cache = map
     }
 
+    suspend fun allEntries(): Collection<HskEntry> {
+        if (cache == null) {
+            load()
+        }
+        return cache?.values ?: emptyList()
+    }
+
     companion object {
         private const val HSK_DATA_PATH = "learn-datas/hsk30-chars-ext.csv"
     }

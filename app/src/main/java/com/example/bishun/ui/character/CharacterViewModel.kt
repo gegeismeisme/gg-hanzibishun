@@ -10,6 +10,7 @@ import com.example.bishun.data.word.WordEntry
 import com.example.bishun.data.word.WordRepository
 import com.example.bishun.data.hsk.HskEntry
 import com.example.bishun.data.hsk.HskRepository
+import com.example.bishun.data.hsk.HskProgressStore
 import com.example.bishun.hanzi.core.HanziCounter
 import com.example.bishun.hanzi.model.CharacterDefinition
 import com.example.bishun.hanzi.model.Point
@@ -33,6 +34,7 @@ class CharacterViewModel(
     private val repository: CharacterDefinitionRepository,
     private val wordRepository: WordRepository,
     private val hskRepository: HskRepository,
+    private val hskProgressStore: HskProgressStore,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow(DEFAULT_CHAR)
@@ -52,6 +54,8 @@ class CharacterViewModel(
     val wordEntry: StateFlow<WordEntry?> = _wordEntry.asStateFlow()
     private val _hskEntry = MutableStateFlow<HskEntry?>(null)
     val hskEntry: StateFlow<HskEntry?> = _hskEntry.asStateFlow()
+    private val _hskProgress = MutableStateFlow(HskProgressSummary())
+    val hskProgress: StateFlow<HskProgressSummary> = _hskProgress.asStateFlow()
 
     private var currentDefinition: CharacterDefinition? = null
     private var renderState: RenderState? = null
@@ -60,6 +64,7 @@ class CharacterViewModel(
     private val userStrokeIds = mutableListOf<Int>()
 
     init {
+        observeHskProgress()
         loadCharacter(DEFAULT_CHAR)
     }
 
@@ -265,6 +270,19 @@ class CharacterViewModel(
         }
     }
 
+    private fun observeHskProgress() {
+        viewModelScope.launch {
+            hskProgressStore.completed.collect { completed ->
+                val entries = hskRepository.allEntries()
+                val levelMap = entries.groupBy { it.level }.mapValues { (_, items) ->
+                    val done = items.count { completed.contains(it.symbol) }
+                    HskLevelSummary(done, items.size)
+                }
+                _hskProgress.value = HskProgressSummary(levelMap)
+            }
+        }
+    }
+
     private suspend fun clearUserStrokes() {
         val ids = userStrokeIds.toList()
         if (ids.isNotEmpty()) {
@@ -302,6 +320,7 @@ class CharacterViewModel(
             completedStrokes = practice.completedStrokes + strokeIndex,
         )
         if (complete) {
+            viewModelScope.launch { hskProgressStore.add(definition.symbol) }
             state.run(QuizActions.highlightCompleteChar(definition, null, 600))
         }
     }
@@ -366,9 +385,24 @@ class CharacterViewModel(
                     val repo = CharacterDataModule.provideDefinitionRepository(applicationContext)
                     val wordRepo = WordRepository(applicationContext)
                     val hskRepo = HskRepository(applicationContext)
-                    return CharacterViewModel(repo, wordRepo, hskRepo) as T
+                    val progressStore = HskProgressStore(applicationContext)
+                    return CharacterViewModel(repo, wordRepo, hskRepo, progressStore) as T
                 }
             }
         }
     }
+}
+
+data class HskLevelSummary(
+    val completed: Int = 0,
+    val total: Int = 0,
+) {
+    val remaining: Int get() = (total - completed).coerceAtLeast(0)
+}
+
+data class HskProgressSummary(
+    val perLevel: Map<Int, HskLevelSummary> = emptyMap(),
+) {
+    val totalCompleted: Int get() = perLevel.values.sumOf { it.completed }
+    val totalCharacters: Int get() = perLevel.values.sumOf { it.total }
 }
