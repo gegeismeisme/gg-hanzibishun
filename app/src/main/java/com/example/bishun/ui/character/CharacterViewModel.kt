@@ -156,6 +156,13 @@ class CharacterViewModel(
         loadCharacter(symbol)
     }
 
+    fun markCourseCharacterLearned() {
+        val current = _courseSession.value?.currentSymbol ?: return
+        viewModelScope.launch {
+            hskProgressStore.add(current)
+        }
+    }
+
     fun playDemo(loop: Boolean = false) {
         val definition = currentDefinition ?: return
         val state = renderState ?: return
