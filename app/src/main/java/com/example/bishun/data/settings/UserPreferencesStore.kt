@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -17,6 +18,9 @@ data class UserPreferences(
     val feedbackTopic: String = "",
     val feedbackMessage: String = "",
     val feedbackContact: String = "",
+    val gridMode: Int = 0,
+    val strokeColor: Int = 0,
+    val showTemplate: Boolean = true,
 )
 
 class UserPreferencesStore(private val context: Context) {
@@ -29,6 +33,9 @@ class UserPreferencesStore(private val context: Context) {
             feedbackTopic = prefs[KEY_FEEDBACK_TOPIC] ?: "",
             feedbackMessage = prefs[KEY_FEEDBACK_MESSAGE] ?: "",
             feedbackContact = prefs[KEY_FEEDBACK_CONTACT] ?: "",
+            gridMode = prefs[KEY_GRID_MODE] ?: 0,
+            strokeColor = prefs[KEY_STROKE_COLOR] ?: 0,
+            showTemplate = prefs[KEY_SHOW_TEMPLATE] ?: true,
         )
     }
 
@@ -66,6 +73,24 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setGridMode(index: Int) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_GRID_MODE] = index
+        }
+    }
+
+    suspend fun setStrokeColor(index: Int) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_STROKE_COLOR] = index
+        }
+    }
+
+    suspend fun setShowTemplate(enabled: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_SHOW_TEMPLATE] = enabled
+        }
+    }
+
     companion object {
         private val Context.userPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -75,5 +100,8 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_FEEDBACK_TOPIC = stringPreferencesKey("feedback_topic")
         private val KEY_FEEDBACK_MESSAGE = stringPreferencesKey("feedback_message")
         private val KEY_FEEDBACK_CONTACT = stringPreferencesKey("feedback_contact")
+        private val KEY_GRID_MODE = intPreferencesKey("grid_mode_index")
+        private val KEY_STROKE_COLOR = intPreferencesKey("stroke_color_index")
+        private val KEY_SHOW_TEMPLATE = booleanPreferencesKey("show_template")
     }
 }

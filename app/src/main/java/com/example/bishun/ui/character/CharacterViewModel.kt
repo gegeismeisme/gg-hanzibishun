@@ -73,6 +73,12 @@ class CharacterViewModel(
     val practiceHistory: StateFlow<List<PracticeHistoryEntry>> = _practiceHistory.asStateFlow()
     private val _courseSession = MutableStateFlow<CourseSession?>(null)
     val courseSession: StateFlow<CourseSession?> = _courseSession.asStateFlow()
+    private val _boardSettings = MutableStateFlow(BoardSettings())
+    val boardSettings: StateFlow<BoardSettings> = _boardSettings.asStateFlow()
+    private val _courseCatalog = MutableStateFlow<Map<Int, List<String>>>(emptyMap())
+    val courseCatalog: StateFlow<Map<Int, List<String>>> = _courseCatalog.asStateFlow()
+    private val _completedSymbols = MutableStateFlow<Set<String>>(emptySet())
+    val completedSymbols: StateFlow<Set<String>> = _completedSymbols.asStateFlow()
     private val _feedbackSubmission = MutableStateFlow<FeedbackSubmission?>(null)
     val feedbackSubmission: StateFlow<FeedbackSubmission?> = _feedbackSubmission.asStateFlow()
     private val _lastFeedbackSubmission = MutableStateFlow<Long?>(null)
@@ -329,6 +335,7 @@ class CharacterViewModel(
     private fun observeHskProgress() {
         viewModelScope.launch {
             hskProgressStore.completed.collect { completed ->
+                _completedSymbols.value = completed
                 val entries = hskRepository.allEntries()
                 courseEntries = entries
                     .groupBy { it.level }
@@ -337,6 +344,7 @@ class CharacterViewModel(
                             .sortedBy { it.writingLevel ?: Int.MAX_VALUE }
                             .map { it.symbol }
                     }
+                _courseCatalog.value = courseEntries
                 val perLevel = mutableMapOf<Int, HskLevelSummary>()
                 val nextTargets = mutableMapOf<Int, String?>()
                 entries.groupBy { it.level }.forEach { (level, items) ->
@@ -362,6 +370,11 @@ class CharacterViewModel(
         viewModelScope.launch {
             userPreferencesStore.data.collect { prefs ->
                 _userPreferences.value = prefs
+                _boardSettings.value = BoardSettings(
+                    grid = PracticeGrid.entries.getOrElse(prefs.gridMode) { PracticeGrid.NONE },
+                    strokeColor = StrokeColorOption.entries.getOrElse(prefs.strokeColor) { StrokeColorOption.PURPLE },
+                    showTemplate = prefs.showTemplate,
+                )
             }
         }
     }
@@ -427,6 +440,24 @@ class CharacterViewModel(
             ""
         } else {
             file.readText().trim()
+        }
+    }
+
+    fun updateGridMode(mode: PracticeGrid) {
+        viewModelScope.launch {
+            userPreferencesStore.setGridMode(mode.ordinal)
+        }
+    }
+
+    fun updateStrokeColor(option: StrokeColorOption) {
+        viewModelScope.launch {
+            userPreferencesStore.setStrokeColor(option.ordinal)
+        }
+    }
+
+    fun updateTemplateVisibility(show: Boolean) {
+        viewModelScope.launch {
+            userPreferencesStore.setShowTemplate(show)
         }
     }
 
@@ -638,3 +669,9 @@ data class CourseSession(
     val hasPrevious: Boolean get() = index > 0
     val hasNext: Boolean get() = index < symbols.lastIndex
 }
+
+data class BoardSettings(
+    val grid: PracticeGrid = PracticeGrid.NONE,
+    val strokeColor: StrokeColorOption = StrokeColorOption.PURPLE,
+    val showTemplate: Boolean = true,
+)

@@ -18,6 +18,8 @@ import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -149,6 +151,9 @@ fun CharacterRoute(
     val hskProgress by viewModel.hskProgress.collectAsState()
     val practiceHistory by viewModel.practiceHistory.collectAsState()
     val courseSession by viewModel.courseSession.collectAsState()
+    val boardSettings by viewModel.boardSettings.collectAsState()
+    val courseCatalog by viewModel.courseCatalog.collectAsState()
+    val completedSymbols by viewModel.completedSymbols.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
     val feedbackSubmission by viewModel.feedbackSubmission.collectAsState()
     val lastFeedbackTimestamp by viewModel.lastFeedbackSubmission.collectAsState()
@@ -163,7 +168,10 @@ fun CharacterRoute(
         hskEntry = hskEntry,
         hskProgress = hskProgress,
         practiceHistory = practiceHistory,
+        courseCatalog = courseCatalog,
         courseSession = courseSession,
+        completedSymbols = completedSymbols,
+        boardSettings = boardSettings,
         userPreferences = userPreferences,
         lastFeedbackTimestamp = lastFeedbackTimestamp,
         feedbackSubmission = feedbackSubmission,
@@ -185,6 +193,9 @@ fun CharacterRoute(
         onFeedbackSubmit = viewModel::submitFeedback,
         onFeedbackHandled = viewModel::consumeFeedbackSubmission,
         onLoadFeedbackLog = { viewModel.readFeedbackLog() },
+        onGridModeChange = viewModel::updateGridMode,
+        onStrokeColorChange = viewModel::updateStrokeColor,
+        onTemplateToggleSetting = viewModel::updateTemplateVisibility,
         onCourseSelect = viewModel::startCourse,
         onCourseNext = viewModel::goToNextCourseCharacter,
         onCoursePrev = viewModel::goToPreviousCourseCharacter,
@@ -202,7 +213,10 @@ fun CharacterScreen(
     hskEntry: HskEntry?,
     hskProgress: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
+    courseCatalog: Map<Int, List<String>>,
     courseSession: CourseSession?,
+    completedSymbols: Set<String>,
+    boardSettings: BoardSettings,
     userPreferences: UserPreferences,
     lastFeedbackTimestamp: Long?,
     feedbackSubmission: FeedbackSubmission?,
@@ -225,14 +239,17 @@ fun CharacterScreen(
     onFeedbackSubmit: (String, String, String) -> Unit,
     onFeedbackHandled: () -> Unit,
     onLoadFeedbackLog: suspend () -> String,
+    onGridModeChange: (PracticeGrid) -> Unit,
+    onStrokeColorChange: (StrokeColorOption) -> Unit,
+    onTemplateToggleSetting: (Boolean) -> Unit,
     onCourseSelect: (Int, String) -> Unit,
     onCourseNext: () -> Unit,
     onCoursePrev: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val showTemplateState = rememberSaveable { mutableStateOf(true) }
     var activeProfileAction by rememberSaveable { mutableStateOf<ProfileMenuAction?>(null) }
-    val calligraphyDemoController = if (uiState is CharacterUiState.Success && showTemplateState.value) {
+    val showTemplate = boardSettings.showTemplate
+    val calligraphyDemoController = if (uiState is CharacterUiState.Success && showTemplate) {
         rememberCalligraphyDemoController(
             strokeCount = uiState.definition.strokeCount,
             definitionKey = uiState.definition.symbol,
@@ -241,7 +258,7 @@ fun CharacterScreen(
         null
     }
     val calligraphyDemoState = calligraphyDemoController?.state?.value ?: CalligraphyDemoState()
-    val useCalligraphyDemo = showTemplateState.value && calligraphyDemoController != null
+    val useCalligraphyDemo = showTemplate && calligraphyDemoController != null
     val playCalligraphyDemo: (Boolean) -> Unit = calligraphyDemoController?.play ?: {}
     val stopCalligraphyDemo: () -> Unit = calligraphyDemoController?.stop ?: {}
     val context = LocalContext.current
@@ -333,12 +350,13 @@ fun CharacterScreen(
                     renderSnapshot = renderSnapshot,
                     practiceState = practiceState,
                     courseSession = courseSession,
+                    boardSettings = boardSettings,
                     wordEntry = wordEntry,
                     hskEntry = hskEntry,
-                    showTemplate = showTemplateState.value,
-                    onTemplateToggle = {
-                        showTemplateState.value = it
-                        if (!it) {
+                    showTemplate = showTemplate,
+                    onTemplateToggle = { enabled ->
+                        onTemplateToggleSetting(enabled)
+                        if (!enabled) {
                             stopCalligraphyDemo()
                         }
                     },
@@ -353,6 +371,8 @@ fun CharacterScreen(
                     onStrokeStart = onStrokeStart,
                     onStrokeMove = onStrokeMove,
                     onStrokeEnd = onStrokeEnd,
+                    onGridModeChange = onGridModeChange,
+                    onStrokeColorChange = onStrokeColorChange,
                     onCourseNext = onCourseNext,
                     onCoursePrev = onCoursePrev,
                     modifier = Modifier.weight(1f),
@@ -364,6 +384,9 @@ fun CharacterScreen(
                 action = action,
                 hskProgress = hskProgress,
                 practiceHistory = practiceHistory,
+                courseCatalog = courseCatalog,
+                completedSymbols = completedSymbols,
+                activeSession = courseSession,
                 userPreferences = userPreferences,
                 wordEntry = wordEntry,
                 lastFeedbackTimestamp = lastFeedbackTimestamp,
@@ -491,6 +514,7 @@ private fun CharacterContent(
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
     courseSession: CourseSession?,
+    boardSettings: BoardSettings,
     isDemoPlaying: Boolean,
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
@@ -503,6 +527,8 @@ private fun CharacterContent(
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
+    onGridModeChange: (PracticeGrid) -> Unit,
+    onStrokeColorChange: (StrokeColorOption) -> Unit,
     onCourseNext: () -> Unit,
     onCoursePrev: () -> Unit,
     modifier: Modifier = Modifier,
@@ -545,10 +571,15 @@ private fun CharacterContent(
             statusText = summary.statusText,
             modifier = Modifier.fillMaxWidth(),
         )
-        val gridState = rememberSaveable { mutableStateOf(PracticeGrid.NONE.ordinal) }
-        val colorState = rememberSaveable { mutableStateOf(StrokeColorOption.PURPLE.ordinal) }
-        val gridMode = PracticeGrid.entries[gridState.value]
-        val strokeColorOption = StrokeColorOption.entries[colorState.value]
+        courseSession?.let {
+            CourseProgressBadge(
+                level = it.level,
+                progressText = it.progressText,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        val gridMode = boardSettings.grid
+        val strokeColorOption = boardSettings.strokeColor
         val strokeColor = strokeColorOption.color
         CharacterCanvas(
             definition = definition,
@@ -565,8 +596,8 @@ private fun CharacterContent(
             showHskIcon = showHskIcon && hskEntry != null,
             onHskInfoClick = { showHskDialog = true },
             currentColorOption = strokeColorOption,
-            onGridModeChange = { gridState.value = it.ordinal },
-            onStrokeColorChange = { colorState.value = it.ordinal },
+            onGridModeChange = onGridModeChange,
+            onStrokeColorChange = onStrokeColorChange,
             onTemplateToggle = {
                 onTemplateToggle(it)
                 if (!it) {
@@ -1113,6 +1144,9 @@ private fun ProfileActionDialog(
     action: ProfileMenuAction,
     hskProgress: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
+    courseCatalog: Map<Int, List<String>>,
+    completedSymbols: Set<String>,
+    activeSession: CourseSession?,
     userPreferences: UserPreferences,
     wordEntry: WordEntry?,
     lastFeedbackTimestamp: Long?,
@@ -1134,6 +1168,9 @@ private fun ProfileActionDialog(
                 text = {
                     CoursePlannerView(
                         summary = hskProgress,
+                        catalog = courseCatalog,
+                        completedSymbols = completedSymbols,
+                        activeSession = activeSession,
                         onSelect = { level, symbol ->
                             onDismiss()
                             onCourseSelect(level, symbol)
@@ -1331,9 +1368,13 @@ private fun PracticeHistoryRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CoursePlannerView(
     summary: HskProgressSummary,
+    catalog: Map<Int, List<String>>,
+    completedSymbols: Set<String>,
+    activeSession: CourseSession?,
     onSelect: (Int, String) -> Unit,
 ) {
     if (summary.perLevel.isEmpty()) {
@@ -1363,6 +1404,39 @@ private fun CoursePlannerView(
                 nextSymbol = nextSymbol,
                 onSelect = { symbol -> onSelect(level, symbol) },
             )
+            val symbols = catalog[level].orEmpty()
+            if (symbols.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    symbols.forEach { symbol ->
+                        val isActive = activeSession?.level == level && activeSession.currentSymbol == symbol
+                        val isCompleted = completedSymbols.contains(symbol)
+                        val background = when {
+                            isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            isCompleted -> MaterialTheme.colorScheme.surfaceVariant
+                            else -> MaterialTheme.colorScheme.surface
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            tonalElevation = if (isActive) 4.dp else 0.dp,
+                            color = background,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onSelect(level, symbol) },
+                        ) {
+                            Text(
+                                text = symbol,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -1991,12 +2065,12 @@ private fun CanvasSettingsMenu(
         }
     }
 }
-private enum class PracticeGrid(val label: String) {
+enum class PracticeGrid(val label: String) {
     NONE("None"),
     RICE("Rice grid"),
     NINE("Nine grid"),
 }
-private enum class StrokeColorOption(val label: String, val color: Color) {
+enum class StrokeColorOption(val label: String, val color: Color) {
     PURPLE("Purple", Color(0xFF6750A4)),
     BLUE("Blue", Color(0xFF2F80ED)),
     GREEN("Green", Color(0xFF2F9B67)),
