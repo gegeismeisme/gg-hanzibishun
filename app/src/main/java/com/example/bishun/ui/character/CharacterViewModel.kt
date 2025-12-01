@@ -129,6 +129,7 @@ class CharacterViewModel(
         val targetSymbol = symbol.takeIf { symbols.contains(it) } ?: symbols.first()
         val index = symbols.indexOf(targetSymbol).takeIf { it >= 0 } ?: 0
         _courseSession.value = CourseSession(level = level, symbols = symbols, index = index)
+        viewModelScope.launch { userPreferencesStore.saveCourseSession(level, targetSymbol) }
         if (currentDefinition?.symbol != targetSymbol) {
             loadCharacter(targetSymbol)
         }
@@ -392,6 +393,7 @@ class CharacterViewModel(
         val index = session.symbols.indexOf(symbol)
         if (index == -1) {
             _courseSession.value = null
+            viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
         } else if (index != session.index) {
             _courseSession.value = session.copy(index = index)
         }
@@ -459,6 +461,11 @@ class CharacterViewModel(
         viewModelScope.launch {
             userPreferencesStore.setShowTemplate(show)
         }
+    }
+
+    fun clearCourseSession() {
+        _courseSession.value = null
+        viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
     }
 
     private fun preloadLastFeedbackTimestamp() {
@@ -552,10 +559,12 @@ class CharacterViewModel(
         if (session.symbols.getOrNull(session.index) != symbol) return
         if (session.index >= session.symbols.lastIndex) {
             _courseSession.value = null
+            viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
             return
         }
         val nextIndex = session.index + 1
         _courseSession.value = session.copy(index = nextIndex)
+        viewModelScope.launch { userPreferencesStore.saveCourseSession(session.level, session.symbols[nextIndex]) }
         loadCharacter(session.symbols[nextIndex])
     }
 

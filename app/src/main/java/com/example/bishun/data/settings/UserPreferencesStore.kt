@@ -21,6 +21,8 @@ data class UserPreferences(
     val gridMode: Int = 0,
     val strokeColor: Int = 0,
     val showTemplate: Boolean = true,
+    val courseLevel: Int? = null,
+    val courseSymbol: String? = null,
 )
 
 class UserPreferencesStore(private val context: Context) {
@@ -36,6 +38,8 @@ class UserPreferencesStore(private val context: Context) {
             gridMode = prefs[KEY_GRID_MODE] ?: 0,
             strokeColor = prefs[KEY_STROKE_COLOR] ?: 0,
             showTemplate = prefs[KEY_SHOW_TEMPLATE] ?: true,
+            courseLevel = prefs[KEY_COURSE_LEVEL],
+            courseSymbol = prefs[KEY_COURSE_SYMBOL],
         )
     }
 
@@ -91,6 +95,18 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun saveCourseSession(level: Int?, symbol: String?) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (level == null || symbol == null) {
+                prefs.remove(KEY_COURSE_LEVEL)
+                prefs.remove(KEY_COURSE_SYMBOL)
+            } else {
+                prefs[KEY_COURSE_LEVEL] = level
+                prefs[KEY_COURSE_SYMBOL] = symbol
+            }
+        }
+    }
+
     companion object {
         private val Context.userPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -103,5 +119,7 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_GRID_MODE = intPreferencesKey("grid_mode_index")
         private val KEY_STROKE_COLOR = intPreferencesKey("stroke_color_index")
         private val KEY_SHOW_TEMPLATE = booleanPreferencesKey("show_template")
+        private val KEY_COURSE_LEVEL = intPreferencesKey("course_level")
+        private val KEY_COURSE_SYMBOL = stringPreferencesKey("course_symbol")
     }
 }

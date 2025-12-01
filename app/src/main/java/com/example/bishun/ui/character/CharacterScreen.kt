@@ -59,6 +59,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -199,6 +200,7 @@ fun CharacterRoute(
         onCourseSelect = viewModel::startCourse,
         onCourseNext = viewModel::goToNextCourseCharacter,
         onCoursePrev = viewModel::goToPreviousCourseCharacter,
+        onCourseExit = viewModel::clearCourseSession,
         onLoadCharacter = viewModel::jumpToCharacter,
     )
 }
@@ -245,6 +247,7 @@ fun CharacterScreen(
     onCourseSelect: (Int, String) -> Unit,
     onCourseNext: () -> Unit,
     onCoursePrev: () -> Unit,
+    onCourseExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var activeProfileAction by rememberSaveable { mutableStateOf<ProfileMenuAction?>(null) }
@@ -696,6 +699,14 @@ private fun DemoControlRow(
                 buttonSize = 36.dp,
             )
         }
+    }
+    courseSession?.currentSymbol?.let { currentSymbol ->
+        CourseResumeCard(
+            session = courseSession,
+            onResume = { onLoadCharacter(currentSymbol) },
+            onExit = onCourseExit,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 @Composable
@@ -1382,6 +1393,8 @@ private fun CoursePlannerView(
         return
     }
     val sortedLevels = summary.perLevel.toSortedMap()
+    var selectedFilterKey by rememberSaveable { mutableStateOf(CourseFilter.REMAINING.name) }
+    val selectedFilter = CourseFilter.valueOf(selectedFilterKey)
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -1393,6 +1406,17 @@ private fun CoursePlannerView(
                 text = "Pick a course to continue",
                 style = MaterialTheme.typography.titleMedium,
             )
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CourseFilter.values().forEach { filter ->
+                    FilterChip(
+                        selected = selectedFilter == filter,
+                        onClick = { selectedFilterKey = filter.name },
+                        label = { Text(filter.label) },
+                    )
+                }
+            }
         }
         items(sortedLevels.entries.toList()) { entry ->
             val level = entry.key
@@ -1414,6 +1438,12 @@ private fun CoursePlannerView(
                     symbols.forEach { symbol ->
                         val isActive = activeSession?.level == level && activeSession.currentSymbol == symbol
                         val isCompleted = completedSymbols.contains(symbol)
+                        val matchesFilter = when (selectedFilter) {
+                            CourseFilter.ALL -> true
+                            CourseFilter.REMAINING -> !isCompleted
+                            CourseFilter.COMPLETED -> isCompleted
+                        }
+                        if (!matchesFilter && !isActive) return@forEach
                         val background = when {
                             isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                             isCompleted -> MaterialTheme.colorScheme.surfaceVariant
@@ -1991,6 +2021,45 @@ private fun PracticeSummaryBadge(
         }
     }
 }
+
+@Composable
+private fun CourseResumeCard(
+    session: CourseSession,
+    onResume: () -> Unit,
+    onExit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text(
+                    text = "Resume HSK ${session.level}",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = "Next: ${session.currentSymbol.orEmpty()} (${session.progressText})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onExit) { Text("Exit") }
+                TextButton(onClick = onResume) { Text("Resume") }
+            }
+        }
+    }
+}
+
 private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
 @Composable
 private fun CanvasSettingsMenu(
@@ -2365,3 +2434,8 @@ private fun ColorRgba.asComposeColor(alphaMultiplier: Float = 1f): Color {
     )
 }
 private fun Offset.toPoint(): Point = Point(x.toDouble(), y.toDouble())
+private enum class CourseFilter(val label: String) {
+    ALL("All"),
+    REMAINING("Remaining"),
+    COMPLETED("Completed"),
+}
