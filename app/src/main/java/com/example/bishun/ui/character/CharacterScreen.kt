@@ -58,6 +58,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -85,6 +86,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.consumePositionChange
@@ -983,6 +985,15 @@ private fun ProfileActionDialog(
                 },
             )
         }
+        ProfileMenuAction.HELP -> {
+            HelpDialog(onDismiss = onDismiss)
+        }
+        ProfileMenuAction.PRIVACY -> {
+            PrivacyDialog(onDismiss = onDismiss)
+        }
+        ProfileMenuAction.FEEDBACK -> {
+            FeedbackDialog(onDismiss = onDismiss)
+        }
         else -> {
             AlertDialog(
                 onDismissRequest = onDismiss,
@@ -1134,6 +1145,215 @@ private fun CourseLevelCard(
             }
         }
     }
+}
+
+@Composable
+private fun HelpDialog(onDismiss: () -> Unit) {
+    val scrollState = rememberScrollState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Help & tips") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                HelpTipCard(
+                    icon = Icons.Filled.Info,
+                    title = "Navigation",
+                    details = "Use the input to jump to any character, tap the cloud to load it, and clear when you want to type another symbol.",
+                )
+                HelpTipCard(
+                    icon = Icons.Filled.PlayArrow,
+                    title = "Demo controls",
+                    details = "Single play previews the strokes once, loop keeps animating until you stop it. Calligraphy overlays mirror these controls.",
+                )
+                HelpTipCard(
+                    icon = Icons.Filled.Create,
+                    title = "Practice state",
+                    details = "Start practice to unlock hints, errors, and the progress pill. Completed strokes fill automatically and persist for HSK tracking.",
+                )
+                HelpTipCard(
+                    icon = Icons.Filled.Settings,
+                    title = "Board options",
+                    details = "Open the board menu to pick grids, pen colors, and calligraphy outlines. Settings stay local so your layout remains consistent.",
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Got it") }
+        },
+    )
+}
+
+@Composable
+private fun HelpTipCard(
+    icon: ImageVector,
+    title: String,
+    details: String,
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = details,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PrivacyDialog(onDismiss: () -> Unit) {
+    var analyticsAllowed by rememberSaveable { mutableStateOf(true) }
+    var crashReportsAllowed by rememberSaveable { mutableStateOf(true) }
+    var networkPrefetch by rememberSaveable { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Privacy preferences") },
+        text = {
+            Column(
+                modifier = Modifier.heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Everything runs offline by default. Toggle optional diagnostics so we are Play Store ready without surprising users.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                PrivacyToggleRow(
+                    title = "Usage analytics",
+                    description = "Anonymous counters for upcoming features.",
+                    checked = analyticsAllowed,
+                    onCheckedChange = { analyticsAllowed = it },
+                )
+                PrivacyToggleRow(
+                    title = "Crash reports",
+                    description = "Share lightweight logs if rendering fails.",
+                    checked = crashReportsAllowed,
+                    onCheckedChange = { crashReportsAllowed = it },
+                )
+                PrivacyToggleRow(
+                    title = "Network prefetch",
+                    description = "Allow Wi-Fi downloads of future packs.",
+                    checked = networkPrefetch,
+                    onCheckedChange = { networkPrefetch = it },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
+}
+
+@Composable
+private fun PrivacyToggleRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun FeedbackDialog(onDismiss: () -> Unit) {
+    var topic by rememberSaveable { mutableStateOf("") }
+    var message by rememberSaveable { mutableStateOf("") }
+    var contact by rememberSaveable { mutableStateOf("") }
+    var submitted by rememberSaveable { mutableStateOf(false) }
+    val canSubmit = message.trim().length >= 6
+    val scrollState = rememberScrollState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (submitted) "Thanks!" else "Send feedback") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (submitted) {
+                    Text(
+                        text = "We stored your note locally. The next release will bundle it with diagnostic exports so nothing gets lost.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = topic,
+                        onValueChange = { topic = it.take(60) },
+                        label = { Text("Topic") },
+                        placeholder = { Text("Feature request, bug...") },
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = message,
+                        onValueChange = { message = it.take(600) },
+                        label = { Text("Details") },
+                        placeholder = { Text("Describe the idea or issue") },
+                        minLines = 4,
+                    )
+                    OutlinedTextField(
+                        value = contact,
+                        onValueChange = { contact = it.take(80) },
+                        label = { Text("Contact (optional)") },
+                        placeholder = { Text("Email or handle") },
+                        singleLine = true,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (submitted) {
+                TextButton(onClick = onDismiss) { Text("Close") }
+            } else {
+                TextButton(onClick = { submitted = true }, enabled = canSubmit) {
+                    Text("Send")
+                }
+            }
+        },
+        dismissButton = {
+            if (!submitted) {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+    )
 }
 
 private enum class ProfileMenuAction(val label: String, val description: String) {
