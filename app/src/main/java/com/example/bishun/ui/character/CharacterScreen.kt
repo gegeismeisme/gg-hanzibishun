@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -54,6 +56,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -1025,27 +1028,109 @@ private fun CoursePlannerView(
         Text("Start practicing to unlock HSK courses.")
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Pick your next character:", style = MaterialTheme.typography.titleMedium)
-        summary.nextTargets.toSortedMap().forEach { (level, symbol) ->
+    val sortedLevels = summary.perLevel.toSortedMap()
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 420.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(
+                text = "Pick a course to continue",
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+        items(sortedLevels.entries.toList()) { entry ->
+            val level = entry.key
+            val stats = entry.value
+            val nextSymbol = summary.nextTargets[level]
+            CourseLevelCard(
+                level = level,
+                stats = stats,
+                nextSymbol = nextSymbol,
+                onSelect = onSelect,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CourseLevelCard(
+    level: Int,
+    stats: HskLevelSummary,
+    nextSymbol: String?,
+    onSelect: (String) -> Unit,
+) {
+    val total = stats.total.coerceAtLeast(1)
+    val progress = (stats.completed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    val statusText = when {
+        nextSymbol == null -> "Course complete"
+        stats.completed == 0 -> "Start with $nextSymbol"
+        else -> "Next • $nextSymbol"
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 2.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
             ) {
-                Column {
-                    Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = symbol ?: "All characters complete",
+                        text = "HSK $level",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = "${stats.completed}/${stats.total} mastered · ${stats.remaining} remaining",
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(
-                    onClick = { symbol?.let(onSelect) },
-                    enabled = symbol != null,
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(12.dp),
                 ) {
-                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "Load")
+                    Text(
+                        text = "Level $level",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
                 }
+            }
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                IconActionButton(
+                    icon = Icons.Filled.PlayArrow,
+                    description = "Load HSK $level",
+                    onClick = { nextSymbol?.let(onSelect) },
+                    enabled = nextSymbol != null,
+                    buttonSize = 36.dp,
+                )
             }
         }
     }
