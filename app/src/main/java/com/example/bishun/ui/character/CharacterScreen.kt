@@ -12,6 +12,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
@@ -158,6 +160,12 @@ fun CharacterRoute(
     val userPreferences by viewModel.userPreferences.collectAsState()
     val feedbackSubmission by viewModel.feedbackSubmission.collectAsState()
     val lastFeedbackTimestamp by viewModel.lastFeedbackSubmission.collectAsState()
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.courseEvents.collect { event ->
+            Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+        }
+    }
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -203,6 +211,7 @@ fun CharacterRoute(
         onCourseSkip = viewModel::skipCourseCharacter,
         onCourseRestart = viewModel::restartCourseLevel,
         onCourseExit = viewModel::clearCourseSession,
+        onMarkCourseLearned = viewModel::markCourseCharacterLearned,
         onLoadCharacter = viewModel::jumpToCharacter,
     )
 }
@@ -252,6 +261,7 @@ fun CharacterScreen(
     onCourseSkip: () -> Unit,
     onCourseRestart: () -> Unit,
     onCourseExit: () -> Unit,
+    onMarkCourseLearned: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var activeProfileAction by rememberSaveable { mutableStateOf<ProfileMenuAction?>(null) }
@@ -398,6 +408,7 @@ fun CharacterScreen(
                 courseCatalog = courseCatalog,
                 completedSymbols = completedSymbols,
                 activeSession = courseSession,
+                onMarkCourseLearned = onMarkCourseLearned,
                 userPreferences = userPreferences,
                 wordEntry = wordEntry,
                 lastFeedbackTimestamp = lastFeedbackTimestamp,
@@ -1185,6 +1196,7 @@ private fun ProfileActionDialog(
     onExitCourse: () -> Unit,
     onSkipCourse: () -> Unit,
     onRestartCourse: () -> Unit,
+    onMarkCourseLearned: (String) -> Unit,
     userPreferences: UserPreferences,
     wordEntry: WordEntry?,
     lastFeedbackTimestamp: Long?,
@@ -1227,6 +1239,7 @@ private fun ProfileActionDialog(
                                 onDismiss()
                                 onCourseSelect(level, symbol)
                             },
+                            onMarkLearned = onMarkCourseLearned,
                         )
                     }
                 },
@@ -1421,7 +1434,7 @@ private fun PracticeHistoryRow(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun CoursePlannerView(
     summary: HskProgressSummary,
@@ -1429,6 +1442,7 @@ private fun CoursePlannerView(
     completedSymbols: Set<String>,
     activeSession: CourseSession?,
     onSelect: (Int, String) -> Unit,
+    onMarkLearned: (String) -> Unit,
 ) {
     if (summary.perLevel.isEmpty()) {
         Text("Start practicing to unlock HSK courses.")
@@ -1497,7 +1511,10 @@ private fun CoursePlannerView(
                             color = background,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .clickable { onSelect(level, symbol) },
+                                .combinedClickable(
+                                    onClick = { onSelect(level, symbol) },
+                                    onLongClick = { onMarkLearned(symbol) },
+                                ),
                         ) {
                             Text(
                                 text = symbol,

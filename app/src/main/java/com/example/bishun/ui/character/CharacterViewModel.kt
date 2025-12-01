@@ -29,8 +29,11 @@ import com.example.bishun.hanzi.quiz.StrokeMatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -79,6 +82,8 @@ class CharacterViewModel(
     val courseCatalog: StateFlow<Map<Int, List<String>>> = _courseCatalog.asStateFlow()
     private val _completedSymbols = MutableStateFlow<Set<String>>(emptySet())
     val completedSymbols: StateFlow<Set<String>> = _completedSymbols.asStateFlow()
+    private val _courseEvents = MutableSharedFlow<CourseEvent>()
+    val courseEvents: SharedFlow<CourseEvent> = _courseEvents.asSharedFlow()
     private val _feedbackSubmission = MutableStateFlow<FeedbackSubmission?>(null)
     val feedbackSubmission: StateFlow<FeedbackSubmission?> = _feedbackSubmission.asStateFlow()
     private val _lastFeedbackSubmission = MutableStateFlow<Long?>(null)
@@ -156,10 +161,10 @@ class CharacterViewModel(
         loadCharacter(symbol)
     }
 
-    fun markCourseCharacterLearned() {
-        val current = _courseSession.value?.currentSymbol ?: return
+    fun markCourseCharacterLearned(symbol: String) {
         viewModelScope.launch {
-            hskProgressStore.add(current)
+            hskProgressStore.add(symbol)
+            _courseEvents.emit(CourseEvent("Marked $symbol as learned"))
         }
     }
 
@@ -396,6 +401,16 @@ class CharacterViewModel(
                     strokeColor = StrokeColorOption.entries.getOrElse(prefs.strokeColor) { StrokeColorOption.PURPLE },
                     showTemplate = prefs.showTemplate,
                 )
+                if (prefs.courseLevel != null && prefs.courseSymbol != null) {
+                    val symbols = courseEntries[prefs.courseLevel]
+                    if (symbols != null && symbols.contains(prefs.courseSymbol)) {
+                        _courseSession.value = CourseSession(
+                            level = prefs.courseLevel,
+                            symbols = symbols,
+                            index = symbols.indexOf(prefs.courseSymbol),
+                        )
+                    }
+                }
             }
         }
     }
@@ -404,8 +419,13 @@ class CharacterViewModel(
         val session = _courseSession.value ?: return
         val newIndex = (session.index + delta).coerceIn(0, session.symbols.size - 1)
         if (newIndex == session.index) return
+        val nextSymbol = session.symbols[newIndex]
         _courseSession.value = session.copy(index = newIndex)
-        loadCharacter(session.symbols[newIndex])
+        viewModelScope.launch {
+            userPreferencesStore.saveCourseSession(session.level, nextSymbol)
+            _courseEvents.emit(CourseEvent("Next up: $nextSymbol"))
+        }
+        loadCharacter(nextSymbol)
     }
 
     private fun alignCourseSession(symbol: String) {
@@ -416,6 +436,7 @@ class CharacterViewModel(
             viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
         } else if (index != session.index) {
             _courseSession.value = session.copy(index = index)
+            viewModelScope.launch { userPreferencesStore.saveCourseSession(session.level, symbol) }
         }
     }
 
@@ -580,12 +601,19 @@ class CharacterViewModel(
         if (session.index >= session.symbols.lastIndex) {
             _courseSession.value = null
             viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
+            viewModelScope.launch {
+                _courseEvents.emit(CourseEvent("HSK ${session.level} complete!"))
+            }
             return
         }
         val nextIndex = session.index + 1
+        val nextSymbol = session.symbols[nextIndex]
         _courseSession.value = session.copy(index = nextIndex)
-        viewModelScope.launch { userPreferencesStore.saveCourseSession(session.level, session.symbols[nextIndex]) }
-        loadCharacter(session.symbols[nextIndex])
+        viewModelScope.launch { userPreferencesStore.saveCourseSession(session.level, nextSymbol) }
+        viewModelScope.launch {
+            _courseEvents.emit(CourseEvent("Auto-advanced to $nextSymbol"))
+        }
+        loadCharacter(nextSymbol)
     }
 
     private fun handleMistake() {
@@ -704,3 +732,5 @@ data class BoardSettings(
     val strokeColor: StrokeColorOption = StrokeColorOption.PURPLE,
     val showTemplate: Boolean = true,
 )
+
+data class CourseEvent(val message: String)
