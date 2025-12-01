@@ -150,6 +150,7 @@ class CharacterViewModel(
 
     fun skipCourseCharacter() {
         navigateCourse(1)
+        viewModelScope.launch { _courseEvents.emit(CourseEvent("Skipped character")) }
     }
 
     fun restartCourseLevel() {
