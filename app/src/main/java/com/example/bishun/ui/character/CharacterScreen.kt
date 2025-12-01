@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolumeUp
@@ -374,14 +375,23 @@ private fun CharacterContent(
 ) {
     var showWordInfo by rememberSaveable(definition.symbol) { mutableStateOf(false) }
     var showHskHint by rememberSaveable(definition.symbol) { mutableStateOf(false) }
+    var showHskIcon by rememberSaveable(definition.symbol) { mutableStateOf(false) }
+    var showHskDialog by rememberSaveable { mutableStateOf(false) }
     val ttsController = rememberTextToSpeechController()
     if (wordEntry == null && showWordInfo) {
         showWordInfo = false
     }
     LaunchedEffect(definition.symbol, hskEntry) {
-        showHskHint = true
-        delay(3500)
-        showHskHint = false
+        if (hskEntry != null) {
+            showHskIcon = false
+            showHskHint = true
+            delay(3500)
+            showHskHint = false
+            showHskIcon = true
+        } else {
+            showHskHint = false
+            showHskIcon = false
+        }
     }
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -416,6 +426,8 @@ private fun CharacterContent(
             calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
             hskEntry = hskEntry,
             showHskHint = showHskHint,
+            showHskIcon = showHskIcon && hskEntry != null,
+            onHskInfoClick = { showHskDialog = true },
             currentColorOption = strokeColorOption,
             onGridModeChange = { gridState.value = it.ordinal },
             onStrokeColorChange = { colorState.value = it.ordinal },
@@ -440,6 +452,12 @@ private fun CharacterContent(
             entry = wordEntry,
             onDismiss = { showWordInfo = false },
             ttsController = ttsController,
+        )
+    }
+    if (showHskDialog && hskEntry != null) {
+        HskInfoDialog(
+            entry = hskEntry,
+            onDismiss = { showHskDialog = false },
         )
     }
 }
@@ -519,6 +537,8 @@ private fun CharacterCanvas(
     calligraphyDemoProgress: List<Float>,
     hskEntry: HskEntry?,
     showHskHint: Boolean,
+    showHskIcon: Boolean,
+    onHskInfoClick: () -> Unit,
     currentColorOption: StrokeColorOption,
     onGridModeChange: (PracticeGrid) -> Unit,
     onStrokeColorChange: (StrokeColorOption) -> Unit,
@@ -629,11 +649,11 @@ private fun CharacterCanvas(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-                IconActionButton(
-                    icon = Icons.Filled.Create,
-                    description = "Start practice",
-                    onClick = onStartPractice,
-                    enabled = !practiceState.isActive,
+            IconActionButton(
+                icon = Icons.Filled.Create,
+                description = "Start practice",
+                onClick = onStartPractice,
+                enabled = !practiceState.isActive,
                 buttonSize = 36.dp,
             )
             IconActionButton(
@@ -652,6 +672,14 @@ private fun CharacterCanvas(
                 onTemplateToggle = onTemplateToggle,
                 buttonSize = 36.dp,
             )
+            if (showHskIcon && hskEntry != null) {
+                IconActionButton(
+                    icon = Icons.Filled.School,
+                    description = "HSK info",
+                    onClick = onHskInfoClick,
+                    buttonSize = 36.dp,
+                )
+            }
         }
         if (showHskHint) {
             HskBadge(
@@ -849,6 +877,55 @@ private fun WordInfoDialog(
             }
         },
     )
+}
+
+@Composable
+private fun HskInfoDialog(
+    entry: HskEntry,
+    onDismiss: () -> Unit,
+) {
+    val scrollState = rememberScrollState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("HSK ${entry.level}") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.verticalScroll(scrollState),
+            ) {
+                HskInfoRow("Writing level", entry.writingLevel?.toString() ?: "N/A")
+                HskInfoRow("Traditional", entry.traditional.ifBlank { entry.symbol })
+                HskInfoRow("Frequency", entry.frequency?.toString() ?: "N/A")
+                Text(
+                    text = "Examples",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = entry.examples.normalizeWhitespace().ifBlank { "No examples available." },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
+}
+
+@Composable
+private fun HskInfoRow(label: String, value: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }
 
 @Composable
