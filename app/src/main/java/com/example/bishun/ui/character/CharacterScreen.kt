@@ -1217,9 +1217,10 @@ private fun ProfileActionDialog(
                 title = { Text("HSK Courses") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        activeSession?.let { session ->
+                        CourseIntroCard()
+                        if (activeSession != null) {
                             CourseResumeCard(
-                                session = session,
+                                session = activeSession,
                                 onResume = {
                                     onDismiss()
                                     onResumeCourse()
@@ -1229,6 +1230,8 @@ private fun ProfileActionDialog(
                                 onRestart = onRestartCourse,
                                 modifier = Modifier.fillMaxWidth(),
                             )
+                        } else {
+                            CourseEmptyStateCard()
                         }
                         CoursePlannerView(
                             summary = hskProgress,
@@ -1444,11 +1447,11 @@ private fun CoursePlannerView(
     onSelect: (Int, String) -> Unit,
     onMarkLearned: (String) -> Unit,
 ) {
-    if (summary.perLevel.isEmpty()) {
-        Text("Start practicing to unlock HSK courses.")
+    val levelKeys = (summary.perLevel.keys + catalog.keys).toSortedSet()
+    if (levelKeys.isEmpty()) {
+        Text("尚未发现课程数据，请检查资源包。")
         return
     }
-    val sortedLevels = summary.perLevel.toSortedMap()
     var selectedFilterKey by rememberSaveable { mutableStateOf(CourseFilter.REMAINING.name) }
     val selectedFilter = CourseFilter.valueOf(selectedFilterKey)
     LazyColumn(
@@ -1474,17 +1477,26 @@ private fun CoursePlannerView(
                 }
             }
         }
-        items(sortedLevels.entries.toList()) { entry ->
-            val level = entry.key
-            val stats = entry.value
+        item {
+            CourseLegendRow()
+        }
+        items(levelKeys.toList()) { level ->
+            val symbols = catalog[level].orEmpty()
+            val completedCount = symbols.count { completedSymbols.contains(it) }
+            val stats = summary.perLevel[level]
+                ?: HskLevelSummary(
+                    completed = completedCount,
+                    total = symbols.size,
+                )
+            val fallbackNext = symbols.firstOrNull { !completedSymbols.contains(it) }
             val nextSymbol = summary.nextTargets[level]
+                ?: fallbackNext
             CourseLevelCard(
                 level = level,
                 stats = stats,
                 nextSymbol = nextSymbol,
                 onSelect = { symbol -> onSelect(level, symbol) },
             )
-            val symbols = catalog[level].orEmpty()
             if (symbols.isNotEmpty()) {
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -2209,6 +2221,50 @@ private fun PracticeSummaryBadge(
     }
 }
 
+@Composable
+private fun CourseLegendRow() {
+    val legend = listOf(
+        LegendEntry("Active", MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+        LegendEntry("Completed", MaterialTheme.colorScheme.surfaceVariant),
+        LegendEntry("Remaining", MaterialTheme.colorScheme.surface),
+    )
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = "Legend & gestures",
+            style = MaterialTheme.typography.labelLarge,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            legend.forEach { entry ->
+                LegendBadge(entry)
+            }
+        }
+        Text(
+            text = "Tap开始学习，长按字符可标记为已掌握。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+private data class LegendEntry(val label: String, val color: Color)
+
+@Composable
+private fun LegendBadge(entry: LegendEntry) {
+    Surface(
+        color = entry.color,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Text(
+            text = entry.label,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        )
+    }
+}
+
 private data class PrivacySummaryRow(val title: String, val details: String)
 
 @Composable
@@ -2275,6 +2331,55 @@ private fun CourseResumeCard(
                 TextButton(onClick = onExit) { Text("Exit") }
                 TextButton(onClick = onResume) { Text("Resume") }
             }
+        }
+    }
+}
+
+@Composable
+private fun CourseIntroCard() {
+    val steps = listOf(
+        "选择一个 HSK 等级开始或继续学习。",
+        "点击字符卡进入练习，长按可标记为已掌握。",
+        "浮动练习徽章会自动显示课程进度与快速操作。",
+    )
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("如何使用课程", style = MaterialTheme.typography.titleSmall)
+            steps.forEach { step ->
+                Text(
+                    text = "• $step",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CourseEmptyStateCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text("尚未加入课程", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = "从下方列表选择任意 HSK 等级即可开启学习节奏。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
