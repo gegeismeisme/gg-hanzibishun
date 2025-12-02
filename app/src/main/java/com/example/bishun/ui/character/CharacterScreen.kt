@@ -509,21 +509,23 @@ private fun SearchBarRow(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-                modifier = Modifier.width(96.dp),
+                modifier = Modifier
+                    .width(96.dp)
+                    .heightIn(max = 38.dp),
             )
             IconActionButton(
                 icon = Icons.Filled.CloudDownload,
                 description = strings.loadButton,
                 onClick = onSubmit,
                 enabled = query.isNotBlank(),
-                buttonSize = 36.dp,
+                buttonSize = 32.dp,
             )
             IconActionButton(
                 icon = Icons.Filled.Clear,
                 description = strings.clearButton,
                 onClick = onClearQuery,
                 enabled = query.isNotEmpty(),
-                buttonSize = 36.dp,
+                buttonSize = 32.dp,
             )
             Spacer(modifier = Modifier.weight(1f, fill = true))
             DemoControlRow(
@@ -552,7 +554,7 @@ private fun ProfileAvatarMenu(onProfileAction: (ProfileMenuAction) -> Unit) {
             icon = Icons.Filled.Person,
             description = "Profile",
             onClick = { expanded = true },
-            buttonSize = 36.dp,
+            buttonSize = 32.dp,
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             menuItems.forEach { action ->
