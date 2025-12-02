@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -78,6 +79,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -138,6 +140,11 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.Locale
 @Composable
@@ -269,6 +276,7 @@ fun CharacterScreen(
 ) {
     var activeProfileAction by rememberSaveable { mutableStateOf<ProfileMenuAction?>(null) }
     val showTemplate = boardSettings.showTemplate
+    val strings = rememberLocalizedStrings()
     val calligraphyDemoController = if (uiState is CharacterUiState.Success && showTemplate) {
         rememberCalligraphyDemoController(
             strokeCount = uiState.definition.strokeCount,
@@ -358,9 +366,10 @@ fun CharacterScreen(
                 onPlayCalligraphyDemoOnce = { playCalligraphyDemo(false) },
                 onPlayCalligraphyDemoLoop = { playCalligraphyDemo(true) },
                 onStopCalligraphyDemo = stopCalligraphyDemo,
+                strings = strings,
             )
             when (uiState) {
-                CharacterUiState.Loading -> Text("Loading...")
+                CharacterUiState.Loading -> Text(strings.loadingLabel)
                 is CharacterUiState.Error -> Text(
                     text = uiState.message,
                     color = MaterialTheme.colorScheme.error,
@@ -433,6 +442,7 @@ fun CharacterScreen(
                 onFeedbackDraftChange = onFeedbackDraftChange,
                 onFeedbackSubmit = onFeedbackSubmit,
                 onDismiss = { activeProfileAction = null },
+                strings = strings,
             )
         }
     }
@@ -455,6 +465,7 @@ private fun SearchBarRow(
     onPlayCalligraphyDemoOnce: () -> Unit,
     onPlayCalligraphyDemoLoop: () -> Unit,
     onStopCalligraphyDemo: () -> Unit,
+    strings: LocalizedStrings,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -465,7 +476,7 @@ private fun SearchBarRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Hanzi Stroke Order",
+                text = strings.appTitle,
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f),
             )
@@ -479,7 +490,7 @@ private fun SearchBarRow(
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                label = { Text("Hanzi") },
+                label = { Text(strings.searchLabel) },
                 placeholder = { Text("\u6c38") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -488,14 +499,14 @@ private fun SearchBarRow(
             )
             IconActionButton(
                 icon = Icons.Filled.CloudDownload,
-                description = "Load character",
+                description = strings.loadButton,
                 onClick = onSubmit,
                 enabled = query.isNotBlank(),
                 buttonSize = 36.dp,
             )
             IconActionButton(
                 icon = Icons.Filled.Clear,
-                description = "Clear input",
+                description = strings.clearButton,
                 onClick = onClearQuery,
                 enabled = query.isNotEmpty(),
                 buttonSize = 36.dp,
@@ -1209,15 +1220,16 @@ private fun ProfileActionDialog(
     onFeedbackDraftChange: (String, String, String) -> Unit,
     onFeedbackSubmit: (String, String, String) -> Unit,
     onDismiss: () -> Unit,
+    strings: LocalizedStrings,
 ) {
     when (action) {
         ProfileMenuAction.COURSES -> {
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("HSK Courses") },
+                title = { Text(strings.coursesDialogTitle) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        CourseIntroCard()
+                        CourseIntroCard(strings)
                         if (activeSession != null) {
                             CourseResumeCard(
                                 session = activeSession,
@@ -1231,7 +1243,7 @@ private fun ProfileActionDialog(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         } else {
-                            CourseEmptyStateCard()
+                            CourseEmptyStateCard(strings)
                         }
                         CoursePlannerView(
                             summary = hskProgress,
@@ -1243,6 +1255,7 @@ private fun ProfileActionDialog(
                                 onCourseSelect(level, symbol)
                             },
                             onMarkLearned = onMarkCourseLearned,
+                            strings = strings,
                         )
                     }
                 },
@@ -1268,7 +1281,7 @@ private fun ProfileActionDialog(
             )
         }
         ProfileMenuAction.HELP -> {
-            HelpDialog(onDismiss = onDismiss)
+            HelpDialog(strings = strings, onDismiss = onDismiss)
         }
         ProfileMenuAction.DICT -> {
             val entry = wordEntry
@@ -1293,6 +1306,7 @@ private fun ProfileActionDialog(
                 onCrashChange = onCrashReportsChange,
                 onPrefetchChange = onPrefetchChange,
                 onDismiss = onDismiss,
+                strings = strings,
             )
         }
         ProfileMenuAction.FEEDBACK -> {
@@ -1329,6 +1343,7 @@ private fun HskProgressView(
     onJumpToChar: (String) -> Unit,
 ) {
     val scrollState = rememberScrollState()
+    val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1336,25 +1351,225 @@ private fun HskProgressView(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (summary.perLevel.isEmpty()) {
-            Text("Practice characters to start tracking HSK progress.")
-        } else {
-            Text(
-                text = "Learned ${summary.totalCompleted}/${summary.totalCharacters}",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            summary.perLevel.toSortedMap().forEach { (level, stats) ->
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth(),
+        ProgressOverviewCard(overview = overview)
+        LevelBreakdownList(summary = summary)
+        HorizontalDivider()
+        PracticeHistorySection(history = practiceHistory, onJumpToChar = onJumpToChar)
+    }
+}
+
+@Composable
+private fun ProgressOverviewCard(overview: ProgressOverview) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 2.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                StatPill(
+                    title = "Learned",
+                    value = "${overview.totalLearned}/${overview.totalCharacters.coerceAtLeast(overview.totalLearned)}",
+                )
+                StatPill(
+                    title = "Streak",
+                    value = if (overview.streakDays > 0) "${overview.streakDays}d" else "Start",
+                )
+                StatPill(
+                    title = "Last practice",
+                    value = overview.lastPracticeTimestamp?.let { formatRelativeDuration(it) } ?: "—",
+                )
+            }
+            WeeklyPracticeChart(counts = overview.weeklyCounts)
+        }
+    }
+}
+
+@Composable
+private fun RowScope.StatPill(title: String, value: String) {
+    Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(text = title, style = MaterialTheme.typography.labelMedium)
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun WeeklyPracticeChart(counts: List<DailyPracticeCount>) {
+    val maxCount = counts.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
+    val barHeight = 56.dp
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Past 7 days", style = MaterialTheme.typography.labelLarge)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Bottom,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            counts.forEach { day ->
+                val ratio = (day.count / maxCount.toFloat()).coerceIn(0f, 1f)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f),
                 ) {
-                    Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
-                    Text("${stats.completed}/${stats.total}")
+                    Box(
+                        modifier = Modifier
+                            .height(barHeight)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.BottomCenter,
+                    ) {
+                        if (ratio > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(ratio)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (day.isToday) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                    ),
+                            )
+                        }
+                    }
+                    Text(
+                        text = day.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (day.isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
-        HorizontalDivider()
-        PracticeHistorySection(history = practiceHistory, onJumpToChar = onJumpToChar)
+    }
+}
+
+@Composable
+private fun LevelBreakdownList(summary: HskProgressSummary) {
+    if (summary.perLevel.isEmpty()) {
+        Text(
+            text = "Practice characters to start tracking HSK progress.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Per level overview",
+            style = MaterialTheme.typography.labelLarge,
+        )
+        summary.perLevel.toSortedMap().forEach { (level, stats) ->
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                tonalElevation = 1.dp,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column {
+                        Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = "${stats.completed}/${stats.total} mastered",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    val progress = if (stats.total == 0) 0f else (stats.completed / stats.total.toFloat()).coerceIn(0f, 1f)
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .width(110.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class ProgressOverview(
+    val totalLearned: Int,
+    val totalCharacters: Int,
+    val streakDays: Int,
+    val lastPracticeTimestamp: Long?,
+    val weeklyCounts: List<DailyPracticeCount>,
+)
+
+private data class DailyPracticeCount(val label: String, val count: Int, val isToday: Boolean)
+
+private data class CourseSymbolVisual(val symbol: String, val isActive: Boolean, val isCompleted: Boolean)
+
+private fun buildProgressOverview(
+    summary: HskProgressSummary,
+    history: List<PracticeHistoryEntry>,
+): ProgressOverview {
+    val zoneId = ZoneId.systemDefault()
+    val today = LocalDate.now(zoneId)
+    val dayFormatter = DateTimeFormatter.ofPattern("EE", Locale.getDefault())
+    val grouped = history.groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zoneId).toLocalDate() }
+    val sortedDays = grouped.keys.sortedDescending()
+    var streak = 0
+    var previousDay: LocalDate? = null
+    loop@ for (day in sortedDays) {
+        if (previousDay == null) {
+            streak = 1
+            previousDay = day
+            continue@loop
+        }
+        val diff = ChronoUnit.DAYS.between(day, previousDay)
+        when {
+            diff == 0L -> continue@loop
+            diff == 1L -> {
+                streak++
+                previousDay = day
+            }
+            else -> break@loop
+        }
+    }
+    val weeklyCounts = (6 downTo 0).map { offset ->
+        val day = today.minusDays(offset.toLong())
+        DailyPracticeCount(
+            label = dayFormatter.format(day),
+            count = grouped[day]?.size ?: 0,
+            isToday = day == today,
+        )
+    }
+    return ProgressOverview(
+        totalLearned = summary.totalCompleted,
+        totalCharacters = summary.totalCharacters.takeIf { it > 0 } ?: summary.totalCompleted,
+        streakDays = streak,
+        lastPracticeTimestamp = history.maxOfOrNull { it.timestamp },
+        weeklyCounts = weeklyCounts,
+    )
+}
+
+private fun formatRelativeDuration(timestamp: Long): String {
+    val diffMillis = System.currentTimeMillis() - timestamp
+    if (diffMillis <= 0) return "just now"
+    val minutes = diffMillis / 60_000
+    return when {
+        minutes < 1 -> "just now"
+        minutes < 60 -> "${minutes}m ago"
+        minutes < 60 * 24 -> "${minutes / 60}h ago"
+        else -> "${minutes / (60 * 24)}d ago"
     }
 }
 
@@ -1446,14 +1661,20 @@ private fun CoursePlannerView(
     activeSession: CourseSession?,
     onSelect: (Int, String) -> Unit,
     onMarkLearned: (String) -> Unit,
+    strings: LocalizedStrings,
 ) {
     val levelKeys = (summary.perLevel.keys + catalog.keys).toSortedSet()
     if (levelKeys.isEmpty()) {
-        Text("尚未发现课程数据，请检查资源包。")
+        Text(
+            text = strings.courseNoDataMessage,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         return
     }
     var selectedFilterKey by rememberSaveable { mutableStateOf(CourseFilter.REMAINING.name) }
     val selectedFilter = CourseFilter.valueOf(selectedFilterKey)
+    val expandedLevels = remember { mutableStateMapOf<Int, Boolean>() }
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -1462,7 +1683,7 @@ private fun CoursePlannerView(
     ) {
         item {
             Text(
-                text = "Pick a course to continue",
+                text = strings.coursePlanHeading,
                 style = MaterialTheme.typography.titleMedium,
             )
         }
@@ -1472,13 +1693,13 @@ private fun CoursePlannerView(
                     FilterChip(
                         selected = selectedFilter == filter,
                         onClick = { selectedFilterKey = filter.name },
-                        label = { Text(filter.label) },
+                        label = { Text(filter.label(strings)) },
                     )
                 }
             }
         }
         item {
-            CourseLegendRow()
+            CourseLegendRow(strings = strings)
         }
         items(levelKeys.toList()) { level ->
             val symbols = catalog[level].orEmpty()
@@ -1496,43 +1717,76 @@ private fun CoursePlannerView(
                 stats = stats,
                 nextSymbol = nextSymbol,
                 onSelect = { symbol -> onSelect(level, symbol) },
+                strings = strings,
             )
             if (symbols.isNotEmpty()) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    symbols.forEach { symbol ->
-                        val isActive = activeSession?.level == level && activeSession.currentSymbol == symbol
-                        val isCompleted = completedSymbols.contains(symbol)
-                        val matchesFilter = when (selectedFilter) {
-                            CourseFilter.ALL -> true
-                            CourseFilter.REMAINING -> !isCompleted
-                            CourseFilter.COMPLETED -> isCompleted
-                        }
-                        if (!matchesFilter && !isActive) return@forEach
-                        val background = when {
-                            isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            isCompleted -> MaterialTheme.colorScheme.surfaceVariant
-                            else -> MaterialTheme.colorScheme.surface
-                        }
+                val accentColor = levelColor(level)
+                val symbolStates = symbols.mapNotNull { symbol ->
+                    val isActive = activeSession?.level == level && activeSession.currentSymbol == symbol
+                    val isCompleted = completedSymbols.contains(symbol)
+                    if (!selectedFilter.include(isCompleted) && !isActive) {
+                        null
+                    } else {
+                        CourseSymbolVisual(symbol = symbol, isActive = isActive, isCompleted = isCompleted)
+                    }
+                }
+                if (symbolStates.isNotEmpty()) {
+                    val previewCount = 10
+                    val isExpanded = expandedLevels[level] ?: false
+                    val canToggle = symbolStates.size > previewCount
+                    if (!isExpanded && canToggle) {
+                        val previewSymbols = symbolStates.take(previewCount).joinToString(" ") { it.symbol }
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            tonalElevation = if (isActive) 4.dp else 0.dp,
-                            color = background,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .combinedClickable(
-                                    onClick = { onSelect(level, symbol) },
-                                    onLongClick = { onMarkLearned(symbol) },
-                                ),
+                            tonalElevation = 1.dp,
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                text = symbol,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                text = if (symbolStates.size > previewCount) "$previewSymbols ..." else previewSymbols,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    if (isExpanded || !canToggle) {
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            symbolStates.forEach { symbolState ->
+                                val background = when {
+                                    symbolState.isActive -> accentColor.copy(alpha = 0.25f)
+                                    symbolState.isCompleted -> accentColor.copy(alpha = 0.1f)
+                                    else -> MaterialTheme.colorScheme.surface
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    tonalElevation = if (symbolState.isActive) 4.dp else 0.dp,
+                                    color = background,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .combinedClickable(
+                                            onClick = { onSelect(level, symbolState.symbol) },
+                                            onLongClick = { onMarkLearned(symbolState.symbol) },
+                                        ),
+                                ) {
+                                    Text(
+                                        text = symbolState.symbol,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (symbolState.isActive) accentColor else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (canToggle) {
+                        TextButton(onClick = { expandedLevels[level] = !isExpanded }) {
+                            Text(
+                                text = if (isExpanded) strings.collapseCharactersLabel else strings.expandCharactersLabel,
                             )
                         }
                     }
@@ -1548,14 +1802,18 @@ private fun CourseLevelCard(
     stats: HskLevelSummary,
     nextSymbol: String?,
     onSelect: (String) -> Unit,
+    strings: LocalizedStrings,
 ) {
     val total = stats.total.coerceAtLeast(1)
     val progress = (stats.completed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    val accentColor = levelColor(level)
     val statusText = when {
-        nextSymbol == null -> "Course complete"
-        stats.completed == 0 -> "Start with $nextSymbol"
-        else -> "Next • $nextSymbol"
+        nextSymbol == null -> strings.courseLevelCompleteLabel
+        stats.completed == 0 -> String.format(strings.locale, strings.courseLevelStartFormat, nextSymbol)
+        else -> String.format(strings.locale, strings.courseLevelNextFormat, nextSymbol)
     }
+    val levelLabel = String.format(strings.locale, strings.levelLabelFormat, level)
+    val progressText = String.format(strings.locale, strings.courseLevelProgressFormat, stats.completed, stats.total, stats.remaining)
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -1576,21 +1834,22 @@ private fun CourseLevelCard(
                     Text(
                         text = "HSK $level",
                         style = MaterialTheme.typography.titleSmall,
+                        color = accentColor,
                     )
                     Text(
-                        text = "${stats.completed}/${stats.total} mastered · ${stats.remaining} remaining",
+                        text = progressText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    color = accentColor.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Text(
-                        text = "Level $level",
+                        text = levelLabel,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = accentColor,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     )
                 }
@@ -1598,6 +1857,7 @@ private fun CourseLevelCard(
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth(),
+                color = accentColor,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1607,13 +1867,13 @@ private fun CourseLevelCard(
                 Text(
                     text = statusText,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = accentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 IconActionButton(
                     icon = Icons.Filled.PlayArrow,
-                    description = "Load HSK $level",
+                    description = String.format(strings.locale, strings.loadLevelFormat, level),
                     onClick = { nextSymbol?.let(onSelect) },
                     enabled = nextSymbol != null,
                     buttonSize = 36.dp,
@@ -1624,54 +1884,12 @@ private fun CourseLevelCard(
 }
 
 @Composable
-private fun HelpDialog(onDismiss: () -> Unit) {
+private fun HelpDialog(strings: LocalizedStrings, onDismiss: () -> Unit) {
     val scrollState = rememberScrollState()
-    val sections = listOf(
-        HelpSection(
-            title = "Quick start",
-            description = "Complete a full demo → practice cycle in seconds.",
-            bullets = listOf(
-                "输入单个汉字，点击云朵加载离线笔顺数据。",
-                "使用播放/循环按钮预览教学演示；开启楷书模板会显示描红效果。",
-                "点击画板右上角的铅笔开始练习，按顺序完成每一笔；提示按钮会高亮下一笔。",
-            ),
-        ),
-        HelpSection(
-            title = "课程与进度",
-            description = "HSK 课程通过头像菜单进入，浮动徽章显示当前进度。",
-            bullets = listOf(
-                "Resume/Skip/Restart/Exit 图标保持在绿色徽章，确保不会遮挡画板。",
-                "左右箭头可快速切换上一字/下一字；完成后进度自动同步到课程摘要。",
-            ),
-        ),
-        HelpSection(
-            title = "字卡与发音",
-            description = "放大楷书字旁的卡片展示拼音、部首、释义和 TextToSpeech 按钮。",
-            bullets = listOf(
-                "点击卡片可查看完整解释并滚动浏览全部文本。",
-                "小喇叭离线播放普通话发音，无需网络。",
-            ),
-        ),
-        HelpSection(
-            title = "网格与模板",
-            description = "画板设置支持米字格、九宫格或无网格，所有选项离线保存在本地。",
-            bullets = listOf(
-                "可切换描红/非描红模式，颜色和模板状态会在下次启动时恢复。",
-                "长按板面外区域滚动页面，避免误触导致画板移动。",
-            ),
-        ),
-        HelpSection(
-            title = "支持与反馈",
-            description = "如需帮助，请通过下列方式联系：",
-            bullets = listOf(
-                "邮箱：qq260316514@gmail.com",
-                "反馈菜单：头像 → Feedback，可附带日志。",
-            ),
-        ),
-    )
+    val sections = strings.helpSections
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Help & onboarding") },
+        title = { Text(strings.helpTitle) },
         text = {
             Column(
                 modifier = Modifier
@@ -1685,19 +1903,13 @@ private fun HelpDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Got it") }
+            TextButton(onClick = onDismiss) { Text(strings.helpConfirm) }
         },
     )
 }
 
-private data class HelpSection(
-    val title: String,
-    val description: String,
-    val bullets: List<String>,
-)
-
 @Composable
-private fun HelpSectionCard(section: HelpSection) {
+private fun HelpSectionCard(section: HelpSectionText) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
@@ -1705,7 +1917,7 @@ private fun HelpSectionCard(section: HelpSection) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(section.title, style = MaterialTheme.typography.titleSmall)
@@ -1716,7 +1928,7 @@ private fun HelpSectionCard(section: HelpSection) {
             )
             section.bullets.forEach { bullet ->
                 Text(
-                    text = "• $bullet",
+                    text = "- $bullet",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -1731,33 +1943,22 @@ private fun PrivacyDialog(
     onCrashChange: (Boolean) -> Unit,
     onPrefetchChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
+    strings: LocalizedStrings,
 ) {
     val context = LocalContext.current
-    val contactEmail = "qq260316514@gmail.com"
-    val summaryPoints = listOf(
-        PrivacySummaryRow(
-            title = "数据存储",
-            details = "练习记录、课程进度、板面设置均保存在设备 DataStore，不会上传云端。",
-        ),
-        PrivacySummaryRow(
-            title = "资源访问",
-            details = "笔顺 JSON 和课程 CSV 打包在 APK 内，除非手动允许网络预取，否则保持离线。",
-        ),
-        PrivacySummaryRow(
-            title = "日志与反馈",
-            details = "只在你主动分享反馈时附带纯文本日志，可在发送前删除敏感信息。",
-        ),
-    )
+    val contactEmail = SUPPORT_EMAIL
+    val summaryPoints = strings.privacySummaryRows
+    var showFullPolicy by rememberSaveable { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Privacy preferences") },
+        title = { Text(strings.privacyTitle) },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 420.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "App 设计为离线优先。仅当你允许时才会启用诊断或网络预取。",
+                    text = strings.privacyIntro,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 PrivacyToggleRow(
@@ -1780,29 +1981,32 @@ private fun PrivacyDialog(
                 )
                 HorizontalDivider()
                 Text(
-                    text = "Data safety snapshot",
+                    text = strings.dataSafetyHeading,
                     style = MaterialTheme.typography.labelLarge,
                 )
                 summaryPoints.forEach { point ->
-                    PrivacySummaryCard(point)
+                    PrivacySummaryCard(PrivacySummaryRow(point.title, point.detail))
                 }
                 Text(
-                    text = "Contact: $contactEmail",
+                    text = String.format(strings.locale, strings.contactSupportLabel, contactEmail),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 TextButton(
                     onClick = {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
                             data = Uri.parse("mailto:$contactEmail")
-                            putExtra(Intent.EXTRA_SUBJECT, "Hanzi Stroke Order – Privacy question")
+                            putExtra(Intent.EXTRA_SUBJECT, "Hanzi Stroke Order - Privacy question")
                         }
-                        val chooser = Intent.createChooser(intent, "Contact support")
+                        val chooser = Intent.createChooser(intent, strings.emailSupportButton)
                         if (intent.resolveActivity(context.packageManager) != null) {
                             runCatching { context.startActivity(chooser) }
                         }
                     },
                 ) {
-                    Text("Email support")
+                    Text(strings.emailSupportButton)
+                }
+                TextButton(onClick = { showFullPolicy = true }) {
+                    Text(strings.viewPolicyButton)
                 }
             }
         },
@@ -1810,6 +2014,9 @@ private fun PrivacyDialog(
             TextButton(onClick = onDismiss) { Text("Close") }
         },
     )
+    if (showFullPolicy) {
+        FullPrivacyPolicyDialog(strings = strings, onDismiss = { showFullPolicy = false })
+    }
 }
 
 @Composable
@@ -2221,18 +2428,19 @@ private fun PracticeSummaryBadge(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CourseLegendRow() {
+private fun CourseLegendRow(strings: LocalizedStrings) {
     val legend = listOf(
-        LegendEntry("Active", MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-        LegendEntry("Completed", MaterialTheme.colorScheme.surfaceVariant),
-        LegendEntry("Remaining", MaterialTheme.colorScheme.surface),
+        LegendEntry(strings.legendActiveLabel, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+        LegendEntry(strings.legendCompletedLabel, MaterialTheme.colorScheme.surfaceVariant),
+        LegendEntry(strings.legendRemainingLabel, MaterialTheme.colorScheme.surface),
     )
     Column(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = "Legend & gestures",
+            text = strings.legendTitle,
             style = MaterialTheme.typography.labelLarge,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2240,8 +2448,33 @@ private fun CourseLegendRow() {
                 LegendBadge(entry)
             }
         }
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            (1..6).forEach { level ->
+                val color = levelColor(level)
+                Surface(
+                    color = color.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        text = String.format(strings.locale, strings.levelLabelFormat, level),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = color,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+            }
+        }
         Text(
-            text = "Tap开始学习，长按字符可标记为已掌握。",
+            text = strings.legendGesture,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = strings.courseLegendHint,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -2265,6 +2498,17 @@ private fun LegendBadge(entry: LegendEntry) {
     }
 }
 
+@Composable
+private fun levelColor(level: Int): Color = when (level) {
+    1 -> Color(0xFF4CAF50)
+    2 -> Color(0xFF2196F3)
+    3 -> Color(0xFFFFB300)
+    4 -> Color(0xFF9C27B0)
+    5 -> Color(0xFFFF7043)
+    6 -> Color(0xFF607D8B)
+    else -> MaterialTheme.colorScheme.primary
+}
+
 private data class PrivacySummaryRow(val title: String, val details: String)
 
 @Composable
@@ -2285,6 +2529,54 @@ private fun PrivacySummaryCard(row: PrivacySummaryRow) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun FullPrivacyPolicyDialog(strings: LocalizedStrings, onDismiss: () -> Unit) {
+    val scrollState = rememberScrollState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings.fullPolicyTitle) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 460.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                strings.fullPolicySections.forEach { section ->
+                    PolicySectionCard(section)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
+}
+
+@Composable
+private fun PolicySectionCard(section: PolicySectionText) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(section.title, style = MaterialTheme.typography.titleSmall)
+            section.bullets.forEach { bullet ->
+                Text(
+                    text = "- $bullet",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -2336,12 +2628,7 @@ private fun CourseResumeCard(
 }
 
 @Composable
-private fun CourseIntroCard() {
-    val steps = listOf(
-        "选择一个 HSK 等级开始或继续学习。",
-        "点击字符卡进入练习，长按可标记为已掌握。",
-        "浮动练习徽章会自动显示课程进度与快速操作。",
-    )
+private fun CourseIntroCard(strings: LocalizedStrings) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         tonalElevation = 1.dp,
@@ -2352,10 +2639,10 @@ private fun CourseIntroCard() {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("如何使用课程", style = MaterialTheme.typography.titleSmall)
-            steps.forEach { step ->
+            Text(strings.courseIntroTitle, style = MaterialTheme.typography.titleSmall)
+            strings.courseIntroBullets.forEach { step ->
                 Text(
-                    text = "• $step",
+                    text = "- $step",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -2364,7 +2651,7 @@ private fun CourseIntroCard() {
 }
 
 @Composable
-private fun CourseEmptyStateCard() {
+private fun CourseEmptyStateCard(strings: LocalizedStrings) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -2374,9 +2661,9 @@ private fun CourseEmptyStateCard() {
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("尚未加入课程", style = MaterialTheme.typography.titleSmall)
+            Text(strings.courseEmptyTitle, style = MaterialTheme.typography.titleSmall)
             Text(
-                text = "从下方列表选择任意 HSK 等级即可开启学习节奏。",
+                text = strings.courseEmptyDescription,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -2729,8 +3016,21 @@ private fun ColorRgba.asComposeColor(alphaMultiplier: Float = 1f): Color {
     )
 }
 private fun Offset.toPoint(): Point = Point(x.toDouble(), y.toDouble())
-private enum class CourseFilter(val label: String) {
-    ALL("All"),
-    REMAINING("Remaining"),
-    COMPLETED("Completed"),
+private enum class CourseFilter {
+    ALL,
+    REMAINING,
+    COMPLETED,
+    ;
+
+    fun label(strings: LocalizedStrings): String = when (this) {
+        ALL -> strings.filterAllLabel
+        REMAINING -> strings.filterRemainingLabel
+        COMPLETED -> strings.filterCompletedLabel
+    }
+
+    fun include(isCompleted: Boolean): Boolean = when (this) {
+        ALL -> true
+        REMAINING -> !isCompleted
+        COMPLETED -> isCompleted
+    }
 }
