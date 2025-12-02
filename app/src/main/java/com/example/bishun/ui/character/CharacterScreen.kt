@@ -1614,36 +1614,62 @@ private fun CourseLevelCard(
 @Composable
 private fun HelpDialog(onDismiss: () -> Unit) {
     val scrollState = rememberScrollState()
+    val sections = listOf(
+        HelpSection(
+            title = "Quick start",
+            description = "Complete a full demo → practice cycle in seconds.",
+            bullets = listOf(
+                "输入单个汉字，点击云朵加载离线笔顺数据。",
+                "使用播放/循环按钮预览教学演示；开启楷书模板会显示描红效果。",
+                "点击画板右上角的铅笔开始练习，按顺序完成每一笔；提示按钮会高亮下一笔。",
+            ),
+        ),
+        HelpSection(
+            title = "课程与进度",
+            description = "HSK 课程通过头像菜单进入，浮动徽章显示当前进度。",
+            bullets = listOf(
+                "Resume/Skip/Restart/Exit 图标保持在绿色徽章，确保不会遮挡画板。",
+                "左右箭头可快速切换上一字/下一字；完成后进度自动同步到课程摘要。",
+            ),
+        ),
+        HelpSection(
+            title = "字卡与发音",
+            description = "放大楷书字旁的卡片展示拼音、部首、释义和 TextToSpeech 按钮。",
+            bullets = listOf(
+                "点击卡片可查看完整解释并滚动浏览全部文本。",
+                "小喇叭离线播放普通话发音，无需网络。",
+            ),
+        ),
+        HelpSection(
+            title = "网格与模板",
+            description = "画板设置支持米字格、九宫格或无网格，所有选项离线保存在本地。",
+            bullets = listOf(
+                "可切换描红/非描红模式，颜色和模板状态会在下次启动时恢复。",
+                "长按板面外区域滚动页面，避免误触导致画板移动。",
+            ),
+        ),
+        HelpSection(
+            title = "支持与反馈",
+            description = "如需帮助，请通过下列方式联系：",
+            bullets = listOf(
+                "邮箱：qq260316514@gmail.com",
+                "反馈菜单：头像 → Feedback，可附带日志。",
+            ),
+        ),
+    )
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Help & tips") },
+        title = { Text("Help & onboarding") },
         text = {
             Column(
                 modifier = Modifier
-                    .heightIn(max = 420.dp)
+                    .heightIn(max = 460.dp)
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                HelpTipCard(
-                    icon = Icons.Filled.Info,
-                    title = "Navigation",
-                    details = "Use the input to jump to any character, tap the cloud to load it, and clear when you want to type another symbol.",
-                )
-                HelpTipCard(
-                    icon = Icons.Filled.PlayArrow,
-                    title = "Demo controls",
-                    details = "Single play previews the strokes once, loop keeps animating until you stop it. Calligraphy overlays mirror these controls.",
-                )
-                HelpTipCard(
-                    icon = Icons.Filled.Create,
-                    title = "Practice state",
-                    details = "Start practice to unlock hints, errors, and the progress pill. Completed strokes fill automatically and persist for HSK tracking.",
-                )
-                HelpTipCard(
-                    icon = Icons.Filled.Settings,
-                    title = "Board options",
-                    details = "Open the board menu to pick grids, pen colors, and calligraphy outlines. Settings stay local so your layout remains consistent.",
-                )
+                sections.forEach { section ->
+                    HelpSectionCard(section = section)
+                }
             }
         },
         confirmButton = {
@@ -1652,32 +1678,33 @@ private fun HelpDialog(onDismiss: () -> Unit) {
     )
 }
 
+private data class HelpSection(
+    val title: String,
+    val description: String,
+    val bullets: List<String>,
+)
+
 @Composable
-private fun HelpTipCard(
-    icon: ImageVector,
-    title: String,
-    details: String,
-) {
+private fun HelpSectionCard(section: HelpSection) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+            Text(section.title, style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = section.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
+            section.bullets.forEach { bullet ->
                 Text(
-                    text = details,
+                    text = "• $bullet",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -1693,6 +1720,22 @@ private fun PrivacyDialog(
     onPrefetchChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val contactEmail = "qq260316514@gmail.com"
+    val summaryPoints = listOf(
+        PrivacySummaryRow(
+            title = "数据存储",
+            details = "练习记录、课程进度、板面设置均保存在设备 DataStore，不会上传云端。",
+        ),
+        PrivacySummaryRow(
+            title = "资源访问",
+            details = "笔顺 JSON 和课程 CSV 打包在 APK 内，除非手动允许网络预取，否则保持离线。",
+        ),
+        PrivacySummaryRow(
+            title = "日志与反馈",
+            details = "只在你主动分享反馈时附带纯文本日志，可在发送前删除敏感信息。",
+        ),
+    )
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Privacy preferences") },
@@ -1702,7 +1745,7 @@ private fun PrivacyDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "Everything runs offline by default. Toggle optional diagnostics so we are Play Store ready without surprising users.",
+                    text = "App 设计为离线优先。仅当你允许时才会启用诊断或网络预取。",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 PrivacyToggleRow(
@@ -1723,6 +1766,32 @@ private fun PrivacyDialog(
                     checked = prefs.networkPrefetchEnabled,
                     onCheckedChange = onPrefetchChange,
                 )
+                HorizontalDivider()
+                Text(
+                    text = "Data safety snapshot",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                summaryPoints.forEach { point ->
+                    PrivacySummaryCard(point)
+                }
+                Text(
+                    text = "Contact: $contactEmail",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                TextButton(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("mailto:$contactEmail")
+                            putExtra(Intent.EXTRA_SUBJECT, "Hanzi Stroke Order – Privacy question")
+                        }
+                        val chooser = Intent.createChooser(intent, "Contact support")
+                        if (intent.resolveActivity(context.packageManager) != null) {
+                            runCatching { context.startActivity(chooser) }
+                        }
+                    },
+                ) {
+                    Text("Email support")
+                }
             }
         },
         confirmButton = {
@@ -2136,6 +2205,30 @@ private fun PracticeSummaryBadge(
                     buttonSize = buttonSize,
                 )
             }
+        }
+    }
+}
+
+private data class PrivacySummaryRow(val title: String, val details: String)
+
+@Composable
+private fun PrivacySummaryCard(row: PrivacySummaryRow) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(row.title, style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = row.details,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
