@@ -80,7 +80,7 @@ fun rememberLocalizedStrings(languageOverride: String?): LocalizedStrings {
 
 private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStrings(
     locale = locale,
-    appTitle = "Hanzi Stroke Order",
+    appTitle = "中国字笔顺",
     searchLabel = "Hanzi",
     loadButton = "Load character",
     clearButton = "Clear input",
@@ -224,7 +224,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
 
 private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStrings(
     locale = locale,
-    appTitle = "Hanzi Stroke Order",
+    appTitle = "中国字笔顺",
     searchLabel = "Hanzi",
     loadButton = "Cargar carácter",
     clearButton = "Borrar",
@@ -368,7 +368,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
 
 private fun localizedStringsJa(locale: Locale): LocalizedStrings = LocalizedStrings(
     locale = locale,
-    appTitle = "Hanzi Stroke Order",
+    appTitle = "中国字笔顺",
     searchLabel = "漢字",
     loadButton = "文字を読み込む",
     clearButton = "クリア",
