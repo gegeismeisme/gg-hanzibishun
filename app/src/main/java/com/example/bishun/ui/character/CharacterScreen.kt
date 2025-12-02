@@ -45,13 +45,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -594,16 +597,6 @@ private fun CharacterContent(
             .fillMaxWidth()
             .fillMaxHeight(),
     ) {
-        courseSession?.currentSymbol?.let { symbol ->
-            CourseResumeCard(
-                session = courseSession,
-                onResume = { onResumeCourse(symbol) },
-                onExit = onCourseExit,
-                onSkip = onCourseSkip,
-                onRestart = onCourseRestart,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
         CharacterInfoPanel(
             definition = definition,
             wordEntry = wordEntry,
@@ -614,15 +607,16 @@ private fun CharacterContent(
         PracticeSummaryBadge(
             progressText = summary.progressText,
             statusText = summary.statusText,
+            courseSession = courseSession,
+            onCourseResume = {
+                val targetSymbol = courseSession?.currentSymbol ?: definition.symbol
+                onResumeCourse(targetSymbol)
+            },
+            onCourseSkip = onCourseSkip,
+            onCourseRestart = onCourseRestart,
+            onCourseExit = onCourseExit,
             modifier = Modifier.fillMaxWidth(),
         )
-        courseSession?.let {
-            CourseProgressBadge(
-                level = it.level,
-                progressText = it.progressText,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
         val gridMode = boardSettings.grid
         val strokeColorOption = boardSettings.strokeColor
         val strokeColor = strokeColorOption.color
@@ -656,6 +650,9 @@ private fun CharacterContent(
             onRequestHint = onRequestHint,
             onCourseNext = onCourseNext,
             onCoursePrev = onCoursePrev,
+            onCourseSkip = onCourseSkip,
+            onCourseRestart = onCourseRestart,
+            onCourseExit = onCourseExit,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = true),
@@ -769,6 +766,9 @@ private fun CharacterCanvas(
     onRequestHint: () -> Unit,
     onCourseNext: () -> Unit,
     onCoursePrev: () -> Unit,
+    onCourseSkip: () -> Unit,
+    onCourseRestart: () -> Unit,
+    onCourseExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val outlineColor = Color(0xFFD6D6D6)
@@ -2051,6 +2051,11 @@ private fun PracticeState.toSummary(): PracticeSummaryUi {
 private fun PracticeSummaryBadge(
     progressText: String,
     statusText: String,
+    courseSession: CourseSession?,
+    onCourseResume: (() -> Unit)?,
+    onCourseSkip: (() -> Unit)?,
+    onCourseRestart: (() -> Unit)?,
+    onCourseExit: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val containerColor = Color(0xFFE5F4EA)
@@ -2061,22 +2066,76 @@ private fun PracticeSummaryBadge(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = progressText,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-            )
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        if (courseSession == null) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = progressText,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                )
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f, fill = true),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = progressText,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = "HSK ${courseSession.level} • ${courseSession.progressText}",
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                val buttonSize = 28.dp
+                IconActionButton(
+                    icon = Icons.Filled.PlayArrow,
+                    description = "Resume course",
+                    onClick = { onCourseResume?.invoke() },
+                    enabled = onCourseResume != null,
+                    buttonSize = buttonSize,
+                )
+                IconActionButton(
+                    icon = Icons.Filled.SkipNext,
+                    description = "Skip character",
+                    onClick = { onCourseSkip?.invoke() },
+                    enabled = onCourseSkip != null,
+                    buttonSize = buttonSize,
+                )
+                IconActionButton(
+                    icon = Icons.Filled.RestartAlt,
+                    description = "Restart level",
+                    onClick = { onCourseRestart?.invoke() },
+                    enabled = onCourseRestart != null,
+                    buttonSize = buttonSize,
+                )
+                IconActionButton(
+                    icon = Icons.Filled.Close,
+                    description = "Exit course",
+                    onClick = { onCourseExit?.invoke() },
+                    enabled = onCourseExit != null,
+                    buttonSize = buttonSize,
+                )
+            }
         }
     }
 }
@@ -2387,35 +2446,6 @@ private fun DrawScope.drawLayer(
                 path = path,
                 color = baseColor.copy(alpha = baseColor.alpha * effectiveOpacity),
                 strokeWidth = strokeWidth,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CourseProgressBadge(
-    level: Int,
-    progressText: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        tonalElevation = 1.dp,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "HSK $level",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = progressText,
-                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
