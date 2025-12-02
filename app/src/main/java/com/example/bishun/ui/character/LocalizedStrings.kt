@@ -64,13 +64,16 @@ data class LocalizedStrings(
 )
 
 @Composable
-fun rememberLocalizedStrings(): LocalizedStrings {
-    val locale = LocalContext.current.resources.configuration.locales[0]
-    return remember(locale) {
-        when (locale.language) {
-            "es" -> localizedStringsEs(locale)
-            "ja" -> localizedStringsJa(locale)
-            else -> localizedStringsEn(locale)
+fun rememberLocalizedStrings(languageOverride: String?): LocalizedStrings {
+    val contextLocale = LocalContext.current.resources.configuration.locales[0]
+    val targetLocale = remember(languageOverride, contextLocale) {
+        languageOverride?.takeIf { it.isNotBlank() }?.let { Locale.forLanguageTag(it) } ?: contextLocale
+    }
+    return remember(targetLocale) {
+        when (targetLocale.language) {
+            "es" -> localizedStringsEs(targetLocale)
+            "ja" -> localizedStringsJa(targetLocale)
+            else -> localizedStringsEn(targetLocale)
         }
     }
 }

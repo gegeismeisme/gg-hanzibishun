@@ -23,6 +23,7 @@ data class UserPreferences(
     val showTemplate: Boolean = true,
     val courseLevel: Int? = null,
     val courseSymbol: String? = null,
+    val languageOverride: String? = null,
 )
 
 class UserPreferencesStore(private val context: Context) {
@@ -40,6 +41,7 @@ class UserPreferencesStore(private val context: Context) {
             showTemplate = prefs[KEY_SHOW_TEMPLATE] ?: true,
             courseLevel = prefs[KEY_COURSE_LEVEL],
             courseSymbol = prefs[KEY_COURSE_SYMBOL],
+            languageOverride = prefs[KEY_LANGUAGE_OVERRIDE],
         )
     }
 
@@ -107,6 +109,16 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setLanguageOverride(localeTag: String?) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (localeTag.isNullOrBlank()) {
+                prefs.remove(KEY_LANGUAGE_OVERRIDE)
+            } else {
+                prefs[KEY_LANGUAGE_OVERRIDE] = localeTag
+            }
+        }
+    }
+
     companion object {
         private val Context.userPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -121,5 +133,6 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_SHOW_TEMPLATE = booleanPreferencesKey("show_template")
         private val KEY_COURSE_LEVEL = intPreferencesKey("course_level")
         private val KEY_COURSE_SYMBOL = stringPreferencesKey("course_symbol")
+        private val KEY_LANGUAGE_OVERRIDE = stringPreferencesKey("language_override")
     }
 }

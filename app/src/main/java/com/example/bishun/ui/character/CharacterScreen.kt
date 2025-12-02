@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -222,6 +223,8 @@ fun CharacterRoute(
         onCourseRestart = viewModel::restartCourseLevel,
         onCourseExit = viewModel::clearCourseSession,
         onMarkCourseLearned = viewModel::markCourseCharacterLearned,
+        languageOverride = userPreferences.languageOverride,
+        onLanguageChange = viewModel::setLanguageOverride,
         onLoadCharacter = viewModel::jumpToCharacter,
     )
 }
@@ -243,6 +246,7 @@ fun CharacterScreen(
     userPreferences: UserPreferences,
     lastFeedbackTimestamp: Long?,
     feedbackSubmission: FeedbackSubmission?,
+    languageOverride: String?,
     onLoadCharacter: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -272,11 +276,12 @@ fun CharacterScreen(
     onCourseRestart: () -> Unit,
     onCourseExit: () -> Unit,
     onMarkCourseLearned: (String) -> Unit,
+    onLanguageChange: (String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var activeProfileAction by rememberSaveable { mutableStateOf<ProfileMenuAction?>(null) }
     val showTemplate = boardSettings.showTemplate
-    val strings = rememberLocalizedStrings()
+    val strings = rememberLocalizedStrings(languageOverride)
     val calligraphyDemoController = if (uiState is CharacterUiState.Success && showTemplate) {
         rememberCalligraphyDemoController(
             strokeCount = uiState.definition.strokeCount,
@@ -367,6 +372,8 @@ fun CharacterScreen(
                 onPlayCalligraphyDemoLoop = { playCalligraphyDemo(true) },
                 onStopCalligraphyDemo = stopCalligraphyDemo,
                 strings = strings,
+                languageOverride = languageOverride,
+                onLanguageChange = onLanguageChange,
             )
             when (uiState) {
                 CharacterUiState.Loading -> Text(strings.loadingLabel)
@@ -466,6 +473,8 @@ private fun SearchBarRow(
     onPlayCalligraphyDemoLoop: () -> Unit,
     onStopCalligraphyDemo: () -> Unit,
     strings: LocalizedStrings,
+    languageOverride: String?,
+    onLanguageChange: (String?) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -474,11 +483,16 @@ private fun SearchBarRow(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = strings.appTitle,
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f),
+            )
+            LanguageMenu(
+                currentTag = languageOverride,
+                onLanguageChange = onLanguageChange,
             )
             ProfileAvatarMenu(onProfileAction = onProfileAction)
         }
@@ -1949,12 +1963,15 @@ private fun PrivacyDialog(
     val contactEmail = SUPPORT_EMAIL
     val summaryPoints = strings.privacySummaryRows
     var showFullPolicy by rememberSaveable { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(strings.privacyTitle) },
         text = {
             Column(
-                modifier = Modifier.heightIn(max = 420.dp),
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
@@ -2497,6 +2514,47 @@ private fun LegendBadge(entry: LegendEntry) {
         )
     }
 }
+
+@Composable
+private fun LanguageMenu(
+    currentTag: String?,
+    onLanguageChange: (String?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val currentChoice = languageChoices.firstOrNull { it.tag == currentTag } ?: languageChoices.first()
+    Box {
+        TextButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Filled.Language,
+                contentDescription = "Select language",
+            )
+            Text(
+                text = currentChoice.label,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            languageChoices.forEach { choice ->
+                DropdownMenuItem(
+                    text = { Text(choice.label) },
+                    onClick = {
+                        expanded = false
+                        onLanguageChange(choice.tag)
+                    },
+                )
+            }
+        }
+    }
+}
+
+private data class LanguageChoice(val tag: String?, val label: String)
+
+private val languageChoices = listOf(
+    LanguageChoice(null, "System"),
+    LanguageChoice("en", "English"),
+    LanguageChoice("es", "Español"),
+    LanguageChoice("ja", "日本語"),
+)
 
 @Composable
 private fun levelColor(level: Int): Color = when (level) {

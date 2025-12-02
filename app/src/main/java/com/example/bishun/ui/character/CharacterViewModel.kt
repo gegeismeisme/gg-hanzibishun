@@ -505,6 +505,12 @@ class CharacterViewModel(
         }
     }
 
+    fun setLanguageOverride(localeTag: String?) {
+        viewModelScope.launch {
+            userPreferencesStore.setLanguageOverride(localeTag)
+        }
+    }
+
     fun clearCourseSession() {
         _courseSession.value = null
         viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
