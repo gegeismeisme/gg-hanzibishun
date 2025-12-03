@@ -18,13 +18,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bishun.ui.account.AccountScreen
 import com.example.bishun.ui.character.CharacterRoute
+import com.example.bishun.ui.character.CharacterViewModel
 import com.example.bishun.ui.courses.CoursesScreen
 import com.example.bishun.ui.library.LibraryScreen
 import com.example.bishun.ui.progress.ProgressScreen
@@ -57,6 +60,10 @@ fun BishunApp() {
     val destinations = remember { MainDestination.items }
     val currentBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStack?.destination?.route ?: MainDestination.Practice.route
+    val context = LocalContext.current
+    val sharedCharacterViewModel: CharacterViewModel = viewModel(
+        factory = CharacterViewModel.factory(context),
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -95,13 +102,22 @@ fun BishunApp() {
                 .padding(padding),
         ) {
             composable(MainDestination.Practice.route) {
-                CharacterRoute(modifier = Modifier.fillMaxSize())
+                CharacterRoute(
+                    modifier = Modifier.fillMaxSize(),
+                    viewModel = sharedCharacterViewModel,
+                )
             }
             composable(MainDestination.Courses.route) {
                 CoursesScreen(
                     modifier = Modifier.fillMaxSize(),
+                    viewModel = sharedCharacterViewModel,
                     onRequestUnlock = {
                         navController.navigate(MainDestination.Account.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToPractice = {
+                        navController.navigate(MainDestination.Practice.route) {
                             launchSingleTop = true
                         }
                     },

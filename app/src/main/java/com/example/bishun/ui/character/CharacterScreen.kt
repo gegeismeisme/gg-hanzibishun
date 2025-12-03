@@ -1244,39 +1244,12 @@ private fun ProfileActionDialog(
                 onDismissRequest = onDismiss,
                 title = { Text(strings.coursesDialogTitle) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        CourseIntroCard(strings)
-                        if (activeSession != null) {
-                            CourseResumeCard(
-                                session = activeSession,
-                                onResume = {
-                                    onDismiss()
-                                    onResumeCourse()
-                                },
-                                onExit = onExitCourse,
-                                onSkip = onSkipCourse,
-                                onRestart = onRestartCourse,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        } else {
-                            CourseEmptyStateCard(strings)
-                        }
-                        CoursePlannerView(
-                            summary = hskProgress,
-                            catalog = courseCatalog,
-                            completedSymbols = completedSymbols,
-                            activeSession = activeSession,
-                            onSelect = { level, symbol ->
-                                onDismiss()
-                                onCourseSelect(level, symbol)
-                            },
-                            onMarkLearned = onMarkCourseLearned,
-                            strings = strings,
-                        )
-                    }
+                    Text(
+                        text = "课程功能已移动到底部导航栏的“课程”标签。请通过底部 Tab 浏览课程、解锁与继续练习。",
+                    )
                 },
                 confirmButton = {
-                    TextButton(onClick = onDismiss) { Text("Close") }
+                    TextButton(onClick = onDismiss) { Text("好的") }
                 },
             )
         }
