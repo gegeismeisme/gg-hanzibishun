@@ -74,6 +74,9 @@ fun BishunApp() {
         factory = LibraryViewModel.factory(context),
     )
     val accountState by accountViewModel.uiState.collectAsState()
+    val userPreferences by sharedCharacterViewModel.userPreferences.collectAsState()
+    val lastFeedbackTimestamp by sharedCharacterViewModel.lastFeedbackSubmission.collectAsState()
+    val feedbackSubmission by sharedCharacterViewModel.feedbackSubmission.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -168,6 +171,17 @@ fun BishunApp() {
                 AccountScreen(
                     modifier = Modifier.fillMaxSize(),
                     viewModel = accountViewModel,
+                    userPreferences = userPreferences,
+                    lastFeedbackTimestamp = lastFeedbackTimestamp,
+                    feedbackSubmission = feedbackSubmission,
+                    onAnalyticsChange = sharedCharacterViewModel::setAnalyticsOptIn,
+                    onCrashChange = sharedCharacterViewModel::setCrashReportsOptIn,
+                    onPrefetchChange = sharedCharacterViewModel::setNetworkPrefetch,
+                    onFeedbackDraftChange = sharedCharacterViewModel::saveFeedbackDraft,
+                    onFeedbackSubmit = sharedCharacterViewModel::submitFeedback,
+                    onFeedbackHandled = sharedCharacterViewModel::consumeFeedbackSubmission,
+                    onLoadFeedbackLog = { sharedCharacterViewModel.readFeedbackLog() },
+                    languageOverride = userPreferences.languageOverride,
                 )
             }
         }

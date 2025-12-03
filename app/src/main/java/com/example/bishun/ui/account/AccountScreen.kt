@@ -1,5 +1,8 @@
 package com.example.bishun.ui.account
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,30 +19,116 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.bishun.data.settings.UserPreferences
+import com.example.bishun.ui.character.FeedbackSubmission
+import com.example.bishun.ui.character.LocalizedStrings
+import com.example.bishun.ui.character.rememberLocalizedStrings
+import com.example.bishun.ui.support.FeedbackDialog
+import com.example.bishun.ui.support.HelpDialog
+import com.example.bishun.ui.support.PrivacyDialog
+import com.example.bishun.ui.support.SUPPORT_EMAIL
+import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
     modifier: Modifier = Modifier,
     viewModel: AccountViewModel,
+    userPreferences: UserPreferences,
+    lastFeedbackTimestamp: Long?,
+    feedbackSubmission: FeedbackSubmission?,
+    onAnalyticsChange: (Boolean) -> Unit,
+    onCrashChange: (Boolean) -> Unit,
+    onPrefetchChange: (Boolean) -> Unit,
+    onFeedbackDraftChange: (String, String, String) -> Unit,
+    onFeedbackSubmit: (String, String, String) -> Unit,
+    onFeedbackHandled: () -> Unit,
+    onLoadFeedbackLog: suspend () -> String,
+    languageOverride: String?,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isLoggedIn = uiState.isSignedIn
     val hasUnlockedPremium = uiState.hasPremiumAccess
     var showLoginDialog by rememberSaveable { mutableStateOf(false) }
     var showPurchaseDialog by rememberSaveable { mutableStateOf(false) }
+    var showHelpDialog by rememberSaveable { mutableStateOf(false) }
+    var showPrivacyDialog by rememberSaveable { mutableStateOf(false) }
+    var showFeedbackDialog by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+    val strings = rememberLocalizedStrings(languageOverride)
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val shareFeedbackLog = remember(onLoadFeedbackLog, context) {
+        {
+            coroutineScope.launch {
+                val logText = onLoadFeedbackLog().takeIf { it.isNotBlank() }
+                if (logText.isNullOrBlank()) {
+                    Toast.makeText(context, "Feedback log is empty.", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "Hanzi feedback log")
+                    putExtra(Intent.EXTRA_TEXT, logText)
+                }
+                val chooser = Intent.createChooser(shareIntent, "Share feedback log")
+                val canHandle = shareIntent.resolveActivity(context.packageManager) != null
+                if (canHandle) {
+                    runCatching { context.startActivity(chooser) }
+                        .onFailure {
+                            Toast.makeText(context, "Unable to share log.", Toast.LENGTH_LONG).show()
+                        }
+                } else {
+                    Toast.makeText(context, "No apps available to share log.", Toast.LENGTH_LONG).show()
+                }
+            }
+            Unit
+        }
+    }
+
+    LaunchedEffect(feedbackSubmission) {
+        val submission = feedbackSubmission ?: return@LaunchedEffect
+        val subject = if (submission.topic.isNotBlank()) {
+            "Hanzi Stroke Order feedback: ${submission.topic}"
+        } else {
+            "Hanzi Stroke Order feedback"
+        }
+        val contactLine = submission.contact.takeIf { it.isNotBlank() }?.let { "\n\nContact: $it" } ?: ""
+        val body = submission.message.ifBlank { "(No message)" } + contactLine
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(SUPPORT_EMAIL))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+        }
+        val chooser = Intent.createChooser(intent, "Send feedback")
+        val canHandle = intent.resolveActivity(context.packageManager) != null
+        if (canHandle) {
+            runCatching { context.startActivity(chooser) }
+                .onFailure {
+                    Toast.makeText(context, "Couldn't open email. Log saved locally—share from Account later.", Toast.LENGTH_LONG).show()
+                }
+        } else {
+            Toast.makeText(context, "No email app installed. Log saved locally—share from Account later.", Toast.LENGTH_LONG).show()
+        }
+        onFeedbackHandled()
+    }
 
     Column(
         modifier = modifier
@@ -48,17 +137,17 @@ fun AccountScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(
-            text = "账户与购买",
+            text = "Account & Purchases",
             style = MaterialTheme.typography.headlineSmall,
         )
         AccountCard(
-            title = "登录状态",
+            title = "Sign-in status",
             description = if (isLoggedIn) {
-                "已登录，课程进度可与购买凭证绑定。"
+                "Signed in. Purchases and unlocked levels remain linked to this device."
             } else {
-                "当前为游客模式。登录仅在购买课程时使用，不影响本地练习功能。"
+                "Guest mode keeps practice data offline. Sign in only when you are ready to unlock courses."
             },
-            buttonLabel = if (isLoggedIn) "退出登录" else "登录并同步",
+            buttonLabel = if (isLoggedIn) "Sign out" else "Sign in & accept policy",
             onClick = {
                 if (isLoggedIn) {
                     viewModel.signOut()
@@ -68,16 +157,16 @@ fun AccountScreen(
             },
         )
         AccountCard(
-            title = "课程解锁",
+            title = "Course unlock",
             description = when {
-                !isLoggedIn -> "请先登录后再解锁课程。未登录时课程以预览模式显示。"
-                hasUnlockedPremium -> "已解锁全部课程。进入“课程”页即可继续学习。"
-                else -> "购买后即可离线访问所有课程列表，包含未来更新内容。"
+                !isLoggedIn -> "Preview HSK levels anytime. Sign in to complete the purchase checklist."
+                hasUnlockedPremium -> "All premium levels are unlocked. Continue from the Courses tab."
+                else -> "One-time unlock stores a local license so lessons remain available offline."
             },
             buttonLabel = when {
-                !isLoggedIn -> "登录后解锁"
-                hasUnlockedPremium -> "查看课程"
-                else -> "解锁课程"
+                !isLoggedIn -> "Sign in required"
+                hasUnlockedPremium -> "Browse courses"
+                else -> "Unlock all courses"
             },
             onClick = {
                 if (!isLoggedIn) {
@@ -86,25 +175,26 @@ fun AccountScreen(
                     showPurchaseDialog = true
                 }
             },
-            enabled = isLoggedIn,
+            enabled = isLoggedIn && !hasUnlockedPremium,
         )
-        AccountCard(
-            title = "支持与合规",
-            description = "帮助、隐私、反馈入口将迁移至此。登录/购买前会再次展示完整隐私条款，确保满足 Google Play 合规要求。",
-            buttonLabel = "查看计划",
-            onClick = { showLoginDialog = true },
+        SupportCard(
+            description = "Help articles, privacy toggles, and the feedback form now live here so compliance checks happen before login or purchases.",
+            onHelpClick = { showHelpDialog = true },
+            onPrivacyClick = { showPrivacyDialog = true },
+            onFeedbackClick = { showFeedbackDialog = true },
+            strings = strings,
         )
     }
 
     if (showLoginDialog) {
         ConsentDialog(
-            title = "登录前须知",
+            title = "Before signing in",
             bulletPoints = listOf(
-                "登录仅用于绑定购买信息，练习数据仍保存在本地。",
-                "登录意味着您已阅读并同意《隐私政策》（docs/privacy-policy.md）。",
-                "如不同意，可继续使用游客模式，但无法解锁付费课程。",
+                "Sign-in is only needed to associate purchases. Practice data stays on-device.",
+                "Continuing confirms you have reviewed the Privacy Policy.",
+                "You can remain in guest mode at any time—premium lessons simply stay locked.",
             ),
-            confirmLabel = "同意并登录",
+            confirmLabel = "Agree & sign in",
             onConfirm = {
                 viewModel.signIn()
                 showLoginDialog = false
@@ -114,18 +204,41 @@ fun AccountScreen(
     }
     if (showPurchaseDialog) {
         ConsentDialog(
-            title = "解锁课程",
+            title = "Unlock premium lessons",
             bulletPoints = listOf(
-                "付款完成后课程授权将缓存在本地，并可离线使用。",
-                "购买记录会写入本地凭证，同时显示在“课程”页中。",
-                "购买流程会再次展示隐私/条款，确保符合商店合规要求。",
+                "Payment tokens are cached locally so all content works offline.",
+                "Unlocking also records the purchase under your account tab for later restores.",
+                "A quick privacy reminder will appear again during checkout for compliance.",
             ),
-            confirmLabel = "确认解锁",
+            confirmLabel = "Confirm unlock",
             onConfirm = {
                 viewModel.unlockPremiumLevels()
                 showPurchaseDialog = false
             },
             onDismiss = { showPurchaseDialog = false },
+        )
+    }
+    if (showHelpDialog) {
+        HelpDialog(strings = strings, onDismiss = { showHelpDialog = false })
+    }
+    if (showPrivacyDialog) {
+        PrivacyDialog(
+            prefs = userPreferences,
+            onAnalyticsChange = onAnalyticsChange,
+            onCrashChange = onCrashChange,
+            onPrefetchChange = onPrefetchChange,
+            onDismiss = { showPrivacyDialog = false },
+            strings = strings,
+        )
+    }
+    if (showFeedbackDialog) {
+        FeedbackDialog(
+            prefs = userPreferences,
+            lastSubmittedAt = lastFeedbackTimestamp,
+            onShareLog = shareFeedbackLog,
+            onDraftChange = onFeedbackDraftChange,
+            onSubmit = onFeedbackSubmit,
+            onDismiss = { showFeedbackDialog = false },
         )
     }
 }
@@ -170,6 +283,47 @@ private fun AccountCard(
 }
 
 @Composable
+private fun SupportCard(
+    description: String,
+    onHelpClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
+    onFeedbackClick: () -> Unit,
+    strings: LocalizedStrings,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Support & compliance",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Button(onClick = onHelpClick) {
+                Text(strings.helpTitle)
+            }
+            Button(onClick = onPrivacyClick) {
+                Text(strings.privacyTitle)
+            }
+            OutlinedButton(onClick = onFeedbackClick) {
+                Text("Send feedback")
+            }
+        }
+    }
+}
+
+@Composable
 private fun ConsentDialog(
     title: String,
     bulletPoints: List<String>,
@@ -193,8 +347,7 @@ private fun ConsentDialog(
                     }
                 }
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(
@@ -203,7 +356,7 @@ private fun ConsentDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "我已阅读并同意隐私条款",
+                        text = "I have reviewed the privacy policy.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -227,7 +380,7 @@ private fun ConsentDialog(
                     onDismiss()
                 },
             ) {
-                Text("取消")
+                Text("Cancel")
             }
         },
     )
