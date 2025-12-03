@@ -34,18 +34,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bishun.R
 import com.example.bishun.data.history.PracticeHistoryEntry
 import com.example.bishun.ui.character.CharacterViewModel
 import com.example.bishun.ui.character.HskLevelSummary
 import com.example.bishun.ui.character.HskProgressSummary
+import com.example.bishun.ui.character.LocalizedStrings
+import com.example.bishun.ui.character.ProgressStrings
 import com.example.bishun.ui.character.components.IconActionButton
+import com.example.bishun.ui.character.rememberLocalizedStrings
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -62,9 +62,12 @@ fun ProgressScreen(
     onJumpToPractice: () -> Unit = {},
     onJumpToCharacter: (String) -> Unit = {},
     onNavigateToCourses: () -> Unit = {},
+    languageOverride: String? = null,
 ) {
     val hskProgress by viewModel.hskProgress.collectAsState()
     val practiceHistory by viewModel.practiceHistory.collectAsState()
+    val strings = rememberLocalizedStrings(languageOverride)
+    val progressStrings = strings.progress
 
     LazyColumn(
         modifier = modifier.padding(horizontal = 20.dp, vertical = 24.dp),
@@ -73,20 +76,21 @@ fun ProgressScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = stringResource(R.string.progress_title),
+                    text = progressStrings.title,
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
-                    text = stringResource(R.string.progress_description),
+                    text = progressStrings.description,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Button(onClick = onJumpToPractice) {
-                    Text(stringResource(R.string.progress_button_jump_back))
+                    Text(progressStrings.jumpBackLabel)
                 }
             }
         }
         item {
             HskProgressView(
+                strings = strings,
                 summary = hskProgress,
                 practiceHistory = practiceHistory,
                 onJumpToChar = onJumpToCharacter,
@@ -98,6 +102,7 @@ fun ProgressScreen(
 
 @Composable
 private fun HskProgressView(
+    strings: LocalizedStrings,
     summary: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
     onJumpToChar: (String) -> Unit,
@@ -110,19 +115,27 @@ private fun HskProgressView(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }
-        ProgressOverviewCard(overview = overview)
+        ProgressOverviewCard(overview = overview, strings = strings)
         LevelBreakdownList(
+            strings = strings,
             summary = summary,
             onJumpToChar = onJumpToChar,
             onNavigateToCourses = onNavigateToCourses,
         )
         HorizontalDivider()
-        PracticeHistorySection(history = practiceHistory, onJumpToChar = onJumpToChar)
+        PracticeHistorySection(
+            strings = strings,
+            history = practiceHistory,
+            onJumpToChar = onJumpToChar,
+        )
     }
 }
 
 @Composable
-private fun ProgressOverviewCard(overview: ProgressOverview) {
+private fun ProgressOverviewCard(
+    overview: ProgressOverview,
+    strings: LocalizedStrings,
+) {
     Surface(
         shape = MaterialTheme.shapes.large,
         tonalElevation = 2.dp,
@@ -133,20 +146,26 @@ private fun ProgressOverviewCard(overview: ProgressOverview) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            val learnedLabel = stringResource(R.string.progress_stat_learned)
-            val streakLabel = stringResource(R.string.progress_stat_streak)
-            val lastSessionLabel = stringResource(R.string.progress_stat_last_session)
-            val streakValue = if (overview.streakDays > 0) {
-                pluralStringResource(
-                    R.plurals.progress_stat_streak_value,
-                    overview.streakDays,
+            val progressStrings = strings.progress
+            val learnedLabel = progressStrings.learnedLabel
+            val streakLabel = progressStrings.streakLabel
+            val lastSessionLabel = progressStrings.lastSessionLabel
+            val streakValue = when {
+                overview.streakDays <= 0 -> progressStrings.streakStartLabel
+                overview.streakDays == 1 -> String.format(
+                    strings.locale,
+                    progressStrings.streakDaySingularFormat,
                     overview.streakDays,
                 )
-            } else {
-                stringResource(R.string.progress_stat_streak_start)
+                else -> String.format(
+                    strings.locale,
+                    progressStrings.streakDayPluralFormat,
+                    overview.streakDays,
+                )
             }
-            val lastSessionValue = overview.lastPracticeTimestamp?.let { formatRelativeDuration(it) }
-                ?: stringResource(R.string.progress_last_session_never)
+            val lastSessionValue = overview.lastPracticeTimestamp?.let {
+                formatRelativeDuration(progressStrings, strings.locale, it)
+            } ?: progressStrings.lastSessionNeverLabel
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -164,7 +183,7 @@ private fun ProgressOverviewCard(overview: ProgressOverview) {
                     value = lastSessionValue,
                 )
             }
-            WeeklyPracticeChart(counts = overview.weeklyCounts)
+            WeeklyPracticeChart(strings = strings.progress, counts = overview.weeklyCounts)
         }
     }
 }
@@ -186,14 +205,14 @@ private fun RowScope.StatPill(title: String, value: String) {
 }
 
 @Composable
-private fun WeeklyPracticeChart(counts: List<DailyPracticeCount>) {
+private fun WeeklyPracticeChart(
+    strings: ProgressStrings,
+    counts: List<DailyPracticeCount>,
+) {
     val maxCount = counts.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
     val barHeight = 56.dp
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = stringResource(R.string.progress_weekly_chart_title),
-            style = MaterialTheme.typography.labelLarge,
-        )
+        Text(text = strings.weeklyChartTitle, style = MaterialTheme.typography.labelLarge)
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Bottom,
@@ -240,13 +259,14 @@ private fun WeeklyPracticeChart(counts: List<DailyPracticeCount>) {
 
 @Composable
 private fun LevelBreakdownList(
+    strings: LocalizedStrings,
     summary: HskProgressSummary,
     onJumpToChar: (String) -> Unit,
     onNavigateToCourses: () -> Unit,
 ) {
     if (summary.perLevel.isEmpty()) {
         Text(
-            text = stringResource(R.string.progress_levels_empty),
+            text = strings.progress.levelsEmpty,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -254,7 +274,7 @@ private fun LevelBreakdownList(
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringResource(R.string.progress_levels_title),
+            text = strings.progress.levelsTitle,
             style = MaterialTheme.typography.labelLarge,
         )
         summary.perLevel.toSortedMap().forEach { (level, stats) ->
@@ -269,13 +289,19 @@ private fun LevelBreakdownList(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    val progressStrings = strings.progress
                     Column {
                         Text(
-                            text = stringResource(R.string.progress_level_label, level),
+                            text = String.format(strings.locale, progressStrings.levelLabelFormat, level),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            text = stringResource(R.string.progress_level_mastered, stats.completed, stats.total),
+                            text = String.format(
+                                strings.locale,
+                                progressStrings.levelMasteredFormat,
+                                stats.completed,
+                                stats.total,
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -290,14 +316,14 @@ private fun LevelBreakdownList(
                     if (!isComplete && nextTarget != null) {
                         IconActionButton(
                             icon = Icons.Filled.PlayArrow,
-                            description = stringResource(R.string.progress_level_jump_description),
+                            description = progressStrings.levelJumpDescription,
                             onClick = { nextTarget.let(onJumpToChar) },
                             enabled = true,
                             buttonSize = 32.dp,
                         )
                     } else {
                         TextButton(onClick = onNavigateToCourses) {
-                            Text(stringResource(R.string.progress_level_browse_courses))
+                            Text(progressStrings.levelBrowseCourses)
                         }
                     }
                 }
@@ -308,39 +334,40 @@ private fun LevelBreakdownList(
 
 @Composable
 private fun PracticeHistorySection(
+    strings: LocalizedStrings,
     history: List<PracticeHistoryEntry>,
     onJumpToChar: (String) -> Unit,
 ) {
-    Text(
-        text = stringResource(R.string.progress_history_title),
-        style = MaterialTheme.typography.titleMedium,
-    )
+    Text(text = strings.progress.historyTitle, style = MaterialTheme.typography.titleMedium)
     if (history.isEmpty()) {
         Text(
-            text = stringResource(R.string.progress_history_empty),
+            text = strings.progress.historyEmpty,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         return
     }
     history.asReversed().take(12).forEach { entry ->
-        PracticeHistoryRow(entry = entry, onJumpToChar = onJumpToChar)
+        PracticeHistoryRow(strings = strings, entry = entry, onJumpToChar = onJumpToChar)
     }
 }
 
 @Composable
 private fun PracticeHistoryRow(
+    strings: LocalizedStrings,
     entry: PracticeHistoryEntry,
     onJumpToChar: (String) -> Unit,
 ) {
     val timeLabel = remember(entry.timestamp) { formatHistoryTimestamp(entry.timestamp) }
+    val progressStrings = strings.progress
     val mistakesLabel = if (entry.mistakes == 0) {
-        stringResource(R.string.progress_history_mistakes_perfect)
+        progressStrings.historyMistakesPerfect
     } else {
-        stringResource(R.string.progress_history_mistakes, entry.mistakes)
+        String.format(strings.locale, progressStrings.historyMistakesFormat, entry.mistakes)
     }
-    val strokesWithMistakes = stringResource(
-        R.string.progress_history_strokes,
+    val strokesWithMistakes = String.format(
+        strings.locale,
+        progressStrings.historyStrokesFormat,
         entry.totalStrokes,
         mistakesLabel,
     )
@@ -382,7 +409,7 @@ private fun PracticeHistoryRow(
                 )
             }
         }
-        val playDescription = stringResource(R.string.progress_history_load_character, entry.symbol)
+        val playDescription = String.format(strings.locale, progressStrings.historyLoadCharacterFormat, entry.symbol)
         IconActionButton(
             icon = Icons.Filled.PlayArrow,
             description = playDescription,
@@ -446,15 +473,19 @@ private fun buildProgressOverview(
     )
 }
 
-private fun formatRelativeDuration(timestamp: Long): String {
+private fun formatRelativeDuration(
+    strings: ProgressStrings,
+    locale: Locale,
+    timestamp: Long,
+): String {
     val diffMillis = System.currentTimeMillis() - timestamp
-    if (diffMillis <= 0) return "just now"
+    if (diffMillis <= 0) return strings.relativeJustNow
     val minutes = diffMillis / 60_000
     return when {
-        minutes < 1 -> "just now"
-        minutes < 60 -> "${minutes}m ago"
-        minutes < 60 * 24 -> "${minutes / 60}h ago"
-        else -> "${minutes / (60 * 24)}d ago"
+        minutes < 1 -> strings.relativeJustNow
+        minutes < 60 -> String.format(locale, strings.relativeMinutesFormat, minutes)
+        minutes < 60 * 24 -> String.format(locale, strings.relativeHoursFormat, minutes / 60)
+        else -> String.format(locale, strings.relativeDaysFormat, minutes / (60 * 24))
     }
 }
 

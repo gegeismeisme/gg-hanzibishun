@@ -27,6 +27,7 @@ data class UserPreferences(
     val languageOverride: String? = null,
     val isAccountSignedIn: Boolean = false,
     val unlockedCourseLevels: Set<Int> = emptySet(),
+    val libraryRecentSearches: List<String> = emptyList(),
 )
 
 class UserPreferencesStore(private val context: Context) {
@@ -50,6 +51,7 @@ class UserPreferencesStore(private val context: Context) {
                 ?.mapNotNull { it.toIntOrNull() }
                 ?.toSet()
                 ?: emptySet(),
+            libraryRecentSearches = decodeRecentSearches(prefs[KEY_LIBRARY_RECENTS]),
         )
     }
 
@@ -145,6 +147,22 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setLibraryRecentSearches(entries: List<String>) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (entries.isEmpty()) {
+                prefs.remove(KEY_LIBRARY_RECENTS)
+            } else {
+                prefs[KEY_LIBRARY_RECENTS] = encodeRecentSearches(entries)
+            }
+        }
+    }
+
+    suspend fun clearLibraryRecentSearches() {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs.remove(KEY_LIBRARY_RECENTS)
+        }
+    }
+
     companion object {
         private val Context.userPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -162,5 +180,16 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_LANGUAGE_OVERRIDE = stringPreferencesKey("language_override")
         private val KEY_ACCOUNT_SIGNED_IN = booleanPreferencesKey("account_signed_in")
         private val KEY_UNLOCKED_LEVELS = stringSetPreferencesKey("unlocked_course_levels")
+        private val KEY_LIBRARY_RECENTS = stringPreferencesKey("library_recent_searches")
+        private const val RECENTS_DELIMITER = "\u0001"
+
+        private fun decodeRecentSearches(raw: String?): List<String> {
+            if (raw.isNullOrBlank()) return emptyList()
+            return raw.split(RECENTS_DELIMITER).filter { it.isNotBlank() }
+        }
+
+        private fun encodeRecentSearches(entries: List<String>): String {
+            return entries.joinToString(separator = RECENTS_DELIMITER)
+        }
     }
 }

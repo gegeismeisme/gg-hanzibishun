@@ -4,12 +4,15 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.bishun.data.settings.UserPreferencesStore
 import com.example.bishun.R
 import com.example.bishun.data.word.WordEntry
 import com.example.bishun.data.word.WordRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 data class LibraryUiState(
@@ -23,10 +26,15 @@ data class LibraryUiState(
 class LibraryViewModel(
     private val appContext: Context,
     private val wordRepository: WordRepository,
+    private val userPreferencesStore: UserPreferencesStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+
+    init {
+        observeRecentSearches()
+    }
 
     fun updateQuery(input: String) {
         val trimmed = input.trim()
@@ -39,7 +47,7 @@ class LibraryViewModel(
     }
 
     fun clearHistory() {
-        _uiState.value = _uiState.value.copy(recentSearches = emptyList())
+        persistRecentSearches(emptyList())
     }
 
     fun submitQuery() {
@@ -56,11 +64,12 @@ class LibraryViewModel(
             runCatching { wordRepository.getWord(symbol) }
                 .onSuccess { entry ->
                     _uiState.value = if (entry != null) {
+                        val updatedRecents = addRecent(symbol)
+                        persistRecentSearches(updatedRecents)
                         _uiState.value.copy(
                             isLoading = false,
                             result = entry,
                             errorMessage = null,
-                            recentSearches = addRecent(symbol),
                         )
                     } else {
                         _uiState.value.copy(
@@ -96,6 +105,28 @@ class LibraryViewModel(
         return current.take(RECENT_LIMIT)
     }
 
+    private fun persistRecentSearches(entries: List<String>) {
+        _uiState.value = _uiState.value.copy(recentSearches = entries)
+        viewModelScope.launch {
+            if (entries.isEmpty()) {
+                userPreferencesStore.clearLibraryRecentSearches()
+            } else {
+                userPreferencesStore.setLibraryRecentSearches(entries)
+            }
+        }
+    }
+
+    private fun observeRecentSearches() {
+        viewModelScope.launch {
+            userPreferencesStore.data
+                .map { it.libraryRecentSearches }
+                .distinctUntilChanged()
+                .collect { recents ->
+                    _uiState.value = _uiState.value.copy(recentSearches = recents)
+                }
+        }
+    }
+
     companion object {
         private const val MAX_QUERY_LENGTH = 2
         private const val RECENT_LIMIT = 6
@@ -106,7 +137,8 @@ class LibraryViewModel(
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val repo = WordRepository(appContext)
-                    return LibraryViewModel(appContext, repo) as T
+                    val prefs = UserPreferencesStore(appContext)
+                    return LibraryViewModel(appContext, repo, prefs) as T
                 }
             }
         }

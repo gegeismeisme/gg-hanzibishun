@@ -158,6 +158,7 @@ fun BishunApp() {
                             launchSingleTop = true
                         }
                     },
+                    languageOverride = userPreferences.languageOverride,
                 )
             }
             composable(MainDestination.Library.route) {
@@ -170,6 +171,7 @@ fun BishunApp() {
                             launchSingleTop = true
                         }
                     },
+                    languageOverride = userPreferences.languageOverride,
                 )
             }
             composable(MainDestination.Account.route) {

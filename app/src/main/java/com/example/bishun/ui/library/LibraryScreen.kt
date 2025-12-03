@@ -25,43 +25,53 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.bishun.R
 import com.example.bishun.data.word.WordEntry
+import com.example.bishun.ui.character.LibraryStrings
+import com.example.bishun.ui.character.rememberLocalizedStrings
+import java.util.Locale
 
 @Composable
 fun LibraryScreen(
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel,
     onLoadInPractice: (String) -> Unit = {},
+    languageOverride: String? = null,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = rememberLocalizedStrings(languageOverride)
+    val libraryStrings = strings.library
+    val locale = strings.locale
 
     Column(
         modifier = modifier.padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(
-            text = stringResource(R.string.library_title),
+            text = libraryStrings.title,
             style = MaterialTheme.typography.headlineSmall,
         )
         Text(
-            text = stringResource(R.string.library_description),
+            text = libraryStrings.description,
             style = MaterialTheme.typography.bodyMedium,
         )
         OutlinedTextField(
             value = uiState.query,
             onValueChange = viewModel::updateQuery,
-            label = { Text(stringResource(R.string.library_input_label)) },
+            label = { Text(libraryStrings.inputLabel) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            supportingText = { Text(stringResource(R.string.library_supporting_text)) },
+            supportingText = { Text(libraryStrings.supportingText) },
         )
-        QuickSuggestionsRow(onSuggestionClick = viewModel::loadCharacter)
+        QuickSuggestionsRow(
+            strings = libraryStrings,
+            suggestions = libraryStrings.quickSuggestions,
+            onSuggestionClick = viewModel::loadCharacter,
+        )
         RowActions(
+            strings = libraryStrings,
             isLoading = uiState.isLoading,
             hasResult = uiState.result != null,
             onSearch = viewModel::submitQuery,
@@ -69,6 +79,7 @@ fun LibraryScreen(
         )
         if (uiState.recentSearches.isNotEmpty()) {
             RecentSearchesRow(
+                strings = libraryStrings,
                 recent = uiState.recentSearches,
                 onSelect = viewModel::loadCharacter,
                 onClear = viewModel::clearHistory,
@@ -83,25 +94,30 @@ fun LibraryScreen(
         }
         uiState.result?.let { entry ->
             WordEntryCard(
+                strings = libraryStrings,
+                locale = locale,
                 entry = entry,
                 onPractice = { onLoadInPractice(entry.word) },
             )
         }
-        HelpCard()
+        HelpCard(strings = libraryStrings)
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun QuickSuggestionsRow(onSuggestionClick: (String) -> Unit) {
-    val suggestions = listOf("永", "你", "学", "心", "写")
+private fun QuickSuggestionsRow(
+    strings: LibraryStrings,
+    suggestions: List<String>,
+    onSuggestionClick: (String) -> Unit,
+) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text = stringResource(R.string.library_quick_try),
+            text = strings.quickTryLabel,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -116,6 +132,7 @@ private fun QuickSuggestionsRow(onSuggestionClick: (String) -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RecentSearchesRow(
+    strings: LibraryStrings,
     recent: List<String>,
     onSelect: (String) -> Unit,
     onClear: () -> Unit,
@@ -127,11 +144,11 @@ private fun RecentSearchesRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(R.string.library_recent_header),
+                text = strings.recentHeader,
                 style = MaterialTheme.typography.labelLarge,
             )
             TextButton(onClick = onClear) {
-                Text(stringResource(R.string.library_recent_clear))
+                Text(strings.recentClear)
             }
         }
         FlowRow(
@@ -151,6 +168,7 @@ private fun RecentSearchesRow(
 
 @Composable
 private fun RowActions(
+    strings: LibraryStrings,
     isLoading: Boolean,
     hasResult: Boolean,
     onSearch: () -> Unit,
@@ -170,20 +188,22 @@ private fun RowActions(
                 )
             }
             val lookupLabel = if (isLoading) {
-                stringResource(R.string.library_button_lookup_loading)
+                strings.lookupLoadingLabel
             } else {
-                stringResource(R.string.library_button_lookup)
+                strings.lookupLabel
             }
             Text(lookupLabel)
         }
         OutlinedButton(onClick = onClear, enabled = hasResult) {
-            Text(stringResource(R.string.library_button_clear_result))
+            Text(strings.clearResultLabel)
         }
     }
 }
 
 @Composable
 private fun WordEntryCard(
+    strings: LibraryStrings,
+    locale: Locale,
     entry: WordEntry,
     onPractice: () -> Unit,
 ) {
@@ -201,34 +221,43 @@ private fun WordEntryCard(
                 text = entry.word,
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             )
-            val fallback = stringResource(R.string.library_value_not_available)
-            val unknown = stringResource(R.string.library_value_unknown)
-            Text(stringResource(R.string.library_pinyin_label, entry.pinyin.ifBlank { fallback }))
+            val fallback = strings.valueNotAvailable
+            val unknown = strings.valueUnknown
             Text(
-                stringResource(
-                    R.string.library_radicals_strokes,
+                text = String.format(
+                    locale,
+                    strings.pinyinLabelFormat,
+                    entry.pinyin.ifBlank { fallback },
+                ),
+            )
+            Text(
+                String.format(
+                    locale,
+                    strings.radicalsStrokesFormat,
                     entry.radicals.ifBlank { fallback },
                     entry.strokes.ifBlank { unknown },
                 ),
             )
             entry.oldword.takeIf { it.isNotBlank() }?.let {
-                Text(stringResource(R.string.library_traditional_label, it))
+                Text(String.format(locale, strings.traditionalLabelFormat, it))
             }
             Text(
-                text = entry.explanation.ifBlank { entry.more.ifBlank { stringResource(R.string.library_definition_fallback) } },
+                text = entry.explanation.ifBlank {
+                    entry.more.ifBlank { strings.definitionFallback }
+                },
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onPractice) {
-                Text(stringResource(R.string.library_button_practice))
+                Text(strings.practiceButtonLabel)
             }
         }
     }
 }
 
 @Composable
-private fun HelpCard() {
+private fun HelpCard(strings: LibraryStrings) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -240,11 +269,11 @@ private fun HelpCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = stringResource(R.string.library_help_title),
+                text = strings.helpTitle,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             )
             Text(
-                text = stringResource(R.string.library_help_body),
+                text = strings.helpBody,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
