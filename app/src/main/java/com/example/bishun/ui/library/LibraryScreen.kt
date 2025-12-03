@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,9 +25,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.bishun.R
 import com.example.bishun.data.word.WordEntry
 
 @Composable
@@ -42,20 +45,20 @@ fun LibraryScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(
-            text = "Dictionary",
+            text = stringResource(R.string.library_title),
             style = MaterialTheme.typography.headlineSmall,
         )
         Text(
-            text = "Look up pinyin, radicals, and quick definitions entirely offline. Enter a single character and jump straight back to Practice when you're ready to trace.",
+            text = stringResource(R.string.library_description),
             style = MaterialTheme.typography.bodyMedium,
         )
         OutlinedTextField(
             value = uiState.query,
             onValueChange = viewModel::updateQuery,
-            label = { Text("Chinese character") },
+            label = { Text(stringResource(R.string.library_input_label)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            supportingText = { Text("Tip: type one character (HSK 1 is unlocked by default).") },
+            supportingText = { Text(stringResource(R.string.library_supporting_text)) },
         )
         QuickSuggestionsRow(onSuggestionClick = viewModel::loadCharacter)
         RowActions(
@@ -98,7 +101,7 @@ private fun QuickSuggestionsRow(onSuggestionClick: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text = "Try:",
+            text = stringResource(R.string.library_quick_try),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -124,11 +127,11 @@ private fun RecentSearchesRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Recent searches",
+                text = stringResource(R.string.library_recent_header),
                 style = MaterialTheme.typography.labelLarge,
             )
             TextButton(onClick = onClear) {
-                Text("Clear")
+                Text(stringResource(R.string.library_recent_clear))
             }
         }
         FlowRow(
@@ -137,9 +140,10 @@ private fun RecentSearchesRow(
             modifier = Modifier.fillMaxWidth(),
         ) {
             recent.forEach { symbol ->
-                OutlinedButton(onClick = { onSelect(symbol) }) {
-                    Text(symbol)
-                }
+                AssistChip(
+                    onClick = { onSelect(symbol) },
+                    label = { Text(symbol) },
+                )
             }
         }
     }
@@ -165,10 +169,15 @@ private fun RowActions(
                     strokeWidth = 2.dp,
                 )
             }
-            Text(if (isLoading) "Searching..." else "Lookup")
+            val lookupLabel = if (isLoading) {
+                stringResource(R.string.library_button_lookup_loading)
+            } else {
+                stringResource(R.string.library_button_lookup)
+            }
+            Text(lookupLabel)
         }
         OutlinedButton(onClick = onClear, enabled = hasResult) {
-            Text("Clear result")
+            Text(stringResource(R.string.library_button_clear_result))
         }
     }
 }
@@ -192,19 +201,27 @@ private fun WordEntryCard(
                 text = entry.word,
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             )
-            Text("Pinyin · ${entry.pinyin.ifBlank { "N/A" }}")
-            Text("Radical · ${entry.radicals.ifBlank { "N/A" }}    Strokes · ${entry.strokes.ifBlank { "?" }}")
+            val fallback = stringResource(R.string.library_value_not_available)
+            val unknown = stringResource(R.string.library_value_unknown)
+            Text(stringResource(R.string.library_pinyin_label, entry.pinyin.ifBlank { fallback }))
+            Text(
+                stringResource(
+                    R.string.library_radicals_strokes,
+                    entry.radicals.ifBlank { fallback },
+                    entry.strokes.ifBlank { unknown },
+                ),
+            )
             entry.oldword.takeIf { it.isNotBlank() }?.let {
-                Text("Traditional · $it")
+                Text(stringResource(R.string.library_traditional_label, it))
             }
             Text(
-                text = entry.explanation.ifBlank { entry.more.ifBlank { "No definition available." } },
+                text = entry.explanation.ifBlank { entry.more.ifBlank { stringResource(R.string.library_definition_fallback) } },
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onPractice) {
-                Text("Practice this character")
+                Text(stringResource(R.string.library_button_practice))
             }
         }
     }
@@ -223,13 +240,11 @@ private fun HelpCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "Tips",
+                text = stringResource(R.string.library_help_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             )
             Text(
-                text = "- Data comes from the bundled word.json so it works offline.\n" +
-                    "- Unlock additional lessons in the Account tab to pair dictionary lookups with courses.\n" +
-                    "- For handwriting and privacy details, see docs/help-guide.md inside the project.",
+                text = stringResource(R.string.library_help_body),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

@@ -1,3 +1,54 @@
 <resources>
     <string name="app_name">Bishun</string>
+
+    <!-- Progress Screen -->
+    <string name="progress_title">Progress</string>
+    <string name="progress_description">Review streaks, HSK completion, and the latest practice history. Everything updates automatically as you trace new characters.</string>
+    <string name="progress_button_jump_back">Jump back to Practice</string>
+    <string name="progress_stat_learned">Learned</string>
+    <string name="progress_stat_streak">Streak</string>
+    <string name="progress_stat_last_session">Last session</string>
+    <plurals name="progress_stat_streak_value">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="progress_stat_streak_start">Start</string>
+    <string name="progress_last_session_never">Never</string>
+    <string name="progress_weekly_chart_title">Last 7 days</string>
+    <string name="progress_levels_title">Levels</string>
+    <string name="progress_levels_empty">Start a practice session to see HSK levels appear here.</string>
+    <string name="progress_level_label">HSK %1$d</string>
+    <string name="progress_level_mastered">%1$d/%2$d mastered</string>
+    <string name="progress_level_jump_description">Jump to next character</string>
+    <string name="progress_level_browse_courses">Browse courses</string>
+    <string name="progress_history_title">Recent practice</string>
+    <string name="progress_history_empty">Once you trace a character, the history will appear here for quick review.</string>
+    <string name="progress_history_strokes">%1$d strokes &#183; %2$s</string>
+    <string name="progress_history_mistakes_perfect">Perfect run</string>
+    <string name="progress_history_mistakes">%1$d mistakes</string>
+    <string name="progress_history_load_character">Load %1$s</string>
+
+    <!-- Library Screen -->
+    <string name="library_title">Dictionary</string>
+    <string name="library_description">Look up pinyin, radicals, and quick definitions entirely offline. Enter a single character and jump straight back to Practice when you\'re ready to trace.</string>
+    <string name="library_input_label">Chinese character</string>
+    <string name="library_supporting_text">Tip: type one character (HSK 1 is unlocked by default).</string>
+    <string name="library_quick_try">Try:</string>
+    <string name="library_recent_header">Recent searches</string>
+    <string name="library_recent_clear">Clear</string>
+    <string name="library_button_lookup">Lookup</string>
+    <string name="library_button_lookup_loading">Searching...</string>
+    <string name="library_button_clear_result">Clear result</string>
+    <string name="library_error_empty">Enter one character to search.</string>
+    <string name="library_error_not_found">Character not found in the offline dictionary.</string>
+    <string name="library_error_read">Unable to read the dictionary. Please try again.</string>
+    <string name="library_pinyin_label">Pinyin &#183; %1$s</string>
+    <string name="library_radicals_strokes">Radical &#183; %1$s    Strokes &#183; %2$s</string>
+    <string name="library_traditional_label">Traditional &#183; %1$s</string>
+    <string name="library_definition_fallback">No definition available.</string>
+    <string name="library_value_not_available">N/A</string>
+    <string name="library_value_unknown">?</string>
+    <string name="library_button_practice">Practice this character</string>
+    <string name="library_help_title">Tips</string>
+    <string name="library_help_body">- Data comes from the bundled word.json so it works offline.\n- Unlock additional lessons in the Account tab to pair dictionary lookups with courses.\n- For handwriting and privacy details, see docs/help-guide.md inside the project.</string>
 </resources>

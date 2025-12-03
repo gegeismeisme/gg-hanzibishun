@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.bishun.R
 import com.example.bishun.data.word.WordEntry
 import com.example.bishun.data.word.WordRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ data class LibraryUiState(
 )
 
 class LibraryViewModel(
+    private val appContext: Context,
     private val wordRepository: WordRepository,
 ) : ViewModel() {
 
@@ -35,6 +37,7 @@ class LibraryViewModel(
     fun clearResult() {
         _uiState.value = _uiState.value.copy(result = null, errorMessage = null)
     }
+
     fun clearHistory() {
         _uiState.value = _uiState.value.copy(recentSearches = emptyList())
     }
@@ -42,7 +45,10 @@ class LibraryViewModel(
     fun submitQuery() {
         val symbol = _uiState.value.query.trim()
         if (symbol.isEmpty()) {
-            _uiState.value = _uiState.value.copy(errorMessage = "Enter one character to search.", result = null)
+            _uiState.value = _uiState.value.copy(
+                errorMessage = appContext.getString(R.string.library_error_empty),
+                result = null,
+            )
             return
         }
         viewModelScope.launch {
@@ -57,11 +63,19 @@ class LibraryViewModel(
                             recentSearches = addRecent(symbol),
                         )
                     } else {
-                        _uiState.value.copy(isLoading = false, result = null, errorMessage = "Character not found in the offline dictionary.")
+                        _uiState.value.copy(
+                            isLoading = false,
+                            result = null,
+                            errorMessage = appContext.getString(R.string.library_error_not_found),
+                        )
                     }
                 }
                 .onFailure {
-                    _uiState.value = _uiState.value.copy(isLoading = false, result = null, errorMessage = "Unable to read the dictionary. Please try again.")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        result = null,
+                        errorMessage = appContext.getString(R.string.library_error_read),
+                    )
                 }
         }
     }
@@ -92,7 +106,7 @@ class LibraryViewModel(
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val repo = WordRepository(appContext)
-                    return LibraryViewModel(repo) as T
+                    return LibraryViewModel(appContext, repo) as T
                 }
             }
         }

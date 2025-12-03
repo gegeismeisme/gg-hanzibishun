@@ -34,10 +34,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.bishun.R
 import com.example.bishun.data.history.PracticeHistoryEntry
 import com.example.bishun.ui.character.CharacterViewModel
 import com.example.bishun.ui.character.HskLevelSummary
@@ -70,15 +73,15 @@ fun ProgressScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Progress",
+                    text = stringResource(R.string.progress_title),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
-                    text = "Review streaks, HSK completion, and the latest practice history. Everything updates automatically as you trace new characters.",
+                    text = stringResource(R.string.progress_description),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Button(onClick = onJumpToPractice) {
-                    Text("Jump back to Practice")
+                    Text(stringResource(R.string.progress_button_jump_back))
                 }
             }
         }
@@ -130,21 +133,35 @@ private fun ProgressOverviewCard(overview: ProgressOverview) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            val learnedLabel = stringResource(R.string.progress_stat_learned)
+            val streakLabel = stringResource(R.string.progress_stat_streak)
+            val lastSessionLabel = stringResource(R.string.progress_stat_last_session)
+            val streakValue = if (overview.streakDays > 0) {
+                pluralStringResource(
+                    R.plurals.progress_stat_streak_value,
+                    overview.streakDays,
+                    overview.streakDays,
+                )
+            } else {
+                stringResource(R.string.progress_stat_streak_start)
+            }
+            val lastSessionValue = overview.lastPracticeTimestamp?.let { formatRelativeDuration(it) }
+                ?: stringResource(R.string.progress_last_session_never)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 StatPill(
-                    title = "Learned",
+                    title = learnedLabel,
                     value = "${overview.totalLearned}/${overview.totalCharacters.coerceAtLeast(overview.totalLearned)}",
                 )
                 StatPill(
-                    title = "Streak",
-                    value = if (overview.streakDays > 0) "${overview.streakDays}d" else "Start",
+                    title = streakLabel,
+                    value = streakValue,
                 )
                 StatPill(
-                    title = "Last session",
-                    value = overview.lastPracticeTimestamp?.let { formatRelativeDuration(it) } ?: "—",
+                    title = lastSessionLabel,
+                    value = lastSessionValue,
                 )
             }
             WeeklyPracticeChart(counts = overview.weeklyCounts)
@@ -173,7 +190,10 @@ private fun WeeklyPracticeChart(counts: List<DailyPracticeCount>) {
     val maxCount = counts.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
     val barHeight = 56.dp
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Last 7 days", style = MaterialTheme.typography.labelLarge)
+        Text(
+            text = stringResource(R.string.progress_weekly_chart_title),
+            style = MaterialTheme.typography.labelLarge,
+        )
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Bottom,
@@ -226,7 +246,7 @@ private fun LevelBreakdownList(
 ) {
     if (summary.perLevel.isEmpty()) {
         Text(
-            text = "Start a practice session to see HSK levels appear here.",
+            text = stringResource(R.string.progress_levels_empty),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -234,7 +254,7 @@ private fun LevelBreakdownList(
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Levels",
+            text = stringResource(R.string.progress_levels_title),
             style = MaterialTheme.typography.labelLarge,
         )
         summary.perLevel.toSortedMap().forEach { (level, stats) ->
@@ -250,9 +270,12 @@ private fun LevelBreakdownList(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
-                        Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "${stats.completed}/${stats.total} mastered",
+                            text = stringResource(R.string.progress_level_label, level),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            text = stringResource(R.string.progress_level_mastered, stats.completed, stats.total),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -263,17 +286,18 @@ private fun LevelBreakdownList(
                         modifier = Modifier.width(110.dp),
                     )
                     val nextTarget = summary.nextTargets[level]
-                    if (nextTarget != null) {
+                    val isComplete = stats.total > 0 && stats.completed >= stats.total
+                    if (!isComplete && nextTarget != null) {
                         IconActionButton(
                             icon = Icons.Filled.PlayArrow,
-                            description = "Jump to next character",
+                            description = stringResource(R.string.progress_level_jump_description),
                             onClick = { nextTarget.let(onJumpToChar) },
                             enabled = true,
                             buttonSize = 32.dp,
                         )
                     } else {
                         TextButton(onClick = onNavigateToCourses) {
-                            Text("Browse courses")
+                            Text(stringResource(R.string.progress_level_browse_courses))
                         }
                     }
                 }
@@ -287,10 +311,13 @@ private fun PracticeHistorySection(
     history: List<PracticeHistoryEntry>,
     onJumpToChar: (String) -> Unit,
 ) {
-    Text("Recent practice", style = MaterialTheme.typography.titleMedium)
+    Text(
+        text = stringResource(R.string.progress_history_title),
+        style = MaterialTheme.typography.titleMedium,
+    )
     if (history.isEmpty()) {
         Text(
-            text = "Once you trace a character, the history will appear here for quick review.",
+            text = stringResource(R.string.progress_history_empty),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -308,10 +335,15 @@ private fun PracticeHistoryRow(
 ) {
     val timeLabel = remember(entry.timestamp) { formatHistoryTimestamp(entry.timestamp) }
     val mistakesLabel = if (entry.mistakes == 0) {
-        "Perfect run"
+        stringResource(R.string.progress_history_mistakes_perfect)
     } else {
-        "${entry.mistakes} mistakes"
+        stringResource(R.string.progress_history_mistakes, entry.mistakes)
     }
+    val strokesWithMistakes = stringResource(
+        R.string.progress_history_strokes,
+        entry.totalStrokes,
+        mistakesLabel,
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -345,14 +377,15 @@ private fun PracticeHistoryRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "${entry.totalStrokes} strokes • $mistakesLabel",
+                    text = strokesWithMistakes,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
+        val playDescription = stringResource(R.string.progress_history_load_character, entry.symbol)
         IconActionButton(
             icon = Icons.Filled.PlayArrow,
-            description = "Load ${entry.symbol}",
+            description = playDescription,
             onClick = { onJumpToChar(entry.symbol) },
             buttonSize = 36.dp,
         )
