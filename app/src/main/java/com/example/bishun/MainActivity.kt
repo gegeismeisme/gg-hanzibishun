@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.bishun.ui.character.CharacterRoute
+import com.example.bishun.ui.navigation.BishunApp
 import com.example.bishun.ui.theme.BishunTheme
 
 class MainActivity : ComponentActivity() {
@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             BishunTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    CharacterRoute()
+                    BishunApp()
                 }
             }
         }
