@@ -153,6 +153,11 @@ fun BishunApp() {
                             launchSingleTop = true
                         }
                     },
+                    onNavigateToCourses = {
+                        navController.navigate(MainDestination.Courses.route) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(MainDestination.Library.route) {

@@ -25,6 +25,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -57,6 +58,7 @@ fun ProgressScreen(
     viewModel: CharacterViewModel,
     onJumpToPractice: () -> Unit = {},
     onJumpToCharacter: (String) -> Unit = {},
+    onNavigateToCourses: () -> Unit = {},
 ) {
     val hskProgress by viewModel.hskProgress.collectAsState()
     val practiceHistory by viewModel.practiceHistory.collectAsState()
@@ -85,6 +87,7 @@ fun ProgressScreen(
                 summary = hskProgress,
                 practiceHistory = practiceHistory,
                 onJumpToChar = onJumpToCharacter,
+                onNavigateToCourses = onNavigateToCourses,
             )
         }
     }
@@ -95,6 +98,7 @@ private fun HskProgressView(
     summary: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
     onJumpToChar: (String) -> Unit,
+    onNavigateToCourses: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -104,7 +108,11 @@ private fun HskProgressView(
     ) {
         val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }
         ProgressOverviewCard(overview = overview)
-        LevelBreakdownList(summary = summary, onJumpToChar = onJumpToChar)
+        LevelBreakdownList(
+            summary = summary,
+            onJumpToChar = onJumpToChar,
+            onNavigateToCourses = onNavigateToCourses,
+        )
         HorizontalDivider()
         PracticeHistorySection(history = practiceHistory, onJumpToChar = onJumpToChar)
     }
@@ -214,6 +222,7 @@ private fun WeeklyPracticeChart(counts: List<DailyPracticeCount>) {
 private fun LevelBreakdownList(
     summary: HskProgressSummary,
     onJumpToChar: (String) -> Unit,
+    onNavigateToCourses: () -> Unit,
 ) {
     if (summary.perLevel.isEmpty()) {
         Text(
@@ -254,13 +263,19 @@ private fun LevelBreakdownList(
                         modifier = Modifier.width(110.dp),
                     )
                     val nextTarget = summary.nextTargets[level]
-                    IconActionButton(
-                        icon = Icons.Filled.PlayArrow,
-                        description = "Jump to next character",
-                        onClick = { nextTarget?.let(onJumpToChar) },
-                        enabled = nextTarget != null,
-                        buttonSize = 32.dp,
-                    )
+                    if (nextTarget != null) {
+                        IconActionButton(
+                            icon = Icons.Filled.PlayArrow,
+                            description = "Jump to next character",
+                            onClick = { nextTarget.let(onJumpToChar) },
+                            enabled = true,
+                            buttonSize = 32.dp,
+                        )
+                    } else {
+                        TextButton(onClick = onNavigateToCourses) {
+                            Text("Browse courses")
+                        }
+                    }
                 }
             }
         }
