@@ -14,12 +14,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.bishun.ui.account.AccountViewModel
 import com.example.bishun.ui.character.CharacterViewModel
 import com.example.bishun.ui.character.CourseSession
 import com.example.bishun.ui.character.HskLevelSummary
@@ -28,6 +29,8 @@ import com.example.bishun.ui.character.HskLevelSummary
 fun CoursesScreen(
     modifier: Modifier = Modifier,
     viewModel: CharacterViewModel,
+    isSignedIn: Boolean,
+    unlockedLevels: Set<Int>,
     onNavigateToPractice: () -> Unit = {},
     onRequestUnlock: () -> Unit = {},
 ) {
@@ -35,6 +38,10 @@ fun CoursesScreen(
     val courseSession by viewModel.courseSession.collectAsState()
     val hskProgress by viewModel.hskProgress.collectAsState()
     val completedSymbols by viewModel.completedSymbols.collectAsState()
+
+    val sortedLevels = remember(courseCatalog) {
+        courseCatalog.entries.sortedBy { it.key }
+    }
 
     LazyColumn(
         modifier = modifier.padding(horizontal = 20.dp, vertical = 24.dp),
@@ -82,9 +89,6 @@ fun CoursesScreen(
                 }
             }
         } else {
-            val sortedLevels = remember(courseCatalog) {
-                courseCatalog.entries.sortedBy { it.key }
-            }
             items(sortedLevels) { entry ->
                 val level = entry.key
                 val symbols = entry.value
@@ -92,12 +96,16 @@ fun CoursesScreen(
                 val nextTarget = hskProgress.nextTargets[level]
                     ?: symbols.firstOrNull { !completedSymbols.contains(it) }
                     ?: symbols.firstOrNull()
+                val canAccess = AccountViewModel.FREE_LEVELS.contains(level) ||
+                    unlockedLevels.contains(level)
                 CourseLevelCard(
                     level = level,
                     symbols = symbols,
                     summary = summary,
                     nextTarget = nextTarget,
                     completedSymbols = completedSymbols,
+                    canAccess = canAccess,
+                    isSignedIn = isSignedIn,
                     onStart = { symbol ->
                         viewModel.startCourse(level, symbol)
                         onNavigateToPractice()
@@ -166,6 +174,8 @@ private fun CourseLevelCard(
     summary: HskLevelSummary?,
     nextTarget: String?,
     completedSymbols: Set<String>,
+    canAccess: Boolean,
+    isSignedIn: Boolean,
     onStart: (String) -> Unit,
     onRequestUnlock: () -> Unit,
 ) {
@@ -205,17 +215,16 @@ private fun CourseLevelCard(
                 text = "示例：${symbols.take(12).joinToString(separator = " ")}",
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
+            if (canAccess) {
                 Button(
                     onClick = { nextTarget?.let(onStart) },
                     enabled = nextTarget != null,
                 ) {
                     Text(if (completed == 0) "开始课程" else "练习下一个")
                 }
-                OutlinedButton(onClick = onRequestUnlock) {
-                    Text("解锁更多")
+            } else {
+                Button(onClick = onRequestUnlock) {
+                    Text(if (isSignedIn) "解锁课程" else "登录后解锁")
                 }
             }
         }

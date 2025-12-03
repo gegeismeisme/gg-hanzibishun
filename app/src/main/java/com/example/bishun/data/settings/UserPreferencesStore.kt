@@ -5,8 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -24,6 +25,8 @@ data class UserPreferences(
     val courseLevel: Int? = null,
     val courseSymbol: String? = null,
     val languageOverride: String? = null,
+    val isAccountSignedIn: Boolean = false,
+    val unlockedCourseLevels: Set<Int> = emptySet(),
 )
 
 class UserPreferencesStore(private val context: Context) {
@@ -42,6 +45,11 @@ class UserPreferencesStore(private val context: Context) {
             courseLevel = prefs[KEY_COURSE_LEVEL],
             courseSymbol = prefs[KEY_COURSE_SYMBOL],
             languageOverride = prefs[KEY_LANGUAGE_OVERRIDE],
+            isAccountSignedIn = prefs[KEY_ACCOUNT_SIGNED_IN] ?: false,
+            unlockedCourseLevels = prefs[KEY_UNLOCKED_LEVELS]
+                ?.mapNotNull { it.toIntOrNull() }
+                ?.toSet()
+                ?: emptySet(),
         )
     }
 
@@ -119,6 +127,24 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setAccountSignedIn(signedIn: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_ACCOUNT_SIGNED_IN] = signedIn
+            if (!signedIn) {
+                prefs.remove(KEY_UNLOCKED_LEVELS)
+            }
+        }
+    }
+
+    suspend fun unlockCourseLevels(levels: Set<Int>) {
+        if (levels.isEmpty()) return
+        context.userPreferencesDataStore.edit { prefs ->
+            val current = prefs[KEY_UNLOCKED_LEVELS] ?: emptySet()
+            val updated = current + levels.map { it.toString() }
+            prefs[KEY_UNLOCKED_LEVELS] = updated.toSet()
+        }
+    }
+
     companion object {
         private val Context.userPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -134,5 +160,7 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_COURSE_LEVEL = intPreferencesKey("course_level")
         private val KEY_COURSE_SYMBOL = stringPreferencesKey("course_symbol")
         private val KEY_LANGUAGE_OVERRIDE = stringPreferencesKey("language_override")
+        private val KEY_ACCOUNT_SIGNED_IN = booleanPreferencesKey("account_signed_in")
+        private val KEY_UNLOCKED_LEVELS = stringSetPreferencesKey("unlocked_course_levels")
     }
 }

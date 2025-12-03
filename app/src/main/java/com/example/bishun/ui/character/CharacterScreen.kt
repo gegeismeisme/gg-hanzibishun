@@ -124,7 +124,6 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import com.example.bishun.data.settings.UserPreferences
-import com.example.bishun.data.history.PracticeHistoryEntry
 import com.example.bishun.hanzi.core.Positioner
 import com.example.bishun.hanzi.geometry.Geometry
 import com.example.bishun.hanzi.model.CharacterDefinition
@@ -163,7 +162,6 @@ fun CharacterRoute(
     val wordEntry by viewModel.wordEntry.collectAsState()
     val hskEntry by viewModel.hskEntry.collectAsState()
     val hskProgress by viewModel.hskProgress.collectAsState()
-    val practiceHistory by viewModel.practiceHistory.collectAsState()
     val courseSession by viewModel.courseSession.collectAsState()
     val boardSettings by viewModel.boardSettings.collectAsState()
     val courseCatalog by viewModel.courseCatalog.collectAsState()
@@ -187,7 +185,6 @@ fun CharacterRoute(
         wordEntry = wordEntry,
         hskEntry = hskEntry,
         hskProgress = hskProgress,
-        practiceHistory = practiceHistory,
         courseCatalog = courseCatalog,
         courseSession = courseSession,
         completedSymbols = completedSymbols,
@@ -238,7 +235,6 @@ fun CharacterScreen(
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
     hskProgress: HskProgressSummary,
-    practiceHistory: List<PracticeHistoryEntry>,
     courseCatalog: Map<Int, List<String>>,
     courseSession: CourseSession?,
     completedSymbols: Set<String>,
@@ -423,7 +419,6 @@ fun CharacterScreen(
             ProfileActionDialog(
                 action = action,
                 hskProgress = hskProgress,
-                practiceHistory = practiceHistory,
                 courseCatalog = courseCatalog,
                 completedSymbols = completedSymbols,
                 activeSession = courseSession,
@@ -1215,7 +1210,6 @@ private fun WordInfoStat(label: String, value: String) {
 private fun ProfileActionDialog(
     action: ProfileMenuAction,
     hskProgress: HskProgressSummary,
-    practiceHistory: List<PracticeHistoryEntry>,
     courseCatalog: Map<Int, List<String>>,
     completedSymbols: Set<String>,
     activeSession: CourseSession?,
@@ -1257,15 +1251,9 @@ private fun ProfileActionDialog(
             AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text(action.label) },
-                text = {
-                    HskProgressView(
-                        summary = hskProgress,
-                        practiceHistory = practiceHistory,
-                        onJumpToChar = onJumpToChar,
-                    )
-                },
+                text = { Text("进度统计已移动到底部导航栏的“进度”标签。请通过底部 Tab 浏览练习历史与 HSK 完成度。") },
                 confirmButton = {
-                    TextButton(onClick = onDismiss) { Text("Close") }
+                    TextButton(onClick = onDismiss) { Text("好的") }
                 },
             )
         }
@@ -1322,322 +1310,6 @@ private fun ProfileActionDialog(
                 },
             )
         }
-    }
-}
-
-@Composable
-private fun HskProgressView(
-    summary: HskProgressSummary,
-    practiceHistory: List<PracticeHistoryEntry>,
-    onJumpToChar: (String) -> Unit,
-) {
-    val scrollState = rememberScrollState()
-    val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 420.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        ProgressOverviewCard(overview = overview)
-        LevelBreakdownList(summary = summary)
-        HorizontalDivider()
-        PracticeHistorySection(history = practiceHistory, onJumpToChar = onJumpToChar)
-    }
-}
-
-@Composable
-private fun ProgressOverviewCard(overview: ProgressOverview) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                StatPill(
-                    title = "Learned",
-                    value = "${overview.totalLearned}/${overview.totalCharacters.coerceAtLeast(overview.totalLearned)}",
-                )
-                StatPill(
-                    title = "Streak",
-                    value = if (overview.streakDays > 0) "${overview.streakDays}d" else "Start",
-                )
-                StatPill(
-                    title = "Last practice",
-                    value = overview.lastPracticeTimestamp?.let { formatRelativeDuration(it) } ?: "—",
-                )
-            }
-            WeeklyPracticeChart(counts = overview.weeklyCounts)
-        }
-    }
-}
-
-@Composable
-private fun RowScope.StatPill(title: String, value: String) {
-    Column(
-        modifier = Modifier.weight(1f),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(text = title, style = MaterialTheme.typography.labelMedium)
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun WeeklyPracticeChart(counts: List<DailyPracticeCount>) {
-    val maxCount = counts.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
-    val barHeight = 56.dp
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Past 7 days", style = MaterialTheme.typography.labelLarge)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.Bottom,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            counts.forEach { day ->
-                val ratio = (day.count / maxCount.toFloat()).coerceIn(0f, 1f)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .height(barHeight)
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.BottomCenter,
-                    ) {
-                        if (ratio > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(ratio)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        if (day.isToday) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                    ),
-                            )
-                        }
-                    }
-                    Text(
-                        text = day.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (day.isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LevelBreakdownList(summary: HskProgressSummary) {
-    if (summary.perLevel.isEmpty()) {
-        Text(
-            text = "Practice characters to start tracking HSK progress.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Per level overview",
-            style = MaterialTheme.typography.labelLarge,
-        )
-        summary.perLevel.toSortedMap().forEach { (level, stats) ->
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                tonalElevation = 1.dp,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
-                        Text("HSK $level", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            text = "${stats.completed}/${stats.total} mastered",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    val progress = if (stats.total == 0) 0f else (stats.completed / stats.total.toFloat()).coerceIn(0f, 1f)
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .width(110.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-private data class ProgressOverview(
-    val totalLearned: Int,
-    val totalCharacters: Int,
-    val streakDays: Int,
-    val lastPracticeTimestamp: Long?,
-    val weeklyCounts: List<DailyPracticeCount>,
-)
-
-private data class DailyPracticeCount(val label: String, val count: Int, val isToday: Boolean)
-
-private data class CourseSymbolVisual(val symbol: String, val isActive: Boolean, val isCompleted: Boolean)
-
-private fun buildProgressOverview(
-    summary: HskProgressSummary,
-    history: List<PracticeHistoryEntry>,
-): ProgressOverview {
-    val zoneId = ZoneId.systemDefault()
-    val today = LocalDate.now(zoneId)
-    val dayFormatter = DateTimeFormatter.ofPattern("EE", Locale.getDefault())
-    val grouped = history.groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zoneId).toLocalDate() }
-    val sortedDays = grouped.keys.sortedDescending()
-    var streak = 0
-    var previousDay: LocalDate? = null
-    loop@ for (day in sortedDays) {
-        if (previousDay == null) {
-            streak = 1
-            previousDay = day
-            continue@loop
-        }
-        val diff = ChronoUnit.DAYS.between(day, previousDay)
-        when {
-            diff == 0L -> continue@loop
-            diff == 1L -> {
-                streak++
-                previousDay = day
-            }
-            else -> break@loop
-        }
-    }
-    val weeklyCounts = (6 downTo 0).map { offset ->
-        val day = today.minusDays(offset.toLong())
-        DailyPracticeCount(
-            label = dayFormatter.format(day),
-            count = grouped[day]?.size ?: 0,
-            isToday = day == today,
-        )
-    }
-    return ProgressOverview(
-        totalLearned = summary.totalCompleted,
-        totalCharacters = summary.totalCharacters.takeIf { it > 0 } ?: summary.totalCompleted,
-        streakDays = streak,
-        lastPracticeTimestamp = history.maxOfOrNull { it.timestamp },
-        weeklyCounts = weeklyCounts,
-    )
-}
-
-private fun formatRelativeDuration(timestamp: Long): String {
-    val diffMillis = System.currentTimeMillis() - timestamp
-    if (diffMillis <= 0) return "just now"
-    val minutes = diffMillis / 60_000
-    return when {
-        minutes < 1 -> "just now"
-        minutes < 60 -> "${minutes}m ago"
-        minutes < 60 * 24 -> "${minutes / 60}h ago"
-        else -> "${minutes / (60 * 24)}d ago"
-    }
-}
-
-@Composable
-private fun PracticeHistorySection(
-    history: List<PracticeHistoryEntry>,
-    onJumpToChar: (String) -> Unit,
-) {
-    Text("Recent practice", style = MaterialTheme.typography.titleMedium)
-    if (history.isEmpty()) {
-        Text(
-            text = "Start a practice session to build your timeline.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        return
-    }
-    history.asReversed().take(12).forEach { entry ->
-        PracticeHistoryRow(entry = entry, onJumpToChar = onJumpToChar)
-    }
-}
-
-@Composable
-private fun PracticeHistoryRow(
-    entry: PracticeHistoryEntry,
-    onJumpToChar: (String) -> Unit,
-) {
-    val timeLabel = remember(entry.timestamp) { formatHistoryTimestamp(entry.timestamp) }
-    val mistakesLabel = if (entry.mistakes == 0) {
-        "Perfect run"
-    } else {
-        "${entry.mistakes} mistakes"
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                tonalElevation = 2.dp,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = entry.symbol,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontFamily = KaishuFontFamily,
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = timeLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "${entry.totalStrokes} strokes • $mistakesLabel",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-        IconActionButton(
-            icon = Icons.Filled.PlayArrow,
-            description = "Load ${entry.symbol}",
-            onClick = { onJumpToChar(entry.symbol) },
-            buttonSize = 36.dp,
-        )
     }
 }
 

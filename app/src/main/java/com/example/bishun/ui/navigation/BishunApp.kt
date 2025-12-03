@@ -14,6 +14,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -26,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bishun.ui.account.AccountScreen
+import com.example.bishun.ui.account.AccountViewModel
 import com.example.bishun.ui.character.CharacterRoute
 import com.example.bishun.ui.character.CharacterViewModel
 import com.example.bishun.ui.courses.CoursesScreen
@@ -64,6 +66,10 @@ fun BishunApp() {
     val sharedCharacterViewModel: CharacterViewModel = viewModel(
         factory = CharacterViewModel.factory(context),
     )
+    val accountViewModel: AccountViewModel = viewModel(
+        factory = AccountViewModel.factory(context),
+    )
+    val accountState by accountViewModel.uiState.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -111,6 +117,8 @@ fun BishunApp() {
                 CoursesScreen(
                     modifier = Modifier.fillMaxSize(),
                     viewModel = sharedCharacterViewModel,
+                    isSignedIn = accountState.isSignedIn,
+                    unlockedLevels = accountState.unlockedLevels,
                     onRequestUnlock = {
                         navController.navigate(MainDestination.Account.route) {
                             launchSingleTop = true
@@ -126,7 +134,14 @@ fun BishunApp() {
             composable(MainDestination.Progress.route) {
                 ProgressScreen(
                     modifier = Modifier.fillMaxSize(),
+                    viewModel = sharedCharacterViewModel,
                     onJumpToPractice = {
+                        navController.navigate(MainDestination.Practice.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onJumpToCharacter = { symbol ->
+                        sharedCharacterViewModel.jumpToCharacter(symbol)
                         navController.navigate(MainDestination.Practice.route) {
                             launchSingleTop = true
                         }
@@ -144,7 +159,10 @@ fun BishunApp() {
                 )
             }
             composable(MainDestination.Account.route) {
-                AccountScreen(modifier = Modifier.fillMaxSize())
+                AccountScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    viewModel = accountViewModel,
+                )
             }
         }
     }

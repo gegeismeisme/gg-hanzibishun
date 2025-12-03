@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,9 +30,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun AccountScreen(modifier: Modifier = Modifier) {
-    var isLoggedIn by rememberSaveable { mutableStateOf(false) }
-    var hasUnlockedPremium by rememberSaveable { mutableStateOf(false) }
+fun AccountScreen(
+    modifier: Modifier = Modifier,
+    viewModel: AccountViewModel,
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val isLoggedIn = uiState.isSignedIn
+    val hasUnlockedPremium = uiState.hasPremiumAccess
     var showLoginDialog by rememberSaveable { mutableStateOf(false) }
     var showPurchaseDialog by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -56,8 +61,7 @@ fun AccountScreen(modifier: Modifier = Modifier) {
             buttonLabel = if (isLoggedIn) "退出登录" else "登录并同步",
             onClick = {
                 if (isLoggedIn) {
-                    isLoggedIn = false
-                    hasUnlockedPremium = false
+                    viewModel.signOut()
                 } else {
                     showLoginDialog = true
                 }
@@ -102,7 +106,7 @@ fun AccountScreen(modifier: Modifier = Modifier) {
             ),
             confirmLabel = "同意并登录",
             onConfirm = {
-                isLoggedIn = true
+                viewModel.signIn()
                 showLoginDialog = false
             },
             onDismiss = { showLoginDialog = false },
@@ -118,7 +122,7 @@ fun AccountScreen(modifier: Modifier = Modifier) {
             ),
             confirmLabel = "确认解锁",
             onConfirm = {
-                hasUnlockedPremium = true
+                viewModel.unlockPremiumLevels()
                 showPurchaseDialog = false
             },
             onDismiss = { showPurchaseDialog = false },
