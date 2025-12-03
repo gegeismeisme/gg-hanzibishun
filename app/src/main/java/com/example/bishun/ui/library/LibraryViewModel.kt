@@ -12,10 +12,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class LibraryUiState(
-    val query: String = "永",
+    val query: String = "",
     val result: WordEntry? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val recentSearches: List<String> = emptyList(),
 )
 
 class LibraryViewModel(
@@ -34,11 +35,14 @@ class LibraryViewModel(
     fun clearResult() {
         _uiState.value = _uiState.value.copy(result = null, errorMessage = null)
     }
+    fun clearHistory() {
+        _uiState.value = _uiState.value.copy(recentSearches = emptyList())
+    }
 
     fun submitQuery() {
         val symbol = _uiState.value.query.trim()
         if (symbol.isEmpty()) {
-            _uiState.value = _uiState.value.copy(errorMessage = "请输入汉字进行查询。", result = null)
+            _uiState.value = _uiState.value.copy(errorMessage = "Enter one character to search.", result = null)
             return
         }
         viewModelScope.launch {
@@ -46,24 +50,41 @@ class LibraryViewModel(
             runCatching { wordRepository.getWord(symbol) }
                 .onSuccess { entry ->
                     _uiState.value = if (entry != null) {
-                        _uiState.value.copy(isLoading = false, result = entry, errorMessage = null)
+                        _uiState.value.copy(
+                            isLoading = false,
+                            result = entry,
+                            errorMessage = null,
+                            recentSearches = addRecent(symbol),
+                        )
                     } else {
-                        _uiState.value.copy(isLoading = false, result = null, errorMessage = "未在离线字典中找到该字。")
+                        _uiState.value.copy(isLoading = false, result = null, errorMessage = "Character not found in the offline dictionary.")
                     }
                 }
                 .onFailure {
-                    _uiState.value = _uiState.value.copy(isLoading = false, result = null, errorMessage = "读取字典时出错，请稍后重试。")
+                    _uiState.value = _uiState.value.copy(isLoading = false, result = null, errorMessage = "Unable to read the dictionary. Please try again.")
                 }
         }
     }
 
     fun loadCharacter(symbol: String) {
-        updateQuery(symbol)
+        val trimmed = symbol.trim().take(MAX_QUERY_LENGTH)
+        if (trimmed.isEmpty()) return
+        if (_uiState.value.query != trimmed) {
+            _uiState.value = _uiState.value.copy(query = trimmed)
+        }
         submitQuery()
+    }
+
+    private fun addRecent(symbol: String): List<String> {
+        val current = _uiState.value.recentSearches.toMutableList()
+        current.remove(symbol)
+        current.add(0, symbol)
+        return current.take(RECENT_LIMIT)
     }
 
     companion object {
         private const val MAX_QUERY_LENGTH = 2
+        private const val RECENT_LIMIT = 6
 
         fun factory(context: Context): ViewModelProvider.Factory {
             val appContext = context.applicationContext
