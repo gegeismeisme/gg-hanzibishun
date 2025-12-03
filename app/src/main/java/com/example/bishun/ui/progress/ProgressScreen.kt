@@ -68,15 +68,15 @@ fun ProgressScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "进度",
+                    text = "Progress",
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
-                    text = "实时查看已掌握的 HSK 字符、连胜记录与最近的练习历史。下方列表会随着练习自动更新。",
+                    text = "Review streaks, HSK completion, and the latest practice history. Everything updates automatically as you trace new characters.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Button(onClick = onJumpToPractice) {
-                    Text("继续练习")
+                    Text("Jump back to Practice")
                 }
             }
         }
@@ -104,7 +104,7 @@ private fun HskProgressView(
     ) {
         val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }
         ProgressOverviewCard(overview = overview)
-        LevelBreakdownList(summary = summary)
+        LevelBreakdownList(summary = summary, onJumpToChar = onJumpToChar)
         HorizontalDivider()
         PracticeHistorySection(history = practiceHistory, onJumpToChar = onJumpToChar)
     }
@@ -127,15 +127,15 @@ private fun ProgressOverviewCard(overview: ProgressOverview) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 StatPill(
-                    title = "已掌握",
+                    title = "Learned",
                     value = "${overview.totalLearned}/${overview.totalCharacters.coerceAtLeast(overview.totalLearned)}",
                 )
                 StatPill(
-                    title = "连胜",
+                    title = "Streak",
                     value = if (overview.streakDays > 0) "${overview.streakDays}d" else "Start",
                 )
                 StatPill(
-                    title = "上次练习",
+                    title = "Last session",
                     value = overview.lastPracticeTimestamp?.let { formatRelativeDuration(it) } ?: "—",
                 )
             }
@@ -165,7 +165,7 @@ private fun WeeklyPracticeChart(counts: List<DailyPracticeCount>) {
     val maxCount = counts.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
     val barHeight = 56.dp
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("近 7 天", style = MaterialTheme.typography.labelLarge)
+        Text("Last 7 days", style = MaterialTheme.typography.labelLarge)
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Bottom,
@@ -211,10 +211,13 @@ private fun WeeklyPracticeChart(counts: List<DailyPracticeCount>) {
 }
 
 @Composable
-private fun LevelBreakdownList(summary: HskProgressSummary) {
+private fun LevelBreakdownList(
+    summary: HskProgressSummary,
+    onJumpToChar: (String) -> Unit,
+) {
     if (summary.perLevel.isEmpty()) {
         Text(
-            text = "开始练字后会在此展示 HSK 等级进度。",
+            text = "Start a practice session to see HSK levels appear here.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -222,7 +225,7 @@ private fun LevelBreakdownList(summary: HskProgressSummary) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "各级别概况",
+            text = "Levels",
             style = MaterialTheme.typography.labelLarge,
         )
         summary.perLevel.toSortedMap().forEach { (level, stats) ->
@@ -250,6 +253,14 @@ private fun LevelBreakdownList(summary: HskProgressSummary) {
                         progress = { progress },
                         modifier = Modifier.width(110.dp),
                     )
+                    val nextTarget = summary.nextTargets[level]
+                    IconActionButton(
+                        icon = Icons.Filled.PlayArrow,
+                        description = "Jump to next character",
+                        onClick = { nextTarget?.let(onJumpToChar) },
+                        enabled = nextTarget != null,
+                        buttonSize = 32.dp,
+                    )
                 }
             }
         }
@@ -261,10 +272,10 @@ private fun PracticeHistorySection(
     history: List<PracticeHistoryEntry>,
     onJumpToChar: (String) -> Unit,
 ) {
-    Text("最近练习", style = MaterialTheme.typography.titleMedium)
+    Text("Recent practice", style = MaterialTheme.typography.titleMedium)
     if (history.isEmpty()) {
         Text(
-            text = "完成一次描红后，这里会显示练习记录。",
+            text = "Once you trace a character, the history will appear here for quick review.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

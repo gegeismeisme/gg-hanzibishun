@@ -2,10 +2,14 @@ package com.example.bishun.ui.library
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,21 +40,22 @@ fun LibraryScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(
-            text = "字典",
+            text = "Dictionary",
             style = MaterialTheme.typography.headlineSmall,
         )
         Text(
-            text = "离线字典数据来自 word.json，可在未联网时查询汉字的拼音、部首、笔画等信息。输入汉字即可查看详情，并可一键跳到“练习”标签继续描红。",
+            text = "Look up pinyin, radicals, and quick definitions entirely offline. Enter a single character and jump straight back to Practice when you're ready to trace.",
             style = MaterialTheme.typography.bodyMedium,
         )
         OutlinedTextField(
             value = uiState.query,
             onValueChange = viewModel::updateQuery,
-            label = { Text("汉字") },
+            label = { Text("Chinese character") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            supportingText = { Text("输入 1 个汉字。HSK1 免费课程无须登录即可练习。") },
+            supportingText = { Text("Tip: type one character (HSK 1 is unlocked by default).") },
         )
+        QuickSuggestionsRow(onSuggestionClick = viewModel::loadCharacter)
         RowActions(
             isLoading = uiState.isLoading,
             hasResult = uiState.result != null,
@@ -67,12 +72,32 @@ fun LibraryScreen(
         uiState.result?.let { entry ->
             WordEntryCard(
                 entry = entry,
-                onPractice = {
-                    onLoadInPractice(entry.word)
-                },
+                onPractice = { onLoadInPractice(entry.word) },
             )
         }
         HelpCard()
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun QuickSuggestionsRow(onSuggestionClick: (String) -> Unit) {
+    val suggestions = listOf("永", "你", "学", "心", "写")
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = "Try:",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        suggestions.forEach { symbol ->
+            OutlinedButton(onClick = { onSuggestionClick(symbol) }) {
+                Text(symbol)
+            }
+        }
     }
 }
 
@@ -96,10 +121,10 @@ private fun RowActions(
                     strokeWidth = 2.dp,
                 )
             }
-            Text(if (isLoading) "搜索中..." else "查询")
+            Text(if (isLoading) "Searching..." else "Lookup")
         }
         OutlinedButton(onClick = onClear, enabled = hasResult) {
-            Text("清空结果")
+            Text("Clear result")
         }
     }
 }
@@ -123,16 +148,19 @@ private fun WordEntryCard(
                 text = entry.word,
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             )
-            Text("拼音：${entry.pinyin.ifBlank { "暂无" }}")
-            Text("部首：${entry.radicals.ifBlank { "暂无" }}    笔画：${entry.strokes.ifBlank { "?" }}")
+            Text("Pinyin · ${entry.pinyin.ifBlank { "N/A" }}")
+            Text("Radical · ${entry.radicals.ifBlank { "N/A" }}    Strokes · ${entry.strokes.ifBlank { "?" }}")
+            entry.oldword.takeIf { it.isNotBlank() }?.let {
+                Text("Traditional · $it")
+            }
             Text(
-                text = entry.explanation.ifBlank { entry.more.ifBlank { "暂无释义" } },
+                text = entry.explanation.ifBlank { entry.more.ifBlank { "No definition available." } },
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onPractice) {
-                Text("在练习页描红")
+                Text("Practice this character")
             }
         }
     }
@@ -151,13 +179,13 @@ private fun HelpCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "使用说明",
+                text = "Tips",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             )
             Text(
-                text = "• 数据来自内置的 word.json，可离线查询。\n" +
-                    "• 可在“账户”标签解锁更多课程，与字典联动。\n" +
-                    "• 更详细的手写与帮助内容请查看 docs/help-guide.md 中的教程。",
+                text = "- Data comes from the bundled word.json so it works offline.\n" +
+                    "- Unlock additional lessons in the Account tab to pair dictionary lookups with courses.\n" +
+                    "- For handwriting and privacy details, see docs/help-guide.md inside the project.",
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
