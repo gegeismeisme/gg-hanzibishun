@@ -20,18 +20,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bishun.ui.account.AccountScreen
 import com.example.bishun.ui.account.AccountViewModel
 import com.example.bishun.ui.character.CharacterRoute
 import com.example.bishun.ui.character.CharacterViewModel
 import com.example.bishun.ui.courses.CoursesScreen
 import com.example.bishun.ui.library.LibraryScreen
+import com.example.bishun.ui.library.LibraryViewModel
 import com.example.bishun.ui.progress.ProgressScreen
 
 private sealed class MainDestination(
@@ -68,6 +69,9 @@ fun BishunApp() {
     )
     val accountViewModel: AccountViewModel = viewModel(
         factory = AccountViewModel.factory(context),
+    )
+    val libraryViewModel: LibraryViewModel = viewModel(
+        factory = LibraryViewModel.factory(context),
     )
     val accountState by accountViewModel.uiState.collectAsState()
 
@@ -151,7 +155,9 @@ fun BishunApp() {
             composable(MainDestination.Library.route) {
                 LibraryScreen(
                     modifier = Modifier.fillMaxSize(),
-                    onStartSearch = {
+                    viewModel = libraryViewModel,
+                    onLoadInPractice = { symbol ->
+                        sharedCharacterViewModel.jumpToCharacter(symbol)
                         navController.navigate(MainDestination.Practice.route) {
                             launchSingleTop = true
                         }

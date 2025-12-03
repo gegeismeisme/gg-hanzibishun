@@ -1238,12 +1238,10 @@ private fun ProfileActionDialog(
                 onDismissRequest = onDismiss,
                 title = { Text(strings.coursesDialogTitle) },
                 text = {
-                    Text(
-                        text = "课程功能已移动到底部导航栏的“课程”标签。请通过底部 Tab 浏览课程、解锁与继续练习。",
-                    )
+                    Text("Courses now live under the bottom navigation 'Courses' tab. Use that tab to browse lessons, resume sessions, or unlock content.")
                 },
                 confirmButton = {
-                    TextButton(onClick = onDismiss) { Text("好的") }
+                    TextButton(onClick = onDismiss) { Text("Got it") }
                 },
             )
         }
@@ -1251,12 +1249,15 @@ private fun ProfileActionDialog(
             AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text(action.label) },
-                text = { Text("进度统计已移动到底部导航栏的“进度”标签。请通过底部 Tab 浏览练习历史与 HSK 完成度。") },
+                text = {
+                    Text("Progress analytics moved to the bottom navigation 'Progress' tab. Open that tab to review streaks, HSK status, and history.")
+                },
                 confirmButton = {
-                    TextButton(onClick = onDismiss) { Text("好的") }
+                    TextButton(onClick = onDismiss) { Text("Got it") }
                 },
             )
         }
+
         ProfileMenuAction.HELP -> {
             HelpDialog(strings = strings, onDismiss = onDismiss)
         }
@@ -2375,6 +2376,8 @@ private fun CourseEmptyStateCard(strings: LocalizedStrings) {
         }
     }
 }
+
+private data class CourseSymbolVisual(val symbol: String, val isActive: Boolean, val isCompleted: Boolean)
 
 private val KaishuFontFamily = FontFamily(Font(R.font.ar_pl_kaiti_m_gb))
 @Composable
