@@ -20,8 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.bishun.ui.character.CourseSession
+import com.example.bishun.ui.character.CoursesStrings
 import com.example.bishun.ui.character.PracticeState
 import com.example.bishun.ui.character.components.IconActionButton
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 
@@ -55,6 +57,8 @@ fun PracticeSummaryBadge(
     onCourseSkip: (() -> Unit)?,
     onCourseRestart: (() -> Unit)?,
     onCourseExit: (() -> Unit)?,
+    courseStrings: CoursesStrings,
+    locale: Locale,
     modifier: Modifier = Modifier,
 ) {
     val containerColor = Color(0xFFE5F4EA)
@@ -99,7 +103,12 @@ fun PracticeSummaryBadge(
                         maxLines = 1,
                     )
                     Text(
-                        text = "HSK ${courseSession.level} • ${courseSession.progressText}",
+                        text = String.format(
+                            locale,
+                            courseStrings.activeCourseStatusFormat,
+                            courseSession.currentSymbol ?: "-",
+                            courseSession.progressText,
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -108,28 +117,28 @@ fun PracticeSummaryBadge(
                 val buttonSize = 28.dp
                 IconActionButton(
                     icon = Icons.Filled.PlayArrow,
-                    description = "Resume course",
+                    description = courseStrings.activeResume,
                     onClick = { onCourseResume?.invoke() },
                     enabled = onCourseResume != null,
                     buttonSize = buttonSize,
                 )
                 IconActionButton(
                     icon = Icons.Filled.SkipNext,
-                    description = "Skip character",
+                    description = courseStrings.activeSkip,
                     onClick = { onCourseSkip?.invoke() },
                     enabled = onCourseSkip != null,
                     buttonSize = buttonSize,
                 )
                 IconActionButton(
                     icon = Icons.Filled.RestartAlt,
-                    description = "Restart level",
+                    description = courseStrings.activeRestart,
                     onClick = { onCourseRestart?.invoke() },
                     enabled = onCourseRestart != null,
                     buttonSize = buttonSize,
                 )
                 IconActionButton(
                     icon = Icons.Filled.Close,
-                    description = "Exit course",
+                    description = courseStrings.activeExit,
                     onClick = { onCourseExit?.invoke() },
                     enabled = onCourseExit != null,
                     buttonSize = buttonSize,

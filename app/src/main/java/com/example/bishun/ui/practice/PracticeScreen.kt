@@ -19,9 +19,10 @@ import com.example.bishun.hanzi.model.CharacterDefinition
 import com.example.bishun.hanzi.model.Point
 import com.example.bishun.hanzi.render.RenderStateSnapshot
 import com.example.bishun.ui.character.CourseSession
+import com.example.bishun.ui.character.CoursesStrings
 import com.example.bishun.ui.character.PracticeState
-import com.example.bishun.ui.practice.BoardSettings
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @Composable
 fun PracticeContent(
@@ -50,6 +51,8 @@ fun PracticeContent(
     onCourseRestart: () -> Unit,
     onResumeCourse: (String) -> Unit,
     onCourseExit: () -> Unit,
+    courseStrings: CoursesStrings,
+    locale: Locale,
     modifier: Modifier = Modifier,
 ) {
     var showWordInfo by rememberSaveable(definition.symbol) { mutableStateOf(false) }
@@ -96,6 +99,8 @@ fun PracticeContent(
             onCourseSkip = onCourseSkip,
             onCourseRestart = onCourseRestart,
             onCourseExit = onCourseExit,
+            courseStrings = courseStrings,
+            locale = locale,
             modifier = Modifier.fillMaxWidth(),
         )
         val gridMode = boardSettings.grid

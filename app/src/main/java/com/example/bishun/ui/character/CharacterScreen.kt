@@ -219,6 +219,8 @@ fun CharacterScreen(
                     onCourseRestart = onCourseRestart,
                     onResumeCourse = onLoadCharacter,
                     onCourseExit = onCourseExit,
+                    courseStrings = strings.courses,
+                    locale = strings.locale,
                     modifier = Modifier.weight(1f),
                 )
             }
