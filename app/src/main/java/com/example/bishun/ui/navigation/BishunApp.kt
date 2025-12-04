@@ -136,6 +136,7 @@ fun BishunApp() {
                             launchSingleTop = true
                         }
                     },
+                    languageOverride = userPreferences.languageOverride,
                 )
             }
             composable(MainDestination.Progress.route) {

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.example.bishun.data.word.WordEntry
 import com.example.bishun.ui.character.LibraryStrings
 import com.example.bishun.ui.character.rememberLocalizedStrings
+import com.example.bishun.ui.library.LibraryError
 import java.util.Locale
 
 @Composable
@@ -85,7 +86,12 @@ fun LibraryScreen(
                 onClear = viewModel::clearHistory,
             )
         }
-        uiState.errorMessage?.let { message ->
+        uiState.error?.let { error ->
+            val message = when (error) {
+                LibraryError.EmptyQuery -> libraryStrings.errorEmpty
+                LibraryError.NotFound -> libraryStrings.errorNotFound
+                LibraryError.ReadFailure -> libraryStrings.errorRead
+            }
             Text(
                 text = message,
                 color = MaterialTheme.colorScheme.error,

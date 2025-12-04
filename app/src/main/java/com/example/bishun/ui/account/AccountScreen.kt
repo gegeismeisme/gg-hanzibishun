@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.bishun.data.settings.UserPreferences
+import com.example.bishun.ui.character.AccountStrings
 import com.example.bishun.ui.character.FeedbackSubmission
 import com.example.bishun.ui.character.LocalizedStrings
 import com.example.bishun.ui.character.rememberLocalizedStrings
@@ -72,6 +73,8 @@ fun AccountScreen(
     var showFeedbackDialog by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val strings = rememberLocalizedStrings(languageOverride)
+    val accountStrings = strings.account
+    val supportStrings = strings.support
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val shareFeedbackLog = remember(onLoadFeedbackLog, context) {
@@ -79,7 +82,7 @@ fun AccountScreen(
             coroutineScope.launch {
                 val logText = onLoadFeedbackLog().takeIf { it.isNotBlank() }
                 if (logText.isNullOrBlank()) {
-                    Toast.makeText(context, "Feedback log is empty.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, supportStrings.feedbackLogEmpty, Toast.LENGTH_LONG).show()
                     return@launch
                 }
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -92,10 +95,10 @@ fun AccountScreen(
                 if (canHandle) {
                     runCatching { context.startActivity(chooser) }
                         .onFailure {
-                            Toast.makeText(context, "Unable to share log.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, supportStrings.feedbackLogShareError, Toast.LENGTH_LONG).show()
                         }
                 } else {
-                    Toast.makeText(context, "No apps available to share log.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, supportStrings.feedbackLogNoApps, Toast.LENGTH_LONG).show()
                 }
             }
             Unit
@@ -122,10 +125,10 @@ fun AccountScreen(
         if (canHandle) {
             runCatching { context.startActivity(chooser) }
                 .onFailure {
-                    Toast.makeText(context, "Couldn't open email. Log saved locally—share from Account later.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, supportStrings.feedbackEmailError, Toast.LENGTH_LONG).show()
                 }
         } else {
-            Toast.makeText(context, "No email app installed. Log saved locally—share from Account later.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, supportStrings.feedbackEmailNoApp, Toast.LENGTH_LONG).show()
         }
         onFeedbackHandled()
     }
@@ -136,18 +139,15 @@ fun AccountScreen(
             .padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text(
-            text = "Account & Purchases",
-            style = MaterialTheme.typography.headlineSmall,
-        )
+        Text(text = accountStrings.title, style = MaterialTheme.typography.headlineSmall)
         AccountCard(
-            title = "Sign-in status",
+            title = accountStrings.signInCardTitle,
             description = if (isLoggedIn) {
-                "Signed in. Purchases and unlocked levels remain linked to this device."
+                accountStrings.signInDescriptionSignedIn
             } else {
-                "Guest mode keeps practice data offline. Sign in only when you are ready to unlock courses."
+                accountStrings.signInDescriptionSignedOut
             },
-            buttonLabel = if (isLoggedIn) "Sign out" else "Sign in & accept policy",
+            buttonLabel = if (isLoggedIn) accountStrings.signInButtonSignedIn else accountStrings.signInButtonSignedOut,
             onClick = {
                 if (isLoggedIn) {
                     viewModel.signOut()
@@ -157,16 +157,16 @@ fun AccountScreen(
             },
         )
         AccountCard(
-            title = "Course unlock",
+            title = accountStrings.courseCardTitle,
             description = when {
-                !isLoggedIn -> "Preview HSK levels anytime. Sign in to complete the purchase checklist."
-                hasUnlockedPremium -> "All premium levels are unlocked. Continue from the Courses tab."
-                else -> "One-time unlock stores a local license so lessons remain available offline."
+                !isLoggedIn -> accountStrings.courseDescriptionSignedOut
+                hasUnlockedPremium -> accountStrings.courseDescriptionUnlocked
+                else -> accountStrings.courseDescriptionLocked
             },
             buttonLabel = when {
-                !isLoggedIn -> "Sign in required"
-                hasUnlockedPremium -> "Browse courses"
-                else -> "Unlock all courses"
+                !isLoggedIn -> accountStrings.courseButtonSignedOut
+                hasUnlockedPremium -> accountStrings.courseButtonUnlocked
+                else -> accountStrings.courseButtonLocked
             },
             onClick = {
                 if (!isLoggedIn) {
@@ -178,23 +178,22 @@ fun AccountScreen(
             enabled = isLoggedIn && !hasUnlockedPremium,
         )
         SupportCard(
-            description = "Help articles, privacy toggles, and the feedback form now live here so compliance checks happen before login or purchases.",
+            accountStrings = accountStrings,
+            strings = strings,
             onHelpClick = { showHelpDialog = true },
             onPrivacyClick = { showPrivacyDialog = true },
             onFeedbackClick = { showFeedbackDialog = true },
-            strings = strings,
         )
     }
 
     if (showLoginDialog) {
         ConsentDialog(
-            title = "Before signing in",
-            bulletPoints = listOf(
-                "Sign-in is only needed to associate purchases. Practice data stays on-device.",
-                "Continuing confirms you have reviewed the Privacy Policy.",
-                "You can remain in guest mode at any time—premium lessons simply stay locked.",
-            ),
-            confirmLabel = "Agree & sign in",
+            title = accountStrings.consentSignInTitle,
+            bulletPoints = accountStrings.consentSignInBullets,
+            confirmLabel = accountStrings.consentSignInConfirm,
+            checkboxLabel = accountStrings.consentCheckboxLabel,
+            cancelLabel = accountStrings.cancelLabel,
+            closeLabel = accountStrings.closeLabel,
             onConfirm = {
                 viewModel.signIn()
                 showLoginDialog = false
@@ -204,13 +203,12 @@ fun AccountScreen(
     }
     if (showPurchaseDialog) {
         ConsentDialog(
-            title = "Unlock premium lessons",
-            bulletPoints = listOf(
-                "Payment tokens are cached locally so all content works offline.",
-                "Unlocking also records the purchase under your account tab for later restores.",
-                "A quick privacy reminder will appear again during checkout for compliance.",
-            ),
-            confirmLabel = "Confirm unlock",
+            title = accountStrings.consentUnlockTitle,
+            bulletPoints = accountStrings.consentUnlockBullets,
+            confirmLabel = accountStrings.consentUnlockConfirm,
+            checkboxLabel = accountStrings.consentCheckboxLabel,
+            cancelLabel = accountStrings.cancelLabel,
+            closeLabel = accountStrings.closeLabel,
             onConfirm = {
                 viewModel.unlockPremiumLevels()
                 showPurchaseDialog = false
@@ -235,6 +233,7 @@ fun AccountScreen(
         FeedbackDialog(
             prefs = userPreferences,
             lastSubmittedAt = lastFeedbackTimestamp,
+            strings = supportStrings,
             onShareLog = shareFeedbackLog,
             onDraftChange = onFeedbackDraftChange,
             onSubmit = onFeedbackSubmit,
@@ -284,7 +283,7 @@ private fun AccountCard(
 
 @Composable
 private fun SupportCard(
-    description: String,
+    accountStrings: AccountStrings,
     onHelpClick: () -> Unit,
     onPrivacyClick: () -> Unit,
     onFeedbackClick: () -> Unit,
@@ -303,11 +302,11 @@ private fun SupportCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Support & compliance",
+                text = accountStrings.supportTitle,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             )
             Text(
-                text = description,
+                text = accountStrings.supportDescription,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onHelpClick) {
@@ -317,7 +316,7 @@ private fun SupportCard(
                 Text(strings.privacyTitle)
             }
             OutlinedButton(onClick = onFeedbackClick) {
-                Text("Send feedback")
+                Text(accountStrings.supportFeedbackButton)
             }
         }
     }
@@ -328,6 +327,9 @@ private fun ConsentDialog(
     title: String,
     bulletPoints: List<String>,
     confirmLabel: String,
+    checkboxLabel: String,
+    cancelLabel: String,
+    closeLabel: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -355,10 +357,7 @@ private fun ConsentDialog(
                         onCheckedChange = { accepted = it },
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "I have reviewed the privacy policy.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Text(text = checkboxLabel, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         },
@@ -380,7 +379,7 @@ private fun ConsentDialog(
                     onDismiss()
                 },
             ) {
-                Text("Cancel")
+                Text(cancelLabel)
             }
         },
     )

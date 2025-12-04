@@ -41,11 +41,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import com.example.bishun.ui.account.AccountViewModel
 import com.example.bishun.ui.character.CharacterViewModel
 import com.example.bishun.ui.character.CourseSession
+import com.example.bishun.ui.character.CoursesStrings
 import com.example.bishun.ui.character.HskLevelSummary
 import com.example.bishun.ui.character.components.IconActionButton
+import com.example.bishun.ui.character.rememberLocalizedStrings
 
 @Composable
 fun CoursesScreen(
@@ -55,6 +58,7 @@ fun CoursesScreen(
     unlockedLevels: Set<Int>,
     onNavigateToPractice: () -> Unit = {},
     onRequestUnlock: () -> Unit = {},
+    languageOverride: String? = null,
 ) {
     val courseCatalog by viewModel.courseCatalog.collectAsState()
     val courseSession by viewModel.courseSession.collectAsState()
@@ -71,6 +75,9 @@ fun CoursesScreen(
     var selectedFilterKey by rememberSaveable { mutableStateOf(CourseFilter.REMAINING.name) }
     val selectedFilter = remember(selectedFilterKey) { CourseFilter.valueOf(selectedFilterKey) }
     val expandedLevels = remember { mutableStateMapOf<Int, Boolean>() }
+    val strings = rememberLocalizedStrings(languageOverride)
+    val courseStrings = strings.courses
+    val locale = strings.locale
 
     LazyColumn(
         modifier = modifier.padding(horizontal = 20.dp, vertical = 24.dp),
@@ -78,9 +85,9 @@ fun CoursesScreen(
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Courses", style = MaterialTheme.typography.headlineSmall)
+                Text(text = courseStrings.title, style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    text = "Preview every HSK pack for free. Unlock premium levels later to keep the offline lessons.",
+                    text = courseStrings.description,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -94,18 +101,18 @@ fun CoursesScreen(
                     FilterChip(
                         selected = selectedFilter == filter,
                         onClick = { selectedFilterKey = filter.name },
-                        label = { Text(filter.label) },
+                        label = { Text(filter.label(courseStrings)) },
                     )
                 }
             }
         }
-        item {
-            CourseLegendRow()
-        }
+        item { CourseLegendRow(strings = courseStrings) }
         courseSession?.let { session ->
             item {
                 ActiveCourseCard(
                     session = session,
+                    strings = courseStrings,
+                    locale = locale,
                     onResume = {
                         val symbol = session.currentSymbol ?: return@ActiveCourseCard
                         viewModel.jumpToCharacter(symbol)
@@ -124,7 +131,7 @@ fun CoursesScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Text(
-                        text = "No course data found. Make sure assets/learn-datas is bundled.",
+                        text = courseStrings.emptyCatalogMessage,
                         modifier = Modifier.padding(20.dp),
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -151,6 +158,8 @@ fun CoursesScreen(
                     canAccess = canAccess,
                     isSignedIn = isSignedIn,
                     accentColor = accentColor,
+                    strings = courseStrings,
+                    locale = locale,
                     onStart = { symbol -> startCourseAt(level, symbol) },
                     onRequestUnlock = onRequestUnlock,
                 )
@@ -167,6 +176,7 @@ fun CoursesScreen(
                 CourseSymbolGrid(
                     symbolStates = symbolStates,
                     accentColor = accentColor,
+                    strings = courseStrings,
                     isExpanded = expandedLevels[level] == true,
                     onToggleExpand = {
                         val current = expandedLevels[level] == true
@@ -183,6 +193,8 @@ fun CoursesScreen(
 @Composable
 private fun ActiveCourseCard(
     session: CourseSession,
+    strings: CoursesStrings,
+    locale: Locale,
     onResume: () -> Unit,
     onSkip: () -> Unit,
     onRestart: () -> Unit,
@@ -196,25 +208,32 @@ private fun ActiveCourseCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val title = String.format(locale, strings.activeCourseTitleFormat, session.level)
+            val status = String.format(
+                locale,
+                strings.activeCourseStatusFormat,
+                session.currentSymbol ?: "-",
+                session.progressText,
+            )
             Text(
-                text = "Active course · HSK ${session.level}",
+                text = title,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             )
             Text(
-                text = "Character ${session.currentSymbol ?: "-"} · ${session.progressText}",
+                text = status,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(onClick = onResume, enabled = session.currentSymbol != null) {
-                    Text("Resume")
+                    Text(strings.activeResume)
                 }
                 OutlinedButton(onClick = onSkip, enabled = session.hasNext) {
-                    Text("Skip")
+                    Text(strings.activeSkip)
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = onRestart) { Text("Restart") }
-                OutlinedButton(onClick = onExit) { Text("Exit") }
+                OutlinedButton(onClick = onRestart) { Text(strings.activeRestart) }
+                OutlinedButton(onClick = onExit) { Text(strings.activeExit) }
             }
         }
     }
@@ -228,6 +247,8 @@ private fun CourseLevelCard(
     canAccess: Boolean,
     isSignedIn: Boolean,
     accentColor: Color,
+    strings: CoursesStrings,
+    locale: Locale,
     onStart: (String) -> Unit,
     onRequestUnlock: () -> Unit,
 ) {
@@ -251,11 +272,17 @@ private fun CourseLevelCard(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "HSK $level",
+                        text = String.format(locale, strings.levelHeaderFormat, level),
                         style = MaterialTheme.typography.titleSmall.copy(color = accentColor),
                     )
                     Text(
-                        text = "${summary.completed}/${summary.total} · remaining ${summary.remaining}",
+                        text = String.format(
+                            locale,
+                            strings.levelProgressFormat,
+                            summary.completed,
+                            summary.total,
+                            summary.remaining,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -265,7 +292,7 @@ private fun CourseLevelCard(
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Text(
-                        text = "Level $level",
+                        text = String.format(locale, strings.levelChipFormat, level),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall.copy(color = accentColor),
                     )
@@ -281,8 +308,11 @@ private fun CourseLevelCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val statusText = nextSymbol?.let {
+                    String.format(locale, strings.levelNextFormat, it)
+                } ?: strings.levelCompletedLabel
                 Text(
-                    text = nextSymbol?.let { "Next · $it" } ?: "Completed",
+                    text = statusText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = accentColor,
                     maxLines = 1,
@@ -291,19 +321,19 @@ private fun CourseLevelCard(
                 when {
                     !canAccess -> {
                         Button(onClick = onRequestUnlock) {
-                            Text(if (isSignedIn) "Unlock" else "Sign in")
+                            Text(if (isSignedIn) strings.lockedUnlockLabel else strings.lockedSignInLabel)
                         }
                     }
                     nextSymbol != null -> {
                         IconActionButton(
                             icon = Icons.Filled.PlayArrow,
-                            description = "Start HSK $level",
+                            description = String.format(locale, strings.iconStartDescriptionFormat, level),
                             onClick = { onStart(nextSymbol) },
                             buttonSize = 36.dp,
                         )
                     }
                     else -> {
-                        TextButton(onClick = {}) { Text("Great job!") }
+                        TextButton(onClick = {}) { Text(strings.lockedGreatJobLabel) }
                     }
                 }
             }
@@ -316,6 +346,7 @@ private fun CourseLevelCard(
 private fun CourseSymbolGrid(
     symbolStates: List<CourseSymbolVisual>,
     accentColor: Color,
+    strings: CoursesStrings,
     isExpanded: Boolean,
     onToggleExpand: (() -> Unit)?,
     onSelect: (String) -> Unit,
@@ -323,7 +354,7 @@ private fun CourseSymbolGrid(
 ) {
     if (symbolStates.isEmpty()) {
         Text(
-            text = "No characters match the current filter.",
+            text = strings.symbolEmptyMessage,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -375,21 +406,21 @@ private fun CourseSymbolGrid(
     onToggleExpand?.let { toggle ->
         if (symbolStates.size > SYMBOL_PREVIEW_COUNT) {
             TextButton(onClick = toggle) {
-                Text(if (isExpanded) "Collapse list" else "Show all characters")
+                Text(if (isExpanded) strings.symbolCollapseLabel else strings.symbolShowAllLabel)
             }
         }
     }
 }
 
 @Composable
-private fun CourseLegendRow() {
+private fun CourseLegendRow(strings: CoursesStrings) {
     val legend = listOf(
-        CourseLegendEntry("Active", Color(0xFF4CAF50).copy(alpha = 0.2f)),
-        CourseLegendEntry("Completed", MaterialTheme.colorScheme.surfaceVariant),
-        CourseLegendEntry("Remaining", MaterialTheme.colorScheme.surface),
+        CourseLegendEntry(strings.legendActive, Color(0xFF4CAF50).copy(alpha = 0.2f)),
+        CourseLegendEntry(strings.legendCompleted, MaterialTheme.colorScheme.surfaceVariant),
+        CourseLegendEntry(strings.legendRemaining, MaterialTheme.colorScheme.surface),
     )
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = "Legend", style = MaterialTheme.typography.labelLarge)
+        Text(text = strings.legendTitle, style = MaterialTheme.typography.labelLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             legend.forEach { entry ->
                 Surface(
@@ -405,23 +436,29 @@ private fun CourseLegendRow() {
             }
         }
         Text(
-            text = "Long press any chip to mark it as learned.",
+            text = strings.legendHint,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
-private enum class CourseFilter(val label: String) {
-    ALL("All"),
-    REMAINING("Remaining"),
-    COMPLETED("Completed");
+private enum class CourseFilter {
+    ALL,
+    REMAINING,
+    COMPLETED;
 
     fun include(isCompleted: Boolean): Boolean = when (this) {
         ALL -> true
         REMAINING -> !isCompleted
         COMPLETED -> isCompleted
     }
+}
+
+private fun CourseFilter.label(strings: CoursesStrings): String = when (this) {
+    CourseFilter.ALL -> strings.filterAll
+    CourseFilter.REMAINING -> strings.filterRemaining
+    CourseFilter.COMPLETED -> strings.filterCompleted
 }
 
 private data class CourseSymbolVisual(

@@ -1,11 +1,9 @@
 package com.example.bishun.ui.library
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.bishun.data.settings.UserPreferencesStore
-import com.example.bishun.R
 import com.example.bishun.data.word.WordEntry
 import com.example.bishun.data.word.WordRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,12 +17,11 @@ data class LibraryUiState(
     val query: String = "",
     val result: WordEntry? = null,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val error: LibraryError? = null,
     val recentSearches: List<String> = emptyList(),
 )
 
 class LibraryViewModel(
-    private val appContext: Context,
     private val wordRepository: WordRepository,
     private val userPreferencesStore: UserPreferencesStore,
 ) : ViewModel() {
@@ -43,7 +40,7 @@ class LibraryViewModel(
     }
 
     fun clearResult() {
-        _uiState.value = _uiState.value.copy(result = null, errorMessage = null)
+        _uiState.value = _uiState.value.copy(result = null, error = null)
     }
 
     fun clearHistory() {
@@ -54,13 +51,13 @@ class LibraryViewModel(
         val symbol = _uiState.value.query.trim()
         if (symbol.isEmpty()) {
             _uiState.value = _uiState.value.copy(
-                errorMessage = appContext.getString(R.string.library_error_empty),
+                error = LibraryError.EmptyQuery,
                 result = null,
             )
             return
         }
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching { wordRepository.getWord(symbol) }
                 .onSuccess { entry ->
                     _uiState.value = if (entry != null) {
@@ -69,13 +66,13 @@ class LibraryViewModel(
                         _uiState.value.copy(
                             isLoading = false,
                             result = entry,
-                            errorMessage = null,
+                            error = null,
                         )
                     } else {
                         _uiState.value.copy(
                             isLoading = false,
                             result = null,
-                            errorMessage = appContext.getString(R.string.library_error_not_found),
+                            error = LibraryError.NotFound,
                         )
                     }
                 }
@@ -83,7 +80,7 @@ class LibraryViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         result = null,
-                        errorMessage = appContext.getString(R.string.library_error_read),
+                        error = LibraryError.ReadFailure,
                     )
                 }
         }
@@ -131,16 +128,22 @@ class LibraryViewModel(
         private const val MAX_QUERY_LENGTH = 2
         private const val RECENT_LIMIT = 6
 
-        fun factory(context: Context): ViewModelProvider.Factory {
+        fun factory(context: android.content.Context): ViewModelProvider.Factory {
             val appContext = context.applicationContext
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val repo = WordRepository(appContext)
                     val prefs = UserPreferencesStore(appContext)
-                    return LibraryViewModel(appContext, repo, prefs) as T
+                    return LibraryViewModel(repo, prefs) as T
                 }
             }
         }
     }
+}
+
+sealed class LibraryError {
+    data object EmptyQuery : LibraryError()
+    data object NotFound : LibraryError()
+    data object ReadFailure : LibraryError()
 }

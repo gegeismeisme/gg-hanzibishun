@@ -33,6 +33,7 @@ import com.example.bishun.data.settings.UserPreferences
 import com.example.bishun.ui.character.HelpSectionText
 import com.example.bishun.ui.character.LocalizedStrings
 import com.example.bishun.ui.character.PolicySectionText
+import com.example.bishun.ui.character.SupportStrings
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -107,6 +108,7 @@ fun PrivacyDialog(
     val context = LocalContext.current
     val contactEmail = SUPPORT_EMAIL
     val summaryPoints = strings.privacySummaryRows
+    val supportStrings = strings.support
     var showFullPolicy by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     AlertDialog(
@@ -124,20 +126,20 @@ fun PrivacyDialog(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 PrivacyToggleRow(
-                    title = "Usage analytics",
-                    description = "Anonymous counters for upcoming features.",
+                    title = supportStrings.analyticsTitle,
+                    description = supportStrings.analyticsDescription,
                     checked = prefs.analyticsOptIn,
                     onCheckedChange = onAnalyticsChange,
                 )
                 PrivacyToggleRow(
-                    title = "Crash reports",
-                    description = "Share lightweight logs if rendering fails.",
+                    title = supportStrings.crashTitle,
+                    description = supportStrings.crashDescription,
                     checked = prefs.crashReportsOptIn,
                     onCheckedChange = onCrashChange,
                 )
                 PrivacyToggleRow(
-                    title = "Network prefetch",
-                    description = "Allow Wi-Fi downloads of future packs.",
+                    title = supportStrings.prefetchTitle,
+                    description = supportStrings.prefetchDescription,
                     checked = prefs.networkPrefetchEnabled,
                     onCheckedChange = onPrefetchChange,
                 )
@@ -173,11 +175,11 @@ fun PrivacyDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(supportStrings.privacyCloseLabel) }
         },
     )
     if (showFullPolicy) {
-        FullPrivacyPolicyDialog(strings = strings, onDismiss = { showFullPolicy = false })
+        FullPrivacyPolicyDialog(strings = strings, supportStrings = supportStrings, onDismiss = { showFullPolicy = false })
     }
 }
 
@@ -212,6 +214,7 @@ private fun PrivacyToggleRow(
 fun FeedbackDialog(
     prefs: UserPreferences,
     lastSubmittedAt: Long?,
+    strings: SupportStrings,
     onShareLog: () -> Unit,
     onDraftChange: (String, String, String) -> Unit,
     onSubmit: (String, String, String) -> Unit,
@@ -234,7 +237,7 @@ fun FeedbackDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (submitted) "Thanks!" else "Send feedback") },
+        title = { Text(if (submitted) strings.feedbackThanksTitle else strings.feedbackTitle) },
         text = {
             Column(
                 modifier = Modifier
@@ -242,16 +245,21 @@ fun FeedbackDialog(
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (lastSubmittedAt != null) {
+                lastSubmittedAt?.let {
+                    val label = String.format(
+                        Locale.getDefault(),
+                        strings.feedbackLastSentFormat,
+                        formatHistoryTimestamp(it),
+                    )
                     Text(
-                        text = "Last sent: ${formatHistoryTimestamp(lastSubmittedAt)}",
+                        text = label,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (submitted) {
                     Text(
-                        text = "We stored your note locally. The next release will bundle it with diagnostic exports so nothing gets lost.",
+                        text = strings.feedbackSavedMessage,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 } else {
@@ -262,8 +270,8 @@ fun FeedbackDialog(
                             topic = value
                             onDraftChange(value, message, contact)
                         },
-                        label = "Topic",
-                        placeholder = "Feature request, bug...",
+                        label = strings.feedbackTopicLabel,
+                        placeholder = strings.feedbackTopicPlaceholder,
                         singleLine = true,
                     )
                     SupportTextField(
@@ -273,8 +281,8 @@ fun FeedbackDialog(
                             message = value
                             onDraftChange(topic, value, contact)
                         },
-                        label = "Details",
-                        placeholder = "Describe the idea or issue",
+                        label = strings.feedbackMessageLabel,
+                        placeholder = strings.feedbackMessagePlaceholder,
                         minLines = 4,
                     )
                     SupportTextField(
@@ -284,8 +292,8 @@ fun FeedbackDialog(
                             contact = value
                             onDraftChange(topic, message, value)
                         },
-                        label = "Contact (optional)",
-                        placeholder = "Email or handle",
+                        label = strings.feedbackContactLabel,
+                        placeholder = strings.feedbackContactPlaceholder,
                         singleLine = true,
                     )
                 }
@@ -293,7 +301,7 @@ fun FeedbackDialog(
         },
         confirmButton = {
             if (submitted) {
-                TextButton(onClick = onDismiss) { Text("Close") }
+                TextButton(onClick = onDismiss) { Text(strings.feedbackCloseLabel) }
             } else {
                 TextButton(
                     onClick = {
@@ -302,17 +310,17 @@ fun FeedbackDialog(
                     },
                     enabled = canSubmit,
                 ) {
-                    Text("Send")
+                    Text(strings.feedbackSendLabel)
                 }
             }
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (lastSubmittedAt != null) {
-                    TextButton(onClick = onShareLog) { Text("Share log") }
+                    TextButton(onClick = onShareLog) { Text(strings.feedbackShareLogLabel) }
                 }
                 if (!submitted) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(strings.feedbackCancelLabel) }
                 }
             }
         },
@@ -341,6 +349,7 @@ private fun SupportTextField(
 @Composable
 private fun FullPrivacyPolicyDialog(
     strings: LocalizedStrings,
+    supportStrings: SupportStrings,
     onDismiss: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
@@ -360,7 +369,7 @@ private fun FullPrivacyPolicyDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(supportStrings.privacyCloseLabel) }
         },
     )
 }

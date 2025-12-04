@@ -736,10 +736,4 @@ data class CourseSession(
     val hasNext: Boolean get() = index < symbols.lastIndex
 }
 
-data class BoardSettings(
-    val grid: PracticeGrid = PracticeGrid.NONE,
-    val strokeColor: StrokeColorOption = StrokeColorOption.PURPLE,
-    val showTemplate: Boolean = true,
-)
-
 data class CourseEvent(val message: String)
