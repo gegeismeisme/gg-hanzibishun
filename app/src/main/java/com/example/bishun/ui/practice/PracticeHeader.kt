@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -95,7 +94,7 @@ fun SearchBarRow(
                 keyboardActions = KeyboardActions(onDone = { onSubmit() }),
                 textStyle = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier
-                    .widthIn(min = 120.dp)
+                    .width(92.dp)
                     .heightIn(min = 56.dp),
             )
             IconActionButton(
