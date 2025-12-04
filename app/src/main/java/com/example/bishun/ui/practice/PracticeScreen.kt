@@ -81,12 +81,6 @@ fun PracticeContent(
             .fillMaxWidth()
             .fillMaxHeight(),
     ) {
-        CharacterInfoPanel(
-            definition = definition,
-            wordEntry = wordEntry,
-            onWordInfoClick = { if (wordEntry != null) showWordInfo = true },
-            modifier = Modifier.fillMaxWidth(),
-        )
         val summary = practiceState.toSummary()
         PracticeSummaryBadge(
             progressText = summary.progressText,
@@ -139,6 +133,10 @@ fun PracticeContent(
             onCourseSkip = onCourseSkip,
             onCourseRestart = onCourseRestart,
             onCourseExit = onCourseExit,
+            onWordInfoClick = { if (wordEntry != null) showWordInfo = true },
+            wordInfoAvailable = wordEntry != null,
+            onPlayPronunciation = { wordEntry?.let { ttsController.speak(it.word) } },
+            pronunciationAvailable = wordEntry != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = true),

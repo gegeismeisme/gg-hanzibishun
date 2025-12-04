@@ -189,6 +189,7 @@ fun BishunApp() {
                     onFeedbackSubmit = sharedCharacterViewModel::submitFeedback,
                     onFeedbackHandled = sharedCharacterViewModel::consumeFeedbackSubmission,
                     onLoadFeedbackLog = { sharedCharacterViewModel.readFeedbackLog() },
+                    onClearLocalData = sharedCharacterViewModel::clearLocalData,
                     languageOverride = userPreferences.languageOverride,
                 )
             }

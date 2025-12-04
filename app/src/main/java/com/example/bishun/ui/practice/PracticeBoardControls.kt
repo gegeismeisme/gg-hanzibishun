@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Create
@@ -19,6 +20,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.bishun.data.hsk.HskEntry
@@ -53,6 +57,10 @@ fun PracticeBoardControls(
     onStrokeColorChange: (StrokeColorOption) -> Unit,
     onTemplateToggle: (Boolean) -> Unit,
     onHskInfoClick: () -> Unit,
+    wordInfoEnabled: Boolean,
+    onShowWordInfo: () -> Unit,
+    pronunciationEnabled: Boolean,
+    onPlayPronunciation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val boardButtonSize = 32.dp
@@ -100,6 +108,20 @@ fun PracticeBoardControls(
             onTemplateToggle = onTemplateToggle,
             buttonSize = boardButtonSize,
         )
+        IconActionButton(
+            icon = Icons.AutoMirrored.Filled.VolumeUp,
+            description = "Play pronunciation",
+            onClick = onPlayPronunciation,
+            enabled = pronunciationEnabled,
+            buttonSize = boardButtonSize,
+        )
+        GlyphActionButton(
+            label = "释",
+            description = "Show dictionary entry",
+            onClick = onShowWordInfo,
+            enabled = wordInfoEnabled,
+            buttonSize = boardButtonSize,
+        )
         if (showHskIcon && hskEntry != null) {
             IconActionButton(
                 icon = Icons.Filled.School,
@@ -107,6 +129,31 @@ fun PracticeBoardControls(
                 onClick = onHskInfoClick,
                 buttonSize = boardButtonSize,
             )
+        }
+    }
+}
+
+@Composable
+private fun GlyphActionButton(
+    label: String,
+    description: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    buttonSize: Dp,
+) {
+    Surface(
+        shape = CircleShape,
+        tonalElevation = if (enabled) 4.dp else 0.dp,
+        color = if (enabled) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (enabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .size(buttonSize)
+            .semantics { this.contentDescription = description },
+        onClick = onClick,
+        enabled = enabled,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(text = label, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -70,7 +70,9 @@ fun ProgressScreen(
     val progressStrings = strings.progress
 
     LazyColumn(
-        modifier = modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
@@ -110,8 +112,7 @@ private fun HskProgressView(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 520.dp),
+            .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }

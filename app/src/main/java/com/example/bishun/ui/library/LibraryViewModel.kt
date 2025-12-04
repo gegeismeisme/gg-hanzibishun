@@ -126,7 +126,7 @@ class LibraryViewModel(
 
     companion object {
         private const val MAX_QUERY_LENGTH = 2
-        private const val RECENT_LIMIT = 6
+        private const val RECENT_LIMIT = 50
 
         fun factory(context: android.content.Context): ViewModelProvider.Factory {
             val appContext = context.applicationContext

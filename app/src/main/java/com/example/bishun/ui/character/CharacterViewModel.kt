@@ -460,6 +460,21 @@ class CharacterViewModel(
         viewModelScope.launch { userPreferencesStore.saveFeedbackDraft(topic, message, contact) }
     }
 
+    fun clearLocalData() {
+        viewModelScope.launch {
+            practiceHistoryStore.clear()
+            hskProgressStore.clear()
+            userPreferencesStore.clearAll()
+            _practiceHistory.value = emptyList()
+            _hskProgress.value = HskProgressSummary()
+            _completedSymbols.value = emptySet()
+            _courseSession.value = null
+            _courseCatalog.value = emptyMap()
+            _userPreferences.value = UserPreferences()
+            _boardSettings.value = BoardSettings()
+        }
+    }
+
     fun submitFeedback(topic: String, message: String, contact: String) {
         viewModelScope.launch {
             userPreferencesStore.clearFeedbackDraft()

@@ -163,6 +163,12 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun clearAll() {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs.clear()
+        }
+    }
+
     companion object {
         private val Context.userPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 

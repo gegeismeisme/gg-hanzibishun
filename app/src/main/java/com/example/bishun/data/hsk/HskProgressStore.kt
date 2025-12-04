@@ -25,6 +25,11 @@ class HskProgressStore(
         _completed.value = updated
     }
 
+    suspend fun clear() = withContext(Dispatchers.IO) {
+        prefs.edit().remove(KEY_COMPLETED).apply()
+        _completed.value = emptySet()
+    }
+
     companion object {
         private const val PREF_NAME = "hsk_progress"
         private const val KEY_COMPLETED = "completed_symbols"

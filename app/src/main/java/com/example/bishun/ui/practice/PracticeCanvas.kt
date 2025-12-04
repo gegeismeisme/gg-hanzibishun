@@ -84,6 +84,10 @@ fun CharacterCanvas(
     onCourseSkip: () -> Unit,
     onCourseRestart: () -> Unit,
     onCourseExit: () -> Unit,
+    onWordInfoClick: () -> Unit,
+    wordInfoAvailable: Boolean,
+    onPlayPronunciation: () -> Unit,
+    pronunciationAvailable: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val outlineColor = Color(0xFFD6D6D6)
@@ -196,6 +200,10 @@ fun CharacterCanvas(
             onStrokeColorChange = onStrokeColorChange,
             onTemplateToggle = onTemplateToggle,
             onHskInfoClick = onHskInfoClick,
+            onShowWordInfo = onWordInfoClick,
+            wordInfoEnabled = wordInfoAvailable,
+            onPlayPronunciation = onPlayPronunciation,
+            pronunciationEnabled = pronunciationAvailable,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(12.dp),

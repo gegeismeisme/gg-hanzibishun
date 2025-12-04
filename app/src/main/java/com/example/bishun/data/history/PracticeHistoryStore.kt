@@ -39,6 +39,12 @@ class PracticeHistoryStore(private val context: Context) {
         }
     }
 
+    suspend fun clear() {
+        context.practiceHistoryStore.edit { prefs ->
+            prefs.remove(KEY_HISTORY)
+        }
+    }
+
     companion object {
         private const val MAX_HISTORY_ENTRIES = 40
         private val Context.practiceHistoryStore: DataStore<Preferences> by preferencesDataStore(name = "practice_history")

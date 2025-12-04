@@ -61,6 +61,7 @@ fun AccountScreen(
     onFeedbackSubmit: (String, String, String) -> Unit,
     onFeedbackHandled: () -> Unit,
     onLoadFeedbackLog: suspend () -> String,
+    onClearLocalData: () -> Unit,
     languageOverride: String?,
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -71,6 +72,7 @@ fun AccountScreen(
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showPrivacyDialog by rememberSaveable { mutableStateOf(false) }
     var showFeedbackDialog by rememberSaveable { mutableStateOf(false) }
+    var showClearDataDialog by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val strings = rememberLocalizedStrings(languageOverride)
     val accountStrings = strings.account
@@ -184,6 +186,12 @@ fun AccountScreen(
             onPrivacyClick = { showPrivacyDialog = true },
             onFeedbackClick = { showFeedbackDialog = true },
         )
+        AccountCard(
+            title = accountStrings.clearDataTitle,
+            description = accountStrings.clearDataDescription,
+            buttonLabel = accountStrings.clearDataButton,
+            onClick = { showClearDataDialog = true },
+        )
     }
 
     if (showLoginDialog) {
@@ -238,6 +246,28 @@ fun AccountScreen(
             onDraftChange = onFeedbackDraftChange,
             onSubmit = onFeedbackSubmit,
             onDismiss = { showFeedbackDialog = false },
+        )
+    }
+    if (showClearDataDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDataDialog = false },
+            title = { Text(accountStrings.clearDataDialogTitle) },
+            text = { Text(accountStrings.clearDataDialogBody) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearLocalData()
+                        showClearDataDialog = false
+                    },
+                ) {
+                    Text(accountStrings.clearDataButton)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDataDialog = false }) {
+                    Text(accountStrings.cancelLabel)
+                }
+            },
         )
     }
 }

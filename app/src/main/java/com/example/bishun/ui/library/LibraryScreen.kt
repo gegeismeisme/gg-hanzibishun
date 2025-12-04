@@ -7,9 +7,13 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -23,6 +27,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +54,10 @@ fun LibraryScreen(
     val libraryStrings = strings.library
     val locale = strings.locale
 
+    var showRecentDialog by rememberSaveable { mutableStateOf(false) }
+    val overflowRecents = remember(uiState.recentSearches) {
+        uiState.recentSearches.drop(RECENT_INLINE_LIMIT)
+    }
     Column(
         modifier = modifier.padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -84,6 +96,7 @@ fun LibraryScreen(
                 recent = uiState.recentSearches,
                 onSelect = viewModel::loadCharacter,
                 onClear = viewModel::clearHistory,
+                onShowOverflow = { showRecentDialog = true },
             )
         }
         uiState.error?.let { error ->
@@ -107,6 +120,18 @@ fun LibraryScreen(
             )
         }
         HelpCard(strings = libraryStrings)
+    }
+    if (showRecentDialog) {
+        val entries = overflowRecents.take(RECENT_DIALOG_LIMIT)
+        RecentSearchesDialog(
+            strings = libraryStrings,
+            entries = entries,
+            onSelect = {
+                viewModel.loadCharacter(it)
+                showRecentDialog = false
+            },
+            onDismiss = { showRecentDialog = false },
+        )
     }
 }
 
@@ -142,7 +167,10 @@ private fun RecentSearchesRow(
     recent: List<String>,
     onSelect: (String) -> Unit,
     onClear: () -> Unit,
+    onShowOverflow: () -> Unit,
 ) {
+    val inline = recent.take(RECENT_INLINE_LIMIT)
+    val hasOverflow = recent.size > RECENT_INLINE_LIMIT
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -162,10 +190,16 @@ private fun RecentSearchesRow(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            recent.forEach { symbol ->
+            inline.forEach { symbol ->
                 AssistChip(
                     onClick = { onSelect(symbol) },
                     label = { Text(symbol) },
+                )
+            }
+            if (hasOverflow) {
+                AssistChip(
+                    onClick = onShowOverflow,
+                    label = { Text(strings.recentOverflowLabel) },
                 )
             }
         }
@@ -213,6 +247,7 @@ private fun WordEntryCard(
     entry: WordEntry,
     onPractice: () -> Unit,
 ) {
+    val scrollState = rememberScrollState()
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -220,7 +255,9 @@ private fun WordEntryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(20.dp)
+                .heightIn(max = 420.dp)
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -261,6 +298,49 @@ private fun WordEntryCard(
         }
     }
 }
+
+@Composable
+private fun RecentSearchesDialog(
+    strings: LibraryStrings,
+    entries: List<String>,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings.recentOverflowDialogTitle) },
+        text = {
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (entries.isEmpty()) {
+                    Text(strings.errorEmpty, style = MaterialTheme.typography.bodySmall)
+                } else {
+                    entries.forEach { symbol ->
+                        TextButton(
+                            onClick = { onSelect(symbol) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(symbol, style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(strings.recentOverflowClose)
+            }
+        },
+    )
+}
+
+private const val RECENT_INLINE_LIMIT = 3
+private const val RECENT_DIALOG_LIMIT = 50
 
 @Composable
 private fun HelpCard(strings: LibraryStrings) {
