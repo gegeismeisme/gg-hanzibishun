@@ -52,6 +52,7 @@ import com.example.bishun.hanzi.render.RenderStateSnapshot
 import com.example.bishun.hanzi.render.UserStrokeRenderState
 import com.example.bishun.ui.character.CourseSession
 import com.example.bishun.ui.character.PracticeState
+import com.example.bishun.ui.character.PracticeBoardStrings
 import com.example.bishun.ui.character.components.IconActionButton
 import kotlinx.coroutines.awaitCancellation
 
@@ -70,6 +71,7 @@ fun CharacterCanvas(
     showHskHint: Boolean,
     showHskIcon: Boolean,
     onHskInfoClick: () -> Unit,
+    boardStrings: PracticeBoardStrings,
     currentColorOption: StrokeColorOption,
     onGridModeChange: (PracticeGrid) -> Unit,
     onStrokeColorChange: (StrokeColorOption) -> Unit,
@@ -204,6 +206,7 @@ fun CharacterCanvas(
             wordInfoEnabled = wordInfoAvailable,
             onPlayPronunciation = onPlayPronunciation,
             pronunciationEnabled = pronunciationAvailable,
+            boardStrings = boardStrings,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(12.dp),

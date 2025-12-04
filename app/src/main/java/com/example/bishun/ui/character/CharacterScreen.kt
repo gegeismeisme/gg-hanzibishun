@@ -196,6 +196,7 @@ fun CharacterScreen(
                     wordEntry = wordEntry,
                     hskEntry = hskEntry,
                     showTemplate = showTemplate,
+                    boardStrings = strings.boardControls,
                     onTemplateToggle = { enabled ->
                         onTemplateToggleSetting(enabled)
                         if (!enabled) {

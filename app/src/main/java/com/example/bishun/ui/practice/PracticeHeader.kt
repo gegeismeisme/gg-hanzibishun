@@ -94,7 +94,7 @@ fun SearchBarRow(
                 keyboardActions = KeyboardActions(onDone = { onSubmit() }),
                 modifier = Modifier
                     .width(96.dp)
-                    .heightIn(max = 38.dp),
+                    .heightIn(min = 42.dp),
             )
             IconActionButton(
                 icon = Icons.Filled.CloudDownload,

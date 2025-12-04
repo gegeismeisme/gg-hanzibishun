@@ -21,6 +21,7 @@ import com.example.bishun.hanzi.render.RenderStateSnapshot
 import com.example.bishun.ui.character.CourseSession
 import com.example.bishun.ui.character.CoursesStrings
 import com.example.bishun.ui.character.PracticeState
+import com.example.bishun.ui.character.PracticeBoardStrings
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -35,6 +36,7 @@ fun PracticeContent(
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
     showTemplate: Boolean,
+    boardStrings: PracticeBoardStrings,
     onTemplateToggle: (Boolean) -> Unit,
     calligraphyDemoState: CalligraphyDemoState,
     onStopCalligraphyDemo: () -> Unit,
@@ -114,6 +116,7 @@ fun PracticeContent(
             showHskHint = showHskHint,
             showHskIcon = showHskIcon && hskEntry != null,
             onHskInfoClick = { showHskDialog = true },
+            boardStrings = boardStrings,
             currentColorOption = strokeColorOption,
             onGridModeChange = onGridModeChange,
             onStrokeColorChange = onStrokeColorChange,
@@ -143,7 +146,7 @@ fun PracticeContent(
         )
     }
     if (showWordInfo && wordEntry != null) {
-        WordInfoDialog(
+        WordInfoBottomSheet(
             entry = wordEntry,
             onDismiss = { showWordInfo = false },
             ttsController = ttsController,

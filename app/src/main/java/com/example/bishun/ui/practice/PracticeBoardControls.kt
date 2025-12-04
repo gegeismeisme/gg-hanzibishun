@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.example.bishun.data.hsk.HskEntry
 import com.example.bishun.ui.character.CourseSession
 import com.example.bishun.ui.character.PracticeState
+import com.example.bishun.ui.character.PracticeBoardStrings
 import com.example.bishun.ui.character.components.IconActionButton
 
 @Composable
@@ -61,6 +62,7 @@ fun PracticeBoardControls(
     onShowWordInfo: () -> Unit,
     pronunciationEnabled: Boolean,
     onPlayPronunciation: () -> Unit,
+    boardStrings: PracticeBoardStrings,
     modifier: Modifier = Modifier,
 ) {
     val boardButtonSize = 32.dp
@@ -71,14 +73,14 @@ fun PracticeBoardControls(
     ) {
         IconActionButton(
             icon = Icons.Filled.Create,
-            description = "Start practice",
+            description = boardStrings.startLabel,
             onClick = onStartPractice,
             enabled = !practiceState.isActive && !isDemoPlaying,
             buttonSize = boardButtonSize,
         )
         IconActionButton(
             icon = Icons.Filled.Info,
-            description = "Hint",
+            description = boardStrings.hintLabel,
             onClick = onRequestHint,
             enabled = practiceState.isActive && !isDemoPlaying,
             buttonSize = boardButtonSize,
@@ -86,14 +88,14 @@ fun PracticeBoardControls(
         courseSession?.let { session ->
             IconActionButton(
                 icon = Icons.Filled.ChevronLeft,
-                description = "Previous word",
+                description = boardStrings.previousLabel,
                 onClick = onCoursePrev,
                 enabled = session.hasPrevious,
                 buttonSize = boardButtonSize,
             )
             IconActionButton(
                 icon = Icons.Filled.ChevronRight,
-                description = "Next word",
+                description = boardStrings.nextLabel,
                 onClick = onCourseNext,
                 enabled = session.hasNext,
                 buttonSize = boardButtonSize,
@@ -106,18 +108,19 @@ fun PracticeBoardControls(
             onGridChange = onGridModeChange,
             onColorChange = onStrokeColorChange,
             onTemplateToggle = onTemplateToggle,
+            description = boardStrings.settingsLabel,
             buttonSize = boardButtonSize,
         )
         IconActionButton(
             icon = Icons.AutoMirrored.Filled.VolumeUp,
-            description = "Play pronunciation",
+            description = boardStrings.pronunciationLabel,
             onClick = onPlayPronunciation,
             enabled = pronunciationEnabled,
             buttonSize = boardButtonSize,
         )
         GlyphActionButton(
             label = "释",
-            description = "Show dictionary entry",
+            description = boardStrings.dictionaryLabel,
             onClick = onShowWordInfo,
             enabled = wordInfoEnabled,
             buttonSize = boardButtonSize,
@@ -125,7 +128,7 @@ fun PracticeBoardControls(
         if (showHskIcon && hskEntry != null) {
             IconActionButton(
                 icon = Icons.Filled.School,
-                description = "HSK info",
+                description = boardStrings.hskLabel,
                 onClick = onHskInfoClick,
                 buttonSize = boardButtonSize,
             )
@@ -166,13 +169,14 @@ fun CanvasSettingsMenu(
     onGridChange: (PracticeGrid) -> Unit,
     onColorChange: (StrokeColorOption) -> Unit,
     onTemplateToggle: (Boolean) -> Unit,
+    description: String,
     buttonSize: Dp = 40.dp,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconActionButton(
             icon = Icons.Filled.Settings,
-            description = "Canvas settings",
+            description = description,
             onClick = { expanded = true },
             buttonSize = buttonSize,
         )
