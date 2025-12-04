@@ -97,6 +97,7 @@ class CharacterViewModel(
     private var currentDefinition: CharacterDefinition? = null
     private var renderState: RenderState? = null
     private var renderStateJob: Job? = null
+    private var completionResetJob: Job? = null
     private var activeUserStroke: UserStroke? = null
     private val userStrokeIds = mutableListOf<Int>()
     private var courseEntries: Map<Int, List<String>> = emptyMap()
@@ -179,6 +180,7 @@ class CharacterViewModel(
         _demoState.value = DemoState(isPlaying = true, loop = loop)
         viewModelScope.launch {
             if (_practiceState.value.isActive || _practiceState.value.completedStrokes.isNotEmpty()) {
+                cancelCompletionReset()
                 clearUserStrokes()
                 resetPracticeState(definition)
             }
@@ -217,6 +219,7 @@ class CharacterViewModel(
         val state = renderState ?: return
         viewModelScope.launch {
             state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, 200))
+            cancelCompletionReset()
             resetPracticeState(definition)
         }
     }
@@ -224,6 +227,7 @@ class CharacterViewModel(
     fun startPractice() {
         val definition = currentDefinition ?: return
         val state = renderState ?: return
+        cancelCompletionReset()
         viewModelScope.launch {
             stopDemo()
             state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, PRACTICE_FADE_DURATION))
@@ -304,6 +308,7 @@ class CharacterViewModel(
                     _uiState.value = CharacterUiState.Success(it)
                     currentDefinition = it
                     setupRenderState(it)
+                    cancelCompletionReset()
                     resetPracticeState(it)
                     loadWordInfo(it.symbol)
                     loadHskInfo(it.symbol)
@@ -574,6 +579,33 @@ class CharacterViewModel(
         activeUserStroke = null
     }
 
+    private fun cancelCompletionReset() {
+        completionResetJob?.cancel()
+        completionResetJob = null
+    }
+
+    private fun scheduleCompletionReset(symbol: String) {
+        completionResetJob?.cancel()
+        completionResetJob = viewModelScope.launch {
+            try {
+                delay(PRACTICE_COMPLETION_RESET_DELAY)
+                if (currentDefinition?.symbol != symbol) return@launch
+                clearUserStrokes()
+                val definition = currentDefinition ?: return@launch
+                renderState?.run(
+                    CharacterActions.showCharacter(
+                        CharacterLayer.MAIN,
+                        definition,
+                        PRACTICE_FADE_DURATION,
+                    ),
+                )
+                resetPracticeState(definition)
+            } finally {
+                completionResetJob = null
+            }
+        }
+    }
+
     private suspend fun handleCorrectStroke(isBackwards: Boolean) {
         val definition = currentDefinition ?: return
         val state = renderState ?: return
@@ -616,6 +648,7 @@ class CharacterViewModel(
             }
             state.run(QuizActions.highlightCompleteChar(definition, null, 600))
             advanceCourseAfterCompletion()
+            scheduleCompletionReset(definition.symbol)
         }
     }
 
@@ -689,6 +722,7 @@ class CharacterViewModel(
         private const val PRACTICE_DISTANCE_THRESHOLD = 350.0
         private const val HINT_THRESHOLD = 3
         private const val PRACTICE_HINT_SPEED = 3.0
+        private const val PRACTICE_COMPLETION_RESET_DELAY = 3_000L
         private const val DEMO_FADE_DURATION = 250L
         private const val DEMO_REVEAL_DURATION = 120L
         private const val DEMO_LOOP_PAUSE = 600L

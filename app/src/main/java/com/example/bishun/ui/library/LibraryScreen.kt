@@ -34,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.bishun.data.word.WordEntry
 import com.example.bishun.ui.character.LibraryStrings
@@ -55,11 +54,14 @@ fun LibraryScreen(
     val locale = strings.locale
 
     var showRecentDialog by rememberSaveable { mutableStateOf(false) }
+    val contentScrollState = rememberScrollState()
     val overflowRecents = remember(uiState.recentSearches) {
         uiState.recentSearches.drop(RECENT_INLINE_LIMIT)
     }
     Column(
-        modifier = modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+        modifier = modifier
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .verticalScroll(contentScrollState),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(
@@ -77,11 +79,6 @@ fun LibraryScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             supportingText = { Text(libraryStrings.supportingText) },
-        )
-        QuickSuggestionsRow(
-            strings = libraryStrings,
-            suggestions = libraryStrings.quickSuggestions,
-            onSuggestionClick = viewModel::loadCharacter,
         )
         RowActions(
             strings = libraryStrings,
@@ -132,31 +129,6 @@ fun LibraryScreen(
             },
             onDismiss = { showRecentDialog = false },
         )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun QuickSuggestionsRow(
-    strings: LibraryStrings,
-    suggestions: List<String>,
-    onSuggestionClick: (String) -> Unit,
-) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            text = strings.quickTryLabel,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        suggestions.forEach { symbol ->
-            OutlinedButton(onClick = { onSuggestionClick(symbol) }) {
-                Text(symbol)
-            }
-        }
     }
 }
 
@@ -247,7 +219,6 @@ private fun WordEntryCard(
     entry: WordEntry,
     onPractice: () -> Unit,
 ) {
-    val scrollState = rememberScrollState()
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -255,9 +226,7 @@ private fun WordEntryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
-                .heightIn(max = 420.dp)
-                .verticalScroll(scrollState),
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -288,8 +257,6 @@ private fun WordEntryCard(
                 text = entry.explanation.ifBlank {
                     entry.more.ifBlank { strings.definitionFallback }
                 },
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onPractice) {
