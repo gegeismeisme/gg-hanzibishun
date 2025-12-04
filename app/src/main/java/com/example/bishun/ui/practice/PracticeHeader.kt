@@ -1,4 +1,4 @@
-package com.example.bishun.ui.practice
+﻿package com.example.bishun.ui.practice
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -238,3 +238,6 @@ private val languageChoices = listOf(
     LanguageChoice("es", "Español"),
     LanguageChoice("ja", "日本語"),
 )
+
+
+

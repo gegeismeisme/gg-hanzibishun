@@ -41,6 +41,7 @@ import com.example.bishun.ui.character.components.IconActionButton
 import com.example.bishun.ui.practice.BoardSettings
 import com.example.bishun.ui.practice.CalligraphyDemoState
 import com.example.bishun.ui.practice.PracticeContent
+import com.example.bishun.ui.practice.PracticeErrorBanner
 import com.example.bishun.ui.practice.PracticeGrid
 import com.example.bishun.ui.practice.StrokeColorOption
 import com.example.bishun.ui.practice.SearchBarRow
@@ -181,9 +182,9 @@ fun CharacterScreen(
             )
             when (uiState) {
                 CharacterUiState.Loading -> Text(strings.loadingLabel)
-                is CharacterUiState.Error -> Text(
-                    text = uiState.message,
-                    color = MaterialTheme.colorScheme.error,
+                is CharacterUiState.Error -> PracticeErrorBanner(
+                    message = uiState.message,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 is CharacterUiState.Success -> PracticeContent(
                     definition = uiState.definition,
