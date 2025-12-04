@@ -38,6 +38,7 @@ import com.example.bishun.hanzi.model.CharacterDefinition
 import com.example.bishun.hanzi.model.Point
 import com.example.bishun.hanzi.render.RenderStateSnapshot
 import com.example.bishun.ui.character.components.IconActionButton
+import com.example.bishun.ui.practice.BoardSettings
 import com.example.bishun.ui.practice.CalligraphyDemoState
 import com.example.bishun.ui.practice.PracticeContent
 import com.example.bishun.ui.practice.PracticeGrid

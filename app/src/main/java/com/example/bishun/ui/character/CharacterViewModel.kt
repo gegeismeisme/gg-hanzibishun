@@ -26,6 +26,7 @@ import com.example.bishun.hanzi.render.actions.CharacterActions
 import com.example.bishun.hanzi.render.actions.CharacterLayer
 import com.example.bishun.hanzi.render.actions.QuizActions
 import com.example.bishun.hanzi.quiz.StrokeMatcher
+import com.example.bishun.ui.practice.BoardSettings
 import com.example.bishun.ui.practice.PracticeGrid
 import com.example.bishun.ui.practice.StrokeColorOption
 import kotlinx.coroutines.Job

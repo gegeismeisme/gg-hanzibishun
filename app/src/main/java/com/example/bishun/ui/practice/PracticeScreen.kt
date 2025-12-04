@@ -18,9 +18,9 @@ import com.example.bishun.data.word.WordEntry
 import com.example.bishun.hanzi.model.CharacterDefinition
 import com.example.bishun.hanzi.model.Point
 import com.example.bishun.hanzi.render.RenderStateSnapshot
-import com.example.bishun.ui.character.BoardSettings
 import com.example.bishun.ui.character.CourseSession
 import com.example.bishun.ui.character.PracticeState
+import com.example.bishun.ui.practice.BoardSettings
 import kotlinx.coroutines.delay
 
 @Composable
