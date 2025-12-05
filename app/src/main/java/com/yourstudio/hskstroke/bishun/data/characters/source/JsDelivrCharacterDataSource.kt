@@ -1,6 +1,6 @@
-package com.example.bishun.data.characters.source
+package com.yourstudio.hskstroke.bishun.data.characters.source
 
-import com.example.bishun.data.characters.model.CharacterJsonDto
+import com.yourstudio.hskstroke.bishun.data.characters.model.CharacterJsonDto
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets

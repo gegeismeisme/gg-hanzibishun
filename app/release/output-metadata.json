@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.example.bishun",
+  "applicationId": "com.yourstudio.hskstroke.bishun",
   "variantName": "release",
   "elements": [
     {

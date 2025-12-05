@@ -1,11 +1,11 @@
-package com.example.bishun.ui.library
+package com.yourstudio.hskstroke.bishun.ui.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.bishun.data.settings.UserPreferencesStore
-import com.example.bishun.data.word.WordEntry
-import com.example.bishun.data.word.WordRepository
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
+import com.yourstudio.hskstroke.bishun.data.word.WordEntry
+import com.yourstudio.hskstroke.bishun.data.word.WordRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

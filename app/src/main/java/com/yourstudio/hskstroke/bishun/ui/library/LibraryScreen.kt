@@ -1,4 +1,4 @@
-package com.example.bishun.ui.library
+package com.yourstudio.hskstroke.bishun.ui.library
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,10 +35,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.bishun.data.word.WordEntry
-import com.example.bishun.ui.character.LibraryStrings
-import com.example.bishun.ui.character.rememberLocalizedStrings
-import com.example.bishun.ui.library.LibraryError
+import com.yourstudio.hskstroke.bishun.data.word.WordEntry
+import com.yourstudio.hskstroke.bishun.ui.character.LibraryStrings
+import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
+import com.yourstudio.hskstroke.bishun.ui.library.LibraryError
 import java.util.Locale
 
 @Composable

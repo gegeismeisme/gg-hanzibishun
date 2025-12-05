@@ -1,8 +1,8 @@
-package com.example.bishun.hanzi.render
+package com.yourstudio.hskstroke.bishun.hanzi.render
 
-import com.example.bishun.hanzi.model.CharacterDefinition
-import com.example.bishun.hanzi.model.Point
-import com.example.bishun.hanzi.model.Stroke
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.model.Stroke
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test

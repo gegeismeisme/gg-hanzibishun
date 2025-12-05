@@ -1,4 +1,4 @@
-﻿package com.example.bishun.ui.practice
+package com.yourstudio.hskstroke.bishun.ui.practice
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,10 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.example.bishun.ui.character.CharacterUiState
-import com.example.bishun.ui.character.DemoState
-import com.example.bishun.ui.character.LocalizedStrings
-import com.example.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.ui.character.CharacterUiState
+import com.yourstudio.hskstroke.bishun.ui.character.DemoState
+import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
+import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 
 @Composable
 fun SearchBarRow(

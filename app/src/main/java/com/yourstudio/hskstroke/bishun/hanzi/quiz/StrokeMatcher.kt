@@ -1,11 +1,11 @@
-package com.example.bishun.hanzi.quiz
+package com.yourstudio.hskstroke.bishun.hanzi.quiz
 
-import com.example.bishun.hanzi.core.average
-import com.example.bishun.hanzi.geometry.Geometry
-import com.example.bishun.hanzi.model.CharacterDefinition
-import com.example.bishun.hanzi.model.Point
-import com.example.bishun.hanzi.model.Stroke
-import com.example.bishun.hanzi.model.UserStroke
+import com.yourstudio.hskstroke.bishun.hanzi.core.average
+import com.yourstudio.hskstroke.bishun.hanzi.geometry.Geometry
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.model.Stroke
+import com.yourstudio.hskstroke.bishun.hanzi.model.UserStroke
 
 object StrokeMatcher {
     private const val COSINE_SIMILARITY_THRESHOLD = 0.0

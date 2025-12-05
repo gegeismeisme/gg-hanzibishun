@@ -1,4 +1,4 @@
-package com.example.bishun.ui.character
+package com.yourstudio.hskstroke.bishun.ui.character
 
 data class DemoState(
     val isPlaying: Boolean = false,

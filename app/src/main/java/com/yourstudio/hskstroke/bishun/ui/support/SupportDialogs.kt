@@ -1,4 +1,4 @@
-package com.example.bishun.ui.support
+package com.yourstudio.hskstroke.bishun.ui.support
 
 import android.content.Intent
 import android.net.Uri
@@ -29,11 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.bishun.data.settings.UserPreferences
-import com.example.bishun.ui.character.HelpSectionText
-import com.example.bishun.ui.character.LocalizedStrings
-import com.example.bishun.ui.character.PolicySectionText
-import com.example.bishun.ui.character.SupportStrings
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
+import com.yourstudio.hskstroke.bishun.ui.character.HelpSectionText
+import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
+import com.yourstudio.hskstroke.bishun.ui.character.PolicySectionText
+import com.yourstudio.hskstroke.bishun.ui.character.SupportStrings
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

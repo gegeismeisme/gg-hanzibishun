@@ -1,14 +1,14 @@
-package com.example.bishun.hanzi.render.actions
+package com.yourstudio.hskstroke.bishun.hanzi.render.actions
 
-import com.example.bishun.hanzi.model.CharacterDefinition
-import com.example.bishun.hanzi.model.Point
-import com.example.bishun.hanzi.render.CharacterLayersState
-import com.example.bishun.hanzi.render.CharacterRenderState
-import com.example.bishun.hanzi.render.ColorRgba
-import com.example.bishun.hanzi.render.Mutation
-import com.example.bishun.hanzi.render.RenderStateSnapshot
-import com.example.bishun.hanzi.render.StrokeRenderState
-import com.example.bishun.hanzi.render.UserStrokeRenderState
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.render.CharacterLayersState
+import com.yourstudio.hskstroke.bishun.hanzi.render.CharacterRenderState
+import com.yourstudio.hskstroke.bishun.hanzi.render.ColorRgba
+import com.yourstudio.hskstroke.bishun.hanzi.render.Mutation
+import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
+import com.yourstudio.hskstroke.bishun.hanzi.render.StrokeRenderState
+import com.yourstudio.hskstroke.bishun.hanzi.render.UserStrokeRenderState
 
 object QuizActions {
 

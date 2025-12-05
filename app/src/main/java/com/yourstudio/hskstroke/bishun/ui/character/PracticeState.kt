@@ -1,4 +1,4 @@
-package com.example.bishun.ui.character
+package com.yourstudio.hskstroke.bishun.ui.character
 
 data class PracticeState(
     val isActive: Boolean = false,

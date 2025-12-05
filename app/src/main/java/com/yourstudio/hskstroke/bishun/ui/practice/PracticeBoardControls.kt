@@ -1,4 +1,4 @@
-package com.example.bishun.ui.practice
+package com.yourstudio.hskstroke.bishun.ui.practice
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -34,11 +34,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.bishun.data.hsk.HskEntry
-import com.example.bishun.ui.character.CourseSession
-import com.example.bishun.ui.character.PracticeState
-import com.example.bishun.ui.character.PracticeBoardStrings
-import com.example.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
+import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
+import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 
 @Composable
 fun PracticeBoardControls(

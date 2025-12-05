@@ -1,4 +1,4 @@
-package com.example.bishun.data.hsk
+package com.yourstudio.hskstroke.bishun.data.hsk
 
 data class HskEntry(
     val symbol: String,

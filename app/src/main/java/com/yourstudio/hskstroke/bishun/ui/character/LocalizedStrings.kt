@@ -1,4 +1,4 @@
-package com.example.bishun.ui.character
+package com.yourstudio.hskstroke.bishun.ui.character
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember

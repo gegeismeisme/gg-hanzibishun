@@ -1,4 +1,4 @@
-package com.example.bishun.ui.character
+package com.yourstudio.hskstroke.bishun.ui.character
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,21 +31,21 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.bishun.data.word.WordEntry
-import com.example.bishun.data.hsk.HskEntry
+import com.yourstudio.hskstroke.bishun.data.word.WordEntry
+import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
 import android.widget.Toast
-import com.example.bishun.hanzi.model.CharacterDefinition
-import com.example.bishun.hanzi.model.Point
-import com.example.bishun.hanzi.render.RenderStateSnapshot
-import com.example.bishun.ui.character.components.IconActionButton
-import com.example.bishun.ui.practice.BoardSettings
-import com.example.bishun.ui.practice.CalligraphyDemoState
-import com.example.bishun.ui.practice.PracticeContent
-import com.example.bishun.ui.practice.PracticeErrorBanner
-import com.example.bishun.ui.practice.PracticeGrid
-import com.example.bishun.ui.practice.StrokeColorOption
-import com.example.bishun.ui.practice.SearchBarRow
-import com.example.bishun.ui.practice.rememberCalligraphyDemoController
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
+import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.ui.practice.BoardSettings
+import com.yourstudio.hskstroke.bishun.ui.practice.CalligraphyDemoState
+import com.yourstudio.hskstroke.bishun.ui.practice.PracticeContent
+import com.yourstudio.hskstroke.bishun.ui.practice.PracticeErrorBanner
+import com.yourstudio.hskstroke.bishun.ui.practice.PracticeGrid
+import com.yourstudio.hskstroke.bishun.ui.practice.StrokeColorOption
+import com.yourstudio.hskstroke.bishun.ui.practice.SearchBarRow
+import com.yourstudio.hskstroke.bishun.ui.practice.rememberCalligraphyDemoController
 @Composable
 fun CharacterRoute(
     modifier: Modifier = Modifier,

@@ -1,6 +1,6 @@
-package com.example.bishun.hanzi.render
+package com.yourstudio.hskstroke.bishun.hanzi.render
 
-import com.example.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineDispatcher

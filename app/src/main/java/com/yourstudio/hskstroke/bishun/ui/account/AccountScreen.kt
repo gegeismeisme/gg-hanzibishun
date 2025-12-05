@@ -1,4 +1,4 @@
-package com.example.bishun.ui.account
+package com.yourstudio.hskstroke.bishun.ui.account
 
 import android.content.Intent
 import android.net.Uri
@@ -36,15 +36,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.bishun.data.settings.UserPreferences
-import com.example.bishun.ui.character.AccountStrings
-import com.example.bishun.ui.character.FeedbackSubmission
-import com.example.bishun.ui.character.LocalizedStrings
-import com.example.bishun.ui.character.rememberLocalizedStrings
-import com.example.bishun.ui.support.FeedbackDialog
-import com.example.bishun.ui.support.HelpDialog
-import com.example.bishun.ui.support.PrivacyDialog
-import com.example.bishun.ui.support.SUPPORT_EMAIL
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
+import com.yourstudio.hskstroke.bishun.ui.character.AccountStrings
+import com.yourstudio.hskstroke.bishun.ui.character.FeedbackSubmission
+import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
+import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
+import com.yourstudio.hskstroke.bishun.ui.support.FeedbackDialog
+import com.yourstudio.hskstroke.bishun.ui.support.HelpDialog
+import com.yourstudio.hskstroke.bishun.ui.support.PrivacyDialog
+import com.yourstudio.hskstroke.bishun.ui.support.SUPPORT_EMAIL
 import kotlinx.coroutines.launch
 
 @Composable

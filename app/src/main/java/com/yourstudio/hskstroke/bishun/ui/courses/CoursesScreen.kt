@@ -1,4 +1,4 @@
-package com.example.bishun.ui.courses
+package com.yourstudio.hskstroke.bishun.ui.courses
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -42,13 +42,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
-import com.example.bishun.ui.account.AccountViewModel
-import com.example.bishun.ui.character.CharacterViewModel
-import com.example.bishun.ui.character.CourseSession
-import com.example.bishun.ui.character.CoursesStrings
-import com.example.bishun.ui.character.HskLevelSummary
-import com.example.bishun.ui.character.components.IconActionButton
-import com.example.bishun.ui.character.rememberLocalizedStrings
+import com.yourstudio.hskstroke.bishun.ui.account.AccountViewModel
+import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
+import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
+import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
+import com.yourstudio.hskstroke.bishun.ui.character.HskLevelSummary
+import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 
 @Composable
 fun CoursesScreen(

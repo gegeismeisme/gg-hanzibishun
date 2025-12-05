@@ -1,6 +1,6 @@
-package com.example.bishun.ui.character
+package com.yourstudio.hskstroke.bishun.ui.character
 
-import com.example.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
 
 sealed interface CharacterUiState {
     data object Loading : CharacterUiState

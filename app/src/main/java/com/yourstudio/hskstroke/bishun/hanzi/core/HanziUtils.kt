@@ -1,4 +1,4 @@
-package com.example.bishun.hanzi.core
+package com.yourstudio.hskstroke.bishun.hanzi.core
 
 import java.util.concurrent.atomic.AtomicInteger
 

@@ -1,4 +1,4 @@
-package com.example.bishun.ui.navigation
+package com.yourstudio.hskstroke.bishun.ui.navigation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,14 +26,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.bishun.ui.account.AccountScreen
-import com.example.bishun.ui.account.AccountViewModel
-import com.example.bishun.ui.character.CharacterRoute
-import com.example.bishun.ui.character.CharacterViewModel
-import com.example.bishun.ui.courses.CoursesScreen
-import com.example.bishun.ui.library.LibraryScreen
-import com.example.bishun.ui.library.LibraryViewModel
-import com.example.bishun.ui.progress.ProgressScreen
+import com.yourstudio.hskstroke.bishun.ui.account.AccountScreen
+import com.yourstudio.hskstroke.bishun.ui.account.AccountViewModel
+import com.yourstudio.hskstroke.bishun.ui.character.CharacterRoute
+import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
+import com.yourstudio.hskstroke.bishun.ui.courses.CoursesScreen
+import com.yourstudio.hskstroke.bishun.ui.library.LibraryScreen
+import com.yourstudio.hskstroke.bishun.ui.library.LibraryViewModel
+import com.yourstudio.hskstroke.bishun.ui.progress.ProgressScreen
 
 private sealed class MainDestination(
     val route: String,

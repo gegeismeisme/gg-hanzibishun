@@ -1,4 +1,4 @@
-package com.example.bishun.data.settings
+package com.yourstudio.hskstroke.bishun.data.settings
 
 import android.content.Context
 import androidx.datastore.core.DataStore

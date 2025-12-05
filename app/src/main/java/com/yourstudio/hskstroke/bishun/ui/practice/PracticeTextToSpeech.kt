@@ -1,4 +1,4 @@
-package com.example.bishun.ui.practice
+package com.yourstudio.hskstroke.bishun.ui.practice
 
 import android.os.Handler
 import android.os.Looper

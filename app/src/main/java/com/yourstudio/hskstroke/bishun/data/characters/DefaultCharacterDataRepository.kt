@@ -1,9 +1,9 @@
-package com.example.bishun.data.characters
+package com.yourstudio.hskstroke.bishun.data.characters
 
-import com.example.bishun.data.characters.cache.CharacterDiskCache
-import com.example.bishun.data.characters.model.CharacterJsonDto
-import com.example.bishun.data.characters.source.CharacterAssetDataSource
-import com.example.bishun.data.characters.source.RemoteCharacterDataSource
+import com.yourstudio.hskstroke.bishun.data.characters.cache.CharacterDiskCache
+import com.yourstudio.hskstroke.bishun.data.characters.model.CharacterJsonDto
+import com.yourstudio.hskstroke.bishun.data.characters.source.CharacterAssetDataSource
+import com.yourstudio.hskstroke.bishun.data.characters.source.RemoteCharacterDataSource
 
 class DefaultCharacterDataRepository(
     private val assetDataSource: CharacterAssetDataSource,

@@ -1,14 +1,14 @@
-package com.example.bishun.hanzi.render.actions
+package com.yourstudio.hskstroke.bishun.hanzi.render.actions
 
-import com.example.bishun.hanzi.model.CharacterDefinition
-import com.example.bishun.hanzi.model.Stroke
-import com.example.bishun.hanzi.render.CharacterLayersState
-import com.example.bishun.hanzi.render.CharacterRenderState
-import com.example.bishun.hanzi.render.ColorParser
-import com.example.bishun.hanzi.render.ColorRgba
-import com.example.bishun.hanzi.render.Mutation
-import com.example.bishun.hanzi.render.RenderStateSnapshot
-import com.example.bishun.hanzi.render.StrokeRenderState
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.Stroke
+import com.yourstudio.hskstroke.bishun.hanzi.render.CharacterLayersState
+import com.yourstudio.hskstroke.bishun.hanzi.render.CharacterRenderState
+import com.yourstudio.hskstroke.bishun.hanzi.render.ColorParser
+import com.yourstudio.hskstroke.bishun.hanzi.render.ColorRgba
+import com.yourstudio.hskstroke.bishun.hanzi.render.Mutation
+import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
+import com.yourstudio.hskstroke.bishun.hanzi.render.StrokeRenderState
 
 enum class CharacterLayer(val scope: String) {
     MAIN("main"),

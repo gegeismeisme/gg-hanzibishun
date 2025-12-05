@@ -1,9 +1,9 @@
-package com.example.bishun.hanzi.parser
+package com.yourstudio.hskstroke.bishun.hanzi.parser
 
-import com.example.bishun.data.characters.model.CharacterJsonDto
-import com.example.bishun.hanzi.model.CharacterDefinition
-import com.example.bishun.hanzi.model.Point
-import com.example.bishun.hanzi.model.Stroke
+import com.yourstudio.hskstroke.bishun.data.characters.model.CharacterJsonDto
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.model.Stroke
 
 class CharacterParser {
 

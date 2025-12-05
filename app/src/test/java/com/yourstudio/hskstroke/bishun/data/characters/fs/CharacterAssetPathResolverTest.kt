@@ -1,4 +1,4 @@
-package com.example.bishun.data.characters.fs
+package com.yourstudio.hskstroke.bishun.data.characters.fs
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

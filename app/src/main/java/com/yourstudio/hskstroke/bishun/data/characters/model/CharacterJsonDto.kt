@@ -1,4 +1,4 @@
-package com.example.bishun.data.characters.model
+package com.yourstudio.hskstroke.bishun.data.characters.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

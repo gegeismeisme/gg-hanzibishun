@@ -1,6 +1,6 @@
-package com.example.bishun.data.characters.cache
+package com.yourstudio.hskstroke.bishun.data.characters.cache
 
-import com.example.bishun.data.characters.model.CharacterJsonDto
+import com.yourstudio.hskstroke.bishun.data.characters.model.CharacterJsonDto
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CoroutineDispatcher

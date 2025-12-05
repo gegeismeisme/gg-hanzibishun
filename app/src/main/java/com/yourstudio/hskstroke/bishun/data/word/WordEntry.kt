@@ -1,4 +1,4 @@
-package com.example.bishun.data.word
+package com.yourstudio.hskstroke.bishun.data.word
 
 data class WordEntry(
     val word: String,

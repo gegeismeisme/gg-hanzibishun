@@ -1,6 +1,6 @@
-package com.example.bishun.hanzi.model
+package com.yourstudio.hskstroke.bishun.hanzi.model
 
-import com.example.bishun.hanzi.geometry.Geometry
+import com.yourstudio.hskstroke.bishun.hanzi.geometry.Geometry
 
 data class Stroke(
     val path: String,

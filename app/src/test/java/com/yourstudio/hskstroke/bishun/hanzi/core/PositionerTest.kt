@@ -1,6 +1,6 @@
-package com.example.bishun.hanzi.core
+package com.yourstudio.hskstroke.bishun.hanzi.core
 
-import com.example.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

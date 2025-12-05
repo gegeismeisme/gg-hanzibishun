@@ -1,4 +1,4 @@
-package com.example.bishun.ui.practice
+package com.yourstudio.hskstroke.bishun.ui.practice
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,10 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.bishun.ui.character.CourseSession
-import com.example.bishun.ui.character.CoursesStrings
-import com.example.bishun.ui.character.PracticeState
-import com.example.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
+import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
+import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min

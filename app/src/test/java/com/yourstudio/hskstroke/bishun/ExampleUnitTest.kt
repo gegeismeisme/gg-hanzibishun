@@ -1,4 +1,4 @@
-package com.example.bishun
+package com.yourstudio.hskstroke.bishun
 
 import org.junit.Test
 

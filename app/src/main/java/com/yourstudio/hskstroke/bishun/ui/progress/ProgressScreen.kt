@@ -1,4 +1,4 @@
-package com.example.bishun.ui.progress
+package com.yourstudio.hskstroke.bishun.ui.progress
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -38,14 +38,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bishun.data.history.PracticeHistoryEntry
-import com.example.bishun.ui.character.CharacterViewModel
-import com.example.bishun.ui.character.HskLevelSummary
-import com.example.bishun.ui.character.HskProgressSummary
-import com.example.bishun.ui.character.LocalizedStrings
-import com.example.bishun.ui.character.ProgressStrings
-import com.example.bishun.ui.character.components.IconActionButton
-import com.example.bishun.ui.character.rememberLocalizedStrings
+import com.yourstudio.hskstroke.bishun.data.history.PracticeHistoryEntry
+import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
+import com.yourstudio.hskstroke.bishun.ui.character.HskLevelSummary
+import com.yourstudio.hskstroke.bishun.ui.character.HskProgressSummary
+import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
+import com.yourstudio.hskstroke.bishun.ui.character.ProgressStrings
+import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate

@@ -1,10 +1,10 @@
-package com.example.bishun.ui.account
+package com.yourstudio.hskstroke.bishun.ui.account
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.bishun.data.settings.UserPreferencesStore
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map

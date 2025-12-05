@@ -1,4 +1,4 @@
-package com.example.bishun.ui.character.components
+package com.yourstudio.hskstroke.bishun.ui.character.components
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilledIconButton

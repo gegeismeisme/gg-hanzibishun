@@ -1,4 +1,4 @@
-package com.example.bishun.data.history
+package com.yourstudio.hskstroke.bishun.data.history
 
 import android.content.Context
 import androidx.datastore.core.DataStore

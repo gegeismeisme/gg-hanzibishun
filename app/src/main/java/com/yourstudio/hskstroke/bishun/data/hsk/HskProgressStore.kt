@@ -1,4 +1,4 @@
-package com.example.bishun.data.hsk
+package com.yourstudio.hskstroke.bishun.data.hsk
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers

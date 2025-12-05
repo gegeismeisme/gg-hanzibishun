@@ -1,4 +1,4 @@
-package com.example.bishun.hanzi.render
+package com.yourstudio.hskstroke.bishun.hanzi.render
 
 data class RenderStateOptions(
     val strokeColor: String = "#555555",

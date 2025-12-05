@@ -1,4 +1,4 @@
-package com.example.bishun.ui.practice
+package com.yourstudio.hskstroke.bishun.ui.practice
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -26,8 +26,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.bishun.data.hsk.HskEntry
-import com.example.bishun.data.word.WordEntry
+import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
+import com.yourstudio.hskstroke.bishun.data.word.WordEntry
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

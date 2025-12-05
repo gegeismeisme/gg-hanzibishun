@@ -1,4 +1,4 @@
-package com.example.bishun.data.word
+package com.yourstudio.hskstroke.bishun.data.word
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers

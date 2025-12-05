@@ -1,4 +1,4 @@
-package com.example.bishun.hanzi.model
+package com.yourstudio.hskstroke.bishun.hanzi.model
 
 data class CharacterDefinition(
     val symbol: String,

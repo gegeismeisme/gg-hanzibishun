@@ -1,7 +1,7 @@
-package com.example.bishun.hanzi.core
+package com.yourstudio.hskstroke.bishun.hanzi.core
 
 import androidx.compose.ui.geometry.Offset
-import com.example.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
 
 class Positioner(
     width: Float,

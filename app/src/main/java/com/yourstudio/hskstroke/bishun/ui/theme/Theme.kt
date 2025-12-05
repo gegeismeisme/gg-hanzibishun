@@ -1,4 +1,4 @@
-package com.example.bishun.ui.theme
+package com.yourstudio.hskstroke.bishun.ui.theme
 
 import android.app.Activity
 import android.os.Build

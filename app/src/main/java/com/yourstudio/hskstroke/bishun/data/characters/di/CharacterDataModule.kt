@@ -1,15 +1,15 @@
-package com.example.bishun.data.characters.di
+package com.yourstudio.hskstroke.bishun.data.characters.di
 
 import android.content.Context
-import com.example.bishun.data.characters.CharacterDataRepository
-import com.example.bishun.data.characters.CharacterDefinitionRepository
-import com.example.bishun.data.characters.DefaultCharacterDataRepository
-import com.example.bishun.data.characters.DefaultCharacterDefinitionRepository
-import com.example.bishun.data.characters.cache.CharacterDiskCache
-import com.example.bishun.data.characters.source.CharacterAssetDataSource
-import com.example.bishun.data.characters.source.JsDelivrCharacterDataSource
-import com.example.bishun.data.characters.source.OssCharacterDataSource
-import com.example.bishun.hanzi.parser.CharacterParser
+import com.yourstudio.hskstroke.bishun.data.characters.CharacterDataRepository
+import com.yourstudio.hskstroke.bishun.data.characters.CharacterDefinitionRepository
+import com.yourstudio.hskstroke.bishun.data.characters.DefaultCharacterDataRepository
+import com.yourstudio.hskstroke.bishun.data.characters.DefaultCharacterDefinitionRepository
+import com.yourstudio.hskstroke.bishun.data.characters.cache.CharacterDiskCache
+import com.yourstudio.hskstroke.bishun.data.characters.source.CharacterAssetDataSource
+import com.yourstudio.hskstroke.bishun.data.characters.source.JsDelivrCharacterDataSource
+import com.yourstudio.hskstroke.bishun.data.characters.source.OssCharacterDataSource
+import com.yourstudio.hskstroke.bishun.hanzi.parser.CharacterParser
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.io.File

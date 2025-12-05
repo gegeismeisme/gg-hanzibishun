@@ -1,6 +1,6 @@
-package com.example.bishun.hanzi.parser
+package com.yourstudio.hskstroke.bishun.hanzi.parser
 
-import com.example.bishun.data.characters.model.CharacterJsonDto
+import com.yourstudio.hskstroke.bishun.data.characters.model.CharacterJsonDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -1,4 +1,4 @@
-package com.example.bishun.ui.practice
+package com.yourstudio.hskstroke.bishun.ui.practice
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing

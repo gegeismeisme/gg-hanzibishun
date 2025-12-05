@@ -1,8 +1,8 @@
-package com.example.bishun.data.characters.source
+package com.yourstudio.hskstroke.bishun.data.characters.source
 
 import android.content.res.AssetManager
-import com.example.bishun.data.characters.fs.CharacterAssetPathResolver
-import com.example.bishun.data.characters.model.CharacterJsonDto
+import com.yourstudio.hskstroke.bishun.data.characters.fs.CharacterAssetPathResolver
+import com.yourstudio.hskstroke.bishun.data.characters.model.CharacterJsonDto
 import java.io.IOException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

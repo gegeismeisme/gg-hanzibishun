@@ -1,6 +1,6 @@
-package com.example.bishun.hanzi.geometry
+package com.yourstudio.hskstroke.bishun.hanzi.geometry
 
-import com.example.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -1,7 +1,7 @@
-package com.example.bishun.data.characters
+package com.yourstudio.hskstroke.bishun.data.characters
 
-import com.example.bishun.hanzi.model.CharacterDefinition
-import com.example.bishun.hanzi.parser.CharacterParser
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.parser.CharacterParser
 
 class DefaultCharacterDefinitionRepository(
     private val dataRepository: CharacterDataRepository,

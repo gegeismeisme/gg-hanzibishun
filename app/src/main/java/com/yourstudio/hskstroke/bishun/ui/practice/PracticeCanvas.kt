@@ -1,4 +1,4 @@
-package com.example.bishun.ui.practice
+package com.yourstudio.hskstroke.bishun.ui.practice
 
 import android.graphics.Matrix as AndroidMatrix
 import androidx.core.graphics.PathParser as AndroidPathParser
@@ -40,20 +40,20 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.example.bishun.data.hsk.HskEntry
-import com.example.bishun.hanzi.core.Positioner
-import com.example.bishun.hanzi.geometry.Geometry
-import com.example.bishun.hanzi.model.CharacterDefinition
-import com.example.bishun.hanzi.model.Point
-import com.example.bishun.hanzi.model.Stroke as ModelStroke
-import com.example.bishun.hanzi.render.CharacterRenderState
-import com.example.bishun.hanzi.render.ColorRgba
-import com.example.bishun.hanzi.render.RenderStateSnapshot
-import com.example.bishun.hanzi.render.UserStrokeRenderState
-import com.example.bishun.ui.character.CourseSession
-import com.example.bishun.ui.character.PracticeState
-import com.example.bishun.ui.character.PracticeBoardStrings
-import com.example.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
+import com.yourstudio.hskstroke.bishun.hanzi.core.Positioner
+import com.yourstudio.hskstroke.bishun.hanzi.geometry.Geometry
+import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.model.Stroke as ModelStroke
+import com.yourstudio.hskstroke.bishun.hanzi.render.CharacterRenderState
+import com.yourstudio.hskstroke.bishun.hanzi.render.ColorRgba
+import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
+import com.yourstudio.hskstroke.bishun.hanzi.render.UserStrokeRenderState
+import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
+import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import kotlinx.coroutines.awaitCancellation
 
 @Composable

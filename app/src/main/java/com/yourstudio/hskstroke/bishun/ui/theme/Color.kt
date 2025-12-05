@@ -1,4 +1,4 @@
-package com.example.bishun.ui.theme
+package com.yourstudio.hskstroke.bishun.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

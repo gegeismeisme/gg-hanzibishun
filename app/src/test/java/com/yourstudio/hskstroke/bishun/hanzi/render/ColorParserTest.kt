@@ -1,4 +1,4 @@
-package com.example.bishun.hanzi.render
+package com.yourstudio.hskstroke.bishun.hanzi.render
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

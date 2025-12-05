@@ -1,6 +1,6 @@
-package com.example.bishun.hanzi.render
+package com.yourstudio.hskstroke.bishun.hanzi.render
 
-import com.example.bishun.hanzi.model.Point
+import com.yourstudio.hskstroke.bishun.hanzi.model.Point
 
 data class StrokeRenderState(
     val strokeIndex: Int,

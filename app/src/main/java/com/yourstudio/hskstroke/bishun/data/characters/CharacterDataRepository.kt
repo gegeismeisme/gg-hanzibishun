@@ -1,6 +1,6 @@
-package com.example.bishun.data.characters
+package com.yourstudio.hskstroke.bishun.data.characters
 
-import com.example.bishun.data.characters.model.CharacterJsonDto
+import com.yourstudio.hskstroke.bishun.data.characters.model.CharacterJsonDto
 
 /**
  * Loads raw Hanzi Writer JSON payloads from local assets or the CDN.
