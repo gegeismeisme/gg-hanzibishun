@@ -6,13 +6,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.bishun"
+    namespace = "com.yourstudio.hskstroke.bishun"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.bishun"
+        applicationId = "com.yourstudio.hskstroke.bishun"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
