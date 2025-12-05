@@ -1,8 +1,11 @@
 package com.yourstudio.hskstroke.bishun.ui.practice
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,7 +14,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
@@ -102,48 +107,58 @@ fun PracticeContent(
         val gridMode = boardSettings.grid
         val strokeColorOption = boardSettings.strokeColor
         val strokeColor = strokeColorOption.color
-        CharacterCanvas(
-            definition = definition,
-            renderSnapshot = renderSnapshot,
-            practiceState = practiceState,
-            courseSession = courseSession,
-            isDemoPlaying = isDemoPlaying,
-            gridMode = gridMode,
-            userStrokeColor = strokeColor,
-            showTemplate = showTemplate,
-            calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
-            hskEntry = hskEntry,
-            showHskHint = showHskHint,
-            showHskIcon = showHskIcon && hskEntry != null,
-            onHskInfoClick = { showHskDialog = true },
-            boardStrings = boardStrings,
-            currentColorOption = strokeColorOption,
-            onGridModeChange = onGridModeChange,
-            onStrokeColorChange = onStrokeColorChange,
-            onTemplateToggle = {
-                onTemplateToggle(it)
-                if (!it) {
-                    onStopCalligraphyDemo()
-                }
-            },
-            onStrokeStart = onStrokeStart,
-            onStrokeMove = onStrokeMove,
-            onStrokeEnd = onStrokeEnd,
-            onStartPractice = onStartPractice,
-            onRequestHint = onRequestHint,
-            onCourseNext = onCourseNext,
-            onCoursePrev = onCoursePrev,
-            onCourseSkip = onCourseSkip,
-            onCourseRestart = onCourseRestart,
-            onCourseExit = onCourseExit,
-            onWordInfoClick = { if (wordEntry != null) showWordInfo = true },
-            wordInfoAvailable = wordEntry != null,
-            onPlayPronunciation = { wordEntry?.let { ttsController.speak(it.word) } },
-            pronunciationAvailable = wordEntry != null,
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = true),
-        )
+        ) {
+            val boardSize = if (maxWidth < maxHeight) maxWidth else maxHeight
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CharacterCanvas(
+                    definition = definition,
+                    renderSnapshot = renderSnapshot,
+                    practiceState = practiceState,
+                    courseSession = courseSession,
+                    isDemoPlaying = isDemoPlaying,
+                    gridMode = gridMode,
+                    userStrokeColor = strokeColor,
+                    showTemplate = showTemplate,
+                    calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
+                    hskEntry = hskEntry,
+                    showHskHint = showHskHint,
+                    showHskIcon = showHskIcon && hskEntry != null,
+                    onHskInfoClick = { showHskDialog = true },
+                    boardStrings = boardStrings,
+                    currentColorOption = strokeColorOption,
+                    onGridModeChange = onGridModeChange,
+                    onStrokeColorChange = onStrokeColorChange,
+                    onTemplateToggle = {
+                        onTemplateToggle(it)
+                        if (!it) {
+                            onStopCalligraphyDemo()
+                        }
+                    },
+                    onStrokeStart = onStrokeStart,
+                    onStrokeMove = onStrokeMove,
+                    onStrokeEnd = onStrokeEnd,
+                    onStartPractice = onStartPractice,
+                    onRequestHint = onRequestHint,
+                    onCourseNext = onCourseNext,
+                    onCoursePrev = onCoursePrev,
+                    onCourseSkip = onCourseSkip,
+                    onCourseRestart = onCourseRestart,
+                    onCourseExit = onCourseExit,
+                    onWordInfoClick = { if (wordEntry != null) showWordInfo = true },
+                    wordInfoAvailable = wordEntry != null,
+                    onPlayPronunciation = { wordEntry?.let { ttsController.speak(it.word) } },
+                    pronunciationAvailable = wordEntry != null,
+                    modifier = Modifier.size(boardSize),
+                )
+            }
+        }
     }
     if (showWordInfo && wordEntry != null) {
         WordInfoBottomSheet(
