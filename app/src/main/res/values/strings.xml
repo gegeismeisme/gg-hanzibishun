@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Bishun</string>
+    <!-- Default to Google test IDs. Replace with your own AdMob IDs for release. -->
+    <string name="admob_app_id">ca-app-pub-7675636192816302~9876642906</string>
+    <string name="admob_app_open_unit_id">ca-app-pub-7675636192816302/1770744564</string>
+    <string name="admob_rewarded_unit_id">ca-app-pub-7675636192816302/7102962298</string>
 </resources>

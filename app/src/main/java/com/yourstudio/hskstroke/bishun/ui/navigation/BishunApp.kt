@@ -1,5 +1,6 @@
 package com.yourstudio.hskstroke.bishun.ui.navigation
 
+import android.app.Activity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -13,10 +14,13 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +68,7 @@ fun BishunApp() {
     val currentBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStack?.destination?.route ?: MainDestination.Practice.route
     val context = LocalContext.current
+    val activity = context as? Activity
     val sharedCharacterViewModel: CharacterViewModel = viewModel(
         factory = CharacterViewModel.factory(context),
     )
@@ -73,10 +78,22 @@ fun BishunApp() {
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModel.factory(context),
     )
-    val accountState by accountViewModel.uiState.collectAsState()
     val userPreferences by sharedCharacterViewModel.userPreferences.collectAsState()
     val lastFeedbackTimestamp by sharedCharacterViewModel.lastFeedbackSubmission.collectAsState()
     val feedbackSubmission by sharedCharacterViewModel.feedbackSubmission.collectAsState()
+    val adsUiState by accountViewModel.adsUiState.collectAsState()
+    var appOpenShown by remember { mutableStateOf(false) }
+    val appStartEpochMs = remember { System.currentTimeMillis() }
+
+    LaunchedEffect(activity, adsUiState.isAppOpenAdReady, userPreferences.isAdFreeNow) {
+        val safeActivity = activity ?: return@LaunchedEffect
+        if (appOpenShown) return@LaunchedEffect
+        if (userPreferences.isAdFreeNow) return@LaunchedEffect
+        if (!adsUiState.isAppOpenAdReady) return@LaunchedEffect
+        if (System.currentTimeMillis() - appStartEpochMs > 15_000L) return@LaunchedEffect
+        appOpenShown = true
+        accountViewModel.showAppOpenAd(safeActivity)
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -118,19 +135,13 @@ fun BishunApp() {
                 CharacterRoute(
                     modifier = Modifier.fillMaxSize(),
                     viewModel = sharedCharacterViewModel,
+                    accountViewModel = accountViewModel,
                 )
             }
             composable(MainDestination.Courses.route) {
                 CoursesScreen(
                     modifier = Modifier.fillMaxSize(),
                     viewModel = sharedCharacterViewModel,
-                    isSignedIn = accountState.isSignedIn,
-                    unlockedLevels = accountState.unlockedLevels,
-                    onRequestUnlock = {
-                        navController.navigate(MainDestination.Account.route) {
-                            launchSingleTop = true
-                        }
-                    },
                     onNavigateToPractice = {
                         navController.navigate(MainDestination.Practice.route) {
                             launchSingleTop = true

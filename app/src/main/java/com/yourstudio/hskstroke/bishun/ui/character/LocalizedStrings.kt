@@ -122,6 +122,7 @@ data class PracticeBoardStrings(
     val pronunciationLabel: String,
     val dictionaryLabel: String,
     val hskLabel: String,
+    val rewardedLabel: String,
 )
 
 private val defaultPracticeBoardStrings = PracticeBoardStrings(
@@ -133,6 +134,7 @@ private val defaultPracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "Play pronunciation",
     dictionaryLabel = "Show dictionary entry",
     hskLabel = "HSK info",
+    rewardedLabel = "Watch an ad (30 min ad-free)",
 )
 
 private val spanishPracticeBoardStrings = PracticeBoardStrings(
@@ -144,6 +146,7 @@ private val spanishPracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "Reproducir pronunciaci\u00f3n",
     dictionaryLabel = "Mostrar definici\u00f3n",
     hskLabel = "Informaci\u00f3n HSK",
+    rewardedLabel = "Ver anuncio (30 min sin anuncios)",
 )
 
 private val japanesePracticeBoardStrings = PracticeBoardStrings(
@@ -155,6 +158,7 @@ private val japanesePracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "\u767a\u97f3\u3092\u518d\u751f",
     dictionaryLabel = "\u8f9e\u66f8\u3092\u898b\u308b",
     hskLabel = "HSK\u60c5\u5831",
+    rewardedLabel = "\u5e83\u544a\u3092\u898b\u308b\uff0830\u5206\u5e83\u544a\u306a\u3057\uff09",
 )
 
 private val japaneseProgressStrings = ProgressStrings(
@@ -793,7 +797,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
     ),
     helpConfirm = "Got it",
     privacyTitle = "Privacy preferences",
-    privacyIntro = "Everything runs offline by default. Enable diagnostics only if you agree.",
+    privacyIntro = "Offline-first by default. Ads require internet and can be removed with a one-time purchase.",
     dataSafetyHeading = "Data safety snapshot",
     privacySummaryRows = listOf(
         SummaryRowText(
@@ -808,6 +812,10 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
             title = "Logs & feedback",
             detail = "Text logs are attached only when you explicitly send feedback.",
         ),
+        SummaryRowText(
+            title = "Advertising & purchases",
+            detail = "If ads are enabled, Google Mobile Ads processes ad-related data. Purchases are handled by Google Play Billing.",
+        ),
     ),
     contactSupportLabel = "Contact: %s",
     emailSupportButton = "Email support",
@@ -821,6 +829,8 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
                 "Up to 40 local practice records for resuming sessions.",
                 "Board preferences such as grids, colors, and template visibility.",
                 "Optional plain-text logs attached only when you send feedback.",
+                "Optional advertising data processed by Google Mobile Ads (if ads are enabled).",
+                "Optional purchase status from Google Play (Remove Ads).",
             ),
         ),
         PolicySectionText(
@@ -834,8 +844,9 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
         PolicySectionText(
             title = "3. Permissions",
             bullets = listOf(
-                "INTERNET (optional) reserved for future downloads or external dictionary links.",
-                "No access to location, contacts, or advertising IDs.",
+                "INTERNET used to load ads (if enabled) and reserved for future downloads/external links.",
+                "ACCESS_NETWORK_STATE used by the ads SDK.",
+                "No access to precise location or contacts.",
             ),
         ),
         PolicySectionText(
@@ -844,6 +855,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
                 "Clear the app's storage in Android settings to reset all data.",
                 "Use the Privacy dialog to toggle analytics, crash logs, or network prefetch.",
                 "Review and edit feedback logs before sending.",
+                "Use the Account screen to purchase/restore Remove Ads.",
             ),
         ),
         PolicySectionText(
@@ -918,7 +930,7 @@ private fun localizedStringsJa(locale: Locale): LocalizedStrings {
         helpTitle = "\u30d8\u30eb\u30d7",
         helpConfirm = "\u4e86\u89e3",
         privacyTitle = "\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u8a2d\u5b9a",
-        privacyIntro = "\u3059\u3079\u3066\u306e\u6a5f\u80fd\u306f\u30c7\u30d5\u30a9\u30eb\u30c8\u3067\u30aa\u30d5\u30e9\u30a4\u30f3\u3067\u3059\u3002\u8a3a\u65ad\u30c7\u30fc\u30bf\u304c\u5fc5\u8981\u306a\u5834\u5408\u306e\u307f\u6709\u52b9\u306b\u3057\u3066\u304f\u3060\u3055\u3044",
+        privacyIntro = "\u30aa\u30d5\u30e9\u30a4\u30f3\u512a\u5148\u3002\u5e83\u544a\u306b\u306f\u30a4\u30f3\u30bf\u30fc\u30cd\u30c3\u30c8\u304c\u5fc5\u8981\u3067\u30011\u56de\u306e\u8cfc\u5165\u3067\u5e83\u544a\u3092\u524a\u9664\u3067\u304d\u307e\u3059\u3002",
         contactSupportLabel = "\u304a\u554f\u3044\u5408\u308f\u305b: %s",
         emailSupportButton = "\u30e1\u30fc\u30eb\u3067\u9023\u7d61",
         viewPolicyButton = "\u30dd\u30ea\u30b7\u30fc\u5168\u6587",
@@ -1012,7 +1024,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
     ),
     helpConfirm = "Entendido",
     privacyTitle = "Preferencias de privacidad",
-    privacyIntro = "La app funciona sin conexión por defecto. Activa diagnósticos solo si estás de acuerdo.",
+    privacyIntro = "La app es offline-first. Los anuncios requieren internet y puedes eliminarlos con una compra única.",
     dataSafetyHeading = "Resumen de seguridad de datos",
     privacySummaryRows = listOf(
         SummaryRowText(
@@ -1027,6 +1039,10 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
             title = "Registros y comentarios",
             detail = "Los registros de texto se adjuntan únicamente cuando envías comentarios.",
         ),
+        SummaryRowText(
+            title = "Publicidad y compras",
+            detail = "Si los anuncios están habilitados, Google Mobile Ads procesa datos relacionados con anuncios. Las compras se gestionan mediante Google Play Billing.",
+        ),
     ),
     contactSupportLabel = "Contacto: %s",
     emailSupportButton = "Enviar correo",
@@ -1040,6 +1056,8 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
                 "Hasta 40 registros locales para reanudar sesiones.",
                 "Preferencias del tablero como cuadrículas, colores y plantillas.",
                 "Registros de texto opcionales solo cuando envías comentarios.",
+                "Datos publicitarios opcionales procesados por Google Mobile Ads (si hay anuncios).",
+                "Estado de compra opcional de Google Play (Eliminar anuncios).",
             ),
         ),
         PolicySectionText(
@@ -1053,8 +1071,9 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
         PolicySectionText(
             title = "3. Permisos",
             bullets = listOf(
-                "INTERNET (opcional) reservado para futuras descargas o enlaces externos.",
-                "Sin acceso a ubicación, contactos ni identificadores publicitarios.",
+                "INTERNET se usa para cargar anuncios (si están habilitados) y para futuras descargas/enlaces externos.",
+                "ACCESS_NETWORK_STATE es usado por el SDK de anuncios.",
+                "Sin acceso a ubicación precisa ni contactos.",
             ),
         ),
         PolicySectionText(
@@ -1063,6 +1082,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
                 "Borra los datos de la app en Ajustes de Android para reiniciar todo.",
                 "Usa el diálogo de Privacidad para activar o desactivar analíticas, registros o prefetch.",
                 "Revisa y edita los registros antes de enviarlos.",
+                "Usa la pantalla de Cuenta para comprar o restaurar Eliminar anuncios.",
             ),
         ),
         PolicySectionText(

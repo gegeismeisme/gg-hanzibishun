@@ -1,4 +1,6 @@
 package com.yourstudio.hskstroke.bishun.ui.character
+
+import android.app.Activity
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +39,7 @@ import android.widget.Toast
 import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
 import com.yourstudio.hskstroke.bishun.hanzi.model.Point
 import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
+import com.yourstudio.hskstroke.bishun.ui.account.AccountViewModel
 import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import com.yourstudio.hskstroke.bishun.ui.practice.BoardSettings
 import com.yourstudio.hskstroke.bishun.ui.practice.CalligraphyDemoState
@@ -52,6 +55,7 @@ fun CharacterRoute(
     viewModel: CharacterViewModel = viewModel(
         factory = CharacterViewModel.factory(LocalContext.current),
     ),
+    accountViewModel: AccountViewModel,
 ) {
     val query by viewModel.query.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -63,12 +67,17 @@ fun CharacterRoute(
     val courseSession by viewModel.courseSession.collectAsState()
     val boardSettings by viewModel.boardSettings.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
+    val adsUiState by accountViewModel.adsUiState.collectAsState()
+    val rewardEligible by accountViewModel.rewardEligible.collectAsState()
     val context = LocalContext.current
+    val activity = context as? Activity
     LaunchedEffect(Unit) {
         viewModel.courseEvents.collect { event ->
             Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
         }
     }
+    val showRewardedButton = rewardEligible && !userPreferences.isAdFreeNow
+    val rewardedButtonEnabled = adsUiState.isRewardedAdReady && activity != null
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -102,6 +111,12 @@ fun CharacterRoute(
         languageOverride = userPreferences.languageOverride,
         onLanguageChange = viewModel::setLanguageOverride,
         onLoadCharacter = viewModel::jumpToCharacter,
+        showRewardedAdButton = showRewardedButton,
+        rewardedAdEnabled = rewardedButtonEnabled,
+        onWatchRewardedAd = {
+            val safeActivity = activity ?: return@CharacterScreen
+            accountViewModel.watchRewardedAd(safeActivity)
+        },
     )
 }
 @Composable
@@ -137,6 +152,9 @@ fun CharacterScreen(
     onCourseRestart: () -> Unit,
     onCourseExit: () -> Unit,
     onLanguageChange: (String?) -> Unit,
+    showRewardedAdButton: Boolean,
+    rewardedAdEnabled: Boolean,
+    onWatchRewardedAd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val showTemplate = boardSettings.showTemplate
@@ -196,6 +214,9 @@ fun CharacterScreen(
                     wordEntry = wordEntry,
                     hskEntry = hskEntry,
                     showTemplate = showTemplate,
+                    showRewardedAdButton = showRewardedAdButton,
+                    rewardedAdEnabled = rewardedAdEnabled,
+                    onWatchRewardedAd = onWatchRewardedAd,
                     boardStrings = strings.boardControls,
                     onTemplateToggle = { enabled ->
                         onTemplateToggleSetting(enabled)

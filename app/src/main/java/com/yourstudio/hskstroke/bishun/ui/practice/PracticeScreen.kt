@@ -41,6 +41,9 @@ fun PracticeContent(
     wordEntry: WordEntry?,
     hskEntry: HskEntry?,
     showTemplate: Boolean,
+    showRewardedAdButton: Boolean,
+    rewardedAdEnabled: Boolean,
+    onWatchRewardedAd: () -> Unit,
     boardStrings: PracticeBoardStrings,
     onTemplateToggle: (Boolean) -> Unit,
     calligraphyDemoState: CalligraphyDemoState,
@@ -141,6 +144,9 @@ fun PracticeContent(
                             onStopCalligraphyDemo()
                         }
                     },
+                    showRewardedAdButton = showRewardedAdButton,
+                    rewardedAdEnabled = rewardedAdEnabled,
+                    onWatchRewardedAd = onWatchRewardedAd,
                     onStrokeStart = onStrokeStart,
                     onStrokeMove = onStrokeMove,
                     onStrokeEnd = onStrokeEnd,

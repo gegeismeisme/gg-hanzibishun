@@ -1,5 +1,6 @@
 package com.yourstudio.hskstroke.bishun.ui.account
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -64,11 +65,7 @@ fun AccountScreen(
     onClearLocalData: () -> Unit,
     languageOverride: String?,
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val isLoggedIn = uiState.isSignedIn
-    val hasUnlockedPremium = uiState.hasPremiumAccess
-    var showLoginDialog by rememberSaveable { mutableStateOf(false) }
-    var showPurchaseDialog by rememberSaveable { mutableStateOf(false) }
+    val billingUiState by viewModel.billingUiState.collectAsState()
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showPrivacyDialog by rememberSaveable { mutableStateOf(false) }
     var showFeedbackDialog by rememberSaveable { mutableStateOf(false) }
@@ -78,6 +75,7 @@ fun AccountScreen(
     val accountStrings = strings.account
     val supportStrings = strings.support
     val context = LocalContext.current
+    val activity = context as? Activity
     val coroutineScope = rememberCoroutineScope()
     val shareFeedbackLog = remember(onLoadFeedbackLog, context) {
         {
@@ -142,42 +140,16 @@ fun AccountScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(text = accountStrings.title, style = MaterialTheme.typography.headlineSmall)
-        AccountCard(
-            title = accountStrings.signInCardTitle,
-            description = if (isLoggedIn) {
-                accountStrings.signInDescriptionSignedIn
-            } else {
-                accountStrings.signInDescriptionSignedOut
+        MonetizationCard(
+            hasRemovedAds = userPreferences.hasRemovedAds,
+            isBillingReady = billingUiState.isReady,
+            priceLabel = billingUiState.removeAdsPrice,
+            isPurchaseInProgress = billingUiState.isPurchaseInProgress,
+            onPurchaseClick = {
+                val safeActivity = activity ?: return@MonetizationCard
+                viewModel.purchaseRemoveAds(safeActivity)
             },
-            buttonLabel = if (isLoggedIn) accountStrings.signInButtonSignedIn else accountStrings.signInButtonSignedOut,
-            onClick = {
-                if (isLoggedIn) {
-                    viewModel.signOut()
-                } else {
-                    showLoginDialog = true
-                }
-            },
-        )
-        AccountCard(
-            title = accountStrings.courseCardTitle,
-            description = when {
-                !isLoggedIn -> accountStrings.courseDescriptionSignedOut
-                hasUnlockedPremium -> accountStrings.courseDescriptionUnlocked
-                else -> accountStrings.courseDescriptionLocked
-            },
-            buttonLabel = when {
-                !isLoggedIn -> accountStrings.courseButtonSignedOut
-                hasUnlockedPremium -> accountStrings.courseButtonUnlocked
-                else -> accountStrings.courseButtonLocked
-            },
-            onClick = {
-                if (!isLoggedIn) {
-                    showLoginDialog = true
-                } else if (!hasUnlockedPremium) {
-                    showPurchaseDialog = true
-                }
-            },
-            enabled = isLoggedIn && !hasUnlockedPremium,
+            onRestoreClick = viewModel::restorePurchases,
         )
         SupportCard(
             accountStrings = accountStrings,
@@ -191,37 +163,6 @@ fun AccountScreen(
             description = accountStrings.clearDataDescription,
             buttonLabel = accountStrings.clearDataButton,
             onClick = { showClearDataDialog = true },
-        )
-    }
-
-    if (showLoginDialog) {
-        ConsentDialog(
-            title = accountStrings.consentSignInTitle,
-            bulletPoints = accountStrings.consentSignInBullets,
-            confirmLabel = accountStrings.consentSignInConfirm,
-            checkboxLabel = accountStrings.consentCheckboxLabel,
-            cancelLabel = accountStrings.cancelLabel,
-            closeLabel = accountStrings.closeLabel,
-            onConfirm = {
-                viewModel.signIn()
-                showLoginDialog = false
-            },
-            onDismiss = { showLoginDialog = false },
-        )
-    }
-    if (showPurchaseDialog) {
-        ConsentDialog(
-            title = accountStrings.consentUnlockTitle,
-            bulletPoints = accountStrings.consentUnlockBullets,
-            confirmLabel = accountStrings.consentUnlockConfirm,
-            checkboxLabel = accountStrings.consentCheckboxLabel,
-            cancelLabel = accountStrings.cancelLabel,
-            closeLabel = accountStrings.closeLabel,
-            onConfirm = {
-                viewModel.unlockPremiumLevels()
-                showPurchaseDialog = false
-            },
-            onDismiss = { showPurchaseDialog = false },
         )
     }
     if (showHelpDialog) {
@@ -269,6 +210,66 @@ fun AccountScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun MonetizationCard(
+    hasRemovedAds: Boolean,
+    isBillingReady: Boolean,
+    priceLabel: String?,
+    isPurchaseInProgress: Boolean,
+    onPurchaseClick: () -> Unit,
+    onRestoreClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val title = "Remove ads"
+    val description = if (hasRemovedAds) {
+        "Thank you! Ads are disabled."
+    } else {
+        "One-time purchase to remove ads on all devices using the same Google Play account."
+    }
+    val purchaseLabel = when {
+        hasRemovedAds -> "Purchased"
+        isPurchaseInProgress -> "Processing..."
+        priceLabel != null -> "Buy $priceLabel"
+        else -> "Buy"
+    }
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = onPurchaseClick,
+                    enabled = !hasRemovedAds && isBillingReady && !isPurchaseInProgress,
+                ) {
+                    Text(purchaseLabel)
+                }
+                OutlinedButton(
+                    onClick = onRestoreClick,
+                    enabled = isBillingReady && !isPurchaseInProgress,
+                ) {
+                    Text("Restore")
+                }
+            }
+        }
     }
 }
 

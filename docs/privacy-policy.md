@@ -1,45 +1,48 @@
 ---
-title: Hanzi Stroke Order – Privacy Policy
-updated: 2025-12-02
+title: Hanzi Stroke Order - Privacy Policy
+updated: 2025-12-24
 ---
 
-Hanzi Stroke Order (“the App”) is a fully offline learning tool published by Bishun Studio. This document explains what information we collect, how it is stored, and how you can control it.
+Hanzi Stroke Order (the "App") is an offline-first learning tool published by Bishun Studio. This document explains what information is processed, how it is stored, and how you can control it.
 
-## 1. Data We Collect
+## 1. Data We Collect / Process
 
 | Category | Details | Storage |
 | --- | --- | --- |
 | Character resources | Local JSON stroke data bundled inside the APK. | Assets only; not user data. |
-| Practice history | Current character, streak counts, error stats needed to resume a session. | Stored locally using Android DataStore; never uploaded. |
-| Settings | Board options (grid, stroke color, template visibility), analytics toggles. | Stored locally via DataStore. |
-| Crash/feedback logs *(optional)* | If you explicitly choose “Send Feedback”, we include a plain-text log to help debug issues. | Temporarily written to app-private storage; shared only through your chosen email client. |
+| Practice history | Characters practiced, stroke progress, and history needed to resume. | Stored locally using Android DataStore; never uploaded. |
+| Settings | Board options (grid, stroke color, template visibility), language override. | Stored locally via DataStore. |
+| Crash/feedback logs *(optional)* | If you explicitly choose "Send Feedback" we include a plain-text log to help debug issues. | Stored temporarily in app-private storage; shared only through your chosen email/share app. |
+| Advertising *(optional)* | If ads are enabled, Google Mobile Ads SDK may process device identifiers (such as the Advertising ID), coarse location derived from IP, and ad interaction events. | Processed by Google; not stored on our servers. |
+| Purchases *(optional)* | If you buy "Remove Ads", Google Play processes the transaction and provides purchase status/tokens so we can unlock the entitlement. | Verified via Google Play Billing on device; entitlement stored locally. |
 
-We do **not** collect names, email addresses, precise location, contacts, or advertising identifiers. The App does not use third-party analytics SDKs.
+We do **not** collect names, contacts, or precise location. Payment details are handled by Google Play and are never shared with us.
 
 ## 2. How Data Is Used
 
 - Resume your latest character/course session.
-- Display learning statistics inside the profile dialog.
+- Display learning statistics and practice history on your device.
 - Remember board and demo preferences.
 - Investigate bugs only when you manually share feedback logs.
+- Show ads to support a free app and grant a temporary ad-free period after a rewarded ad.
+- Unlock a permanent ad-free entitlement after the one-time "Remove Ads" purchase.
 
-No information leaves your device unless you explicitly export it (for example, by emailing feedback).
+No information leaves your device unless you explicitly export it (for example, by emailing/sharing feedback).
 
 ## 3. Permissions
 
 | Permission | Reason |
 | --- | --- |
-| `android.permission.INTERNET` *(optional)* | Reserved for future course updates and to let you open external dictionary links. The App does not contact remote servers today. |
-
-You can use the App offline. Disabling network access will not degrade functionality.
+| `android.permission.INTERNET` | Required to load ads (if enabled) and reserved for future updates/external links. The core learning features work offline. |
+| `android.permission.ACCESS_NETWORK_STATE` | Used by the ads SDK to determine connectivity. |
 
 ## 4. Your Controls
 
 - **Reset data**: Clear the app storage from Android Settings → Apps → Hanzi Stroke Order → Storage → Clear data.
-- **Opt-out switches**: From the profile avatar menu → Privacy, toggle analytics/crash reporting (these stay disabled by default until implemented).
 - **Feedback logs**: Before sending, you can preview and edit the log text.
+- **Remove ads**: Buy the one-time "Remove Ads" product (Google Play). You can restore purchases on a new device using the same Google Play account.
 
-## 5. Children’s Privacy
+## 5. Children's Privacy
 
 The App targets general audiences, including students. We do not knowingly collect personally identifiable information from children. Parents can clear practice data at any time via system settings.
 
@@ -49,8 +52,7 @@ If we add cloud sync, accounts, or online services, we will update this policy, 
 
 ## 7. Contact
 
-Email: `qq260316514@gmail.com`  
-GitHub Issues: `https://github.com/<pending repo>/issues`
+Email: `qq260316514@gmail.com`
 
 ---
 

@@ -42,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
-import com.yourstudio.hskstroke.bishun.ui.account.AccountViewModel
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
 import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
 import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
@@ -54,10 +53,7 @@ import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 fun CoursesScreen(
     modifier: Modifier = Modifier,
     viewModel: CharacterViewModel,
-    isSignedIn: Boolean,
-    unlockedLevels: Set<Int>,
     onNavigateToPractice: () -> Unit = {},
-    onRequestUnlock: () -> Unit = {},
     languageOverride: String? = null,
 ) {
     val courseCatalog by viewModel.courseCatalog.collectAsState()
@@ -148,20 +144,16 @@ fun CoursesScreen(
                     )
                 val fallbackNext = symbols.firstOrNull { !completedSymbols.contains(it) }
                 val nextSymbol = hskProgress.nextTargets[level] ?: fallbackNext
-                val canAccess = AccountViewModel.FREE_LEVELS.contains(level) || unlockedLevels.contains(level)
                 val accentColor = levelColor(level)
 
                 CourseLevelCard(
                     level = level,
                     summary = summary,
                     nextSymbol = nextSymbol,
-                    canAccess = canAccess,
-                    isSignedIn = isSignedIn,
                     accentColor = accentColor,
                     strings = courseStrings,
                     locale = locale,
                     onStart = { symbol -> startCourseAt(level, symbol) },
-                    onRequestUnlock = onRequestUnlock,
                 )
 
                 val activeSession = courseSession
@@ -244,13 +236,10 @@ private fun CourseLevelCard(
     level: Int,
     summary: HskLevelSummary,
     nextSymbol: String?,
-    canAccess: Boolean,
-    isSignedIn: Boolean,
     accentColor: Color,
     strings: CoursesStrings,
     locale: Locale,
     onStart: (String) -> Unit,
-    onRequestUnlock: () -> Unit,
 ) {
     val total = summary.total.coerceAtLeast(1)
     val progress = (summary.completed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
@@ -319,11 +308,6 @@ private fun CourseLevelCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 when {
-                    !canAccess -> {
-                        Button(onClick = onRequestUnlock) {
-                            Text(if (isSignedIn) strings.lockedUnlockLabel else strings.lockedSignInLabel)
-                        }
-                    }
                     nextSymbol != null -> {
                         IconActionButton(
                             icon = Icons.Filled.PlayArrow,

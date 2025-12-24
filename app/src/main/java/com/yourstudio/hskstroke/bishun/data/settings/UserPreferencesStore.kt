@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -28,7 +29,12 @@ data class UserPreferences(
     val isAccountSignedIn: Boolean = false,
     val unlockedCourseLevels: Set<Int> = emptySet(),
     val libraryRecentSearches: List<String> = emptyList(),
-)
+    val hasRemovedAds: Boolean = false,
+    val rewardedAdFreeUntilEpochMs: Long? = null,
+) {
+    val isAdFreeNow: Boolean
+        get() = hasRemovedAds || (rewardedAdFreeUntilEpochMs?.let { it > System.currentTimeMillis() } == true)
+}
 
 class UserPreferencesStore(private val context: Context) {
 
@@ -52,6 +58,8 @@ class UserPreferencesStore(private val context: Context) {
                 ?.toSet()
                 ?: emptySet(),
             libraryRecentSearches = decodeRecentSearches(prefs[KEY_LIBRARY_RECENTS]),
+            hasRemovedAds = prefs[KEY_REMOVE_ADS] ?: false,
+            rewardedAdFreeUntilEpochMs = prefs[KEY_REWARDED_AD_FREE_UNTIL],
         )
     }
 
@@ -163,6 +171,25 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setRemoveAdsPurchased(purchased: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_REMOVE_ADS] = purchased
+            if (purchased) {
+                prefs.remove(KEY_REWARDED_AD_FREE_UNTIL)
+            }
+        }
+    }
+
+    suspend fun setRewardedAdFreeUntil(epochMs: Long?) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (epochMs == null) {
+                prefs.remove(KEY_REWARDED_AD_FREE_UNTIL)
+            } else {
+                prefs[KEY_REWARDED_AD_FREE_UNTIL] = epochMs
+            }
+        }
+    }
+
     suspend fun clearAll() {
         context.userPreferencesDataStore.edit { prefs ->
             prefs.clear()
@@ -187,6 +214,8 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_ACCOUNT_SIGNED_IN = booleanPreferencesKey("account_signed_in")
         private val KEY_UNLOCKED_LEVELS = stringSetPreferencesKey("unlocked_course_levels")
         private val KEY_LIBRARY_RECENTS = stringPreferencesKey("library_recent_searches")
+        private val KEY_REMOVE_ADS = booleanPreferencesKey("remove_ads_purchased")
+        private val KEY_REWARDED_AD_FREE_UNTIL = longPreferencesKey("rewarded_ad_free_until_epoch_ms")
         private const val RECENTS_DELIMITER = "\u0001"
 
         private fun decodeRecentSearches(raw: String?): List<String> {
