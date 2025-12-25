@@ -1,7 +1,8 @@
 package com.yourstudio.hskstroke.bishun.ui.navigation
 
-import android.app.Activity
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
@@ -10,28 +11,28 @@ import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.yourstudio.hskstroke.bishun.R
+import com.yourstudio.hskstroke.bishun.ads.BannerAd
 import com.yourstudio.hskstroke.bishun.ui.account.AccountScreen
-import com.yourstudio.hskstroke.bishun.ui.account.AccountViewModel
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterRoute
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
 import com.yourstudio.hskstroke.bishun.ui.courses.CoursesScreen
@@ -68,12 +69,8 @@ fun BishunApp() {
     val currentBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStack?.destination?.route ?: MainDestination.Practice.route
     val context = LocalContext.current
-    val activity = context as? Activity
     val sharedCharacterViewModel: CharacterViewModel = viewModel(
         factory = CharacterViewModel.factory(context),
-    )
-    val accountViewModel: AccountViewModel = viewModel(
-        factory = AccountViewModel.factory(context),
     )
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModel.factory(context),
@@ -81,45 +78,42 @@ fun BishunApp() {
     val userPreferences by sharedCharacterViewModel.userPreferences.collectAsState()
     val lastFeedbackTimestamp by sharedCharacterViewModel.lastFeedbackSubmission.collectAsState()
     val feedbackSubmission by sharedCharacterViewModel.feedbackSubmission.collectAsState()
-    val adsUiState by accountViewModel.adsUiState.collectAsState()
-    var appOpenShown by remember { mutableStateOf(false) }
-    val appStartEpochMs = remember { System.currentTimeMillis() }
-
-    LaunchedEffect(activity, adsUiState.isAppOpenAdReady, userPreferences.isAdFreeNow) {
-        val safeActivity = activity ?: return@LaunchedEffect
-        if (appOpenShown) return@LaunchedEffect
-        if (userPreferences.isAdFreeNow) return@LaunchedEffect
-        if (!adsUiState.isAppOpenAdReady) return@LaunchedEffect
-        if (System.currentTimeMillis() - appStartEpochMs > 15_000L) return@LaunchedEffect
-        appOpenShown = true
-        accountViewModel.showAppOpenAd(safeActivity)
-    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
-                destinations.forEach { destination ->
-                    val selected = destination.route == currentRoute
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = destination.label,
-                            )
-                        },
-                        label = { Text(destination.label) },
+            Column {
+                val bannerUnitId = stringResource(R.string.admob_banner_unit_id)
+                if (bannerUnitId.isNotBlank()) {
+                    BannerAd(
+                        adUnitId = bannerUnitId,
+                        modifier = Modifier.fillMaxWidth(),
                     )
+                    HorizontalDivider()
+                }
+                NavigationBar {
+                    destinations.forEach { destination ->
+                        val selected = destination.route == currentRoute
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = destination.icon,
+                                    contentDescription = destination.label,
+                                )
+                            },
+                            label = { Text(destination.label) },
+                        )
+                    }
                 }
             }
         },
@@ -135,7 +129,6 @@ fun BishunApp() {
                 CharacterRoute(
                     modifier = Modifier.fillMaxSize(),
                     viewModel = sharedCharacterViewModel,
-                    accountViewModel = accountViewModel,
                 )
             }
             composable(MainDestination.Courses.route) {
@@ -189,7 +182,6 @@ fun BishunApp() {
             composable(MainDestination.Account.route) {
                 AccountScreen(
                     modifier = Modifier.fillMaxSize(),
-                    viewModel = accountViewModel,
                     userPreferences = userPreferences,
                     lastFeedbackTimestamp = lastFeedbackTimestamp,
                     feedbackSubmission = feedbackSubmission,

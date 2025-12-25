@@ -1,6 +1,6 @@
 ---
 title: Hanzi Stroke Order - Privacy Policy
-updated: 2025-12-24
+updated: 2025-12-25
 ---
 
 Hanzi Stroke Order (the "App") is an offline-first learning tool published by Bishun Studio. This document explains what information is processed, how it is stored, and how you can control it.
@@ -14,9 +14,8 @@ Hanzi Stroke Order (the "App") is an offline-first learning tool published by Bi
 | Settings | Board options (grid, stroke color, template visibility), language override. | Stored locally via DataStore. |
 | Crash/feedback logs *(optional)* | If you explicitly choose "Send Feedback" we include a plain-text log to help debug issues. | Stored temporarily in app-private storage; shared only through your chosen email/share app. |
 | Advertising *(optional)* | If ads are enabled, Google Mobile Ads SDK may process device identifiers (such as the Advertising ID), coarse location derived from IP, and ad interaction events. | Processed by Google; not stored on our servers. |
-| Purchases *(optional)* | If you buy "Remove Ads", Google Play processes the transaction and provides purchase status/tokens so we can unlock the entitlement. | Verified via Google Play Billing on device; entitlement stored locally. |
 
-We do **not** collect names, contacts, or precise location. Payment details are handled by Google Play and are never shared with us.
+We do **not** collect names, contacts, or precise location.
 
 ## 2. How Data Is Used
 
@@ -24,8 +23,7 @@ We do **not** collect names, contacts, or precise location. Payment details are 
 - Display learning statistics and practice history on your device.
 - Remember board and demo preferences.
 - Investigate bugs only when you manually share feedback logs.
-- Show ads to support a free app and grant a temporary ad-free period after a rewarded ad.
-- Unlock a permanent ad-free entitlement after the one-time "Remove Ads" purchase.
+- Show banner ads to support a free app.
 
 No information leaves your device unless you explicitly export it (for example, by emailing/sharing feedback).
 
@@ -40,7 +38,6 @@ No information leaves your device unless you explicitly export it (for example, 
 
 - **Reset data**: Clear the app storage from Android Settings → Apps → Hanzi Stroke Order → Storage → Clear data.
 - **Feedback logs**: Before sending, you can preview and edit the log text.
-- **Remove ads**: Buy the one-time "Remove Ads" product (Google Play). You can restore purchases on a new device using the same Google Play account.
 
 ## 5. Children's Privacy
 

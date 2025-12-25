@@ -1,6 +1,5 @@
 package com.yourstudio.hskstroke.bishun.ui.account
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -25,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,7 +49,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun AccountScreen(
     modifier: Modifier = Modifier,
-    viewModel: AccountViewModel,
     userPreferences: UserPreferences,
     lastFeedbackTimestamp: Long?,
     feedbackSubmission: FeedbackSubmission?,
@@ -65,7 +62,6 @@ fun AccountScreen(
     onClearLocalData: () -> Unit,
     languageOverride: String?,
 ) {
-    val billingUiState by viewModel.billingUiState.collectAsState()
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showPrivacyDialog by rememberSaveable { mutableStateOf(false) }
     var showFeedbackDialog by rememberSaveable { mutableStateOf(false) }
@@ -75,7 +71,6 @@ fun AccountScreen(
     val accountStrings = strings.account
     val supportStrings = strings.support
     val context = LocalContext.current
-    val activity = context as? Activity
     val coroutineScope = rememberCoroutineScope()
     val shareFeedbackLog = remember(onLoadFeedbackLog, context) {
         {
@@ -140,17 +135,6 @@ fun AccountScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(text = accountStrings.title, style = MaterialTheme.typography.headlineSmall)
-        MonetizationCard(
-            hasRemovedAds = userPreferences.hasRemovedAds,
-            isBillingReady = billingUiState.isReady,
-            priceLabel = billingUiState.removeAdsPrice,
-            isPurchaseInProgress = billingUiState.isPurchaseInProgress,
-            onPurchaseClick = {
-                val safeActivity = activity ?: return@MonetizationCard
-                viewModel.purchaseRemoveAds(safeActivity)
-            },
-            onRestoreClick = viewModel::restorePurchases,
-        )
         SupportCard(
             accountStrings = accountStrings,
             strings = strings,
@@ -210,66 +194,6 @@ fun AccountScreen(
                 }
             },
         )
-    }
-}
-
-@Composable
-private fun MonetizationCard(
-    hasRemovedAds: Boolean,
-    isBillingReady: Boolean,
-    priceLabel: String?,
-    isPurchaseInProgress: Boolean,
-    onPurchaseClick: () -> Unit,
-    onRestoreClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val title = "Remove ads"
-    val description = if (hasRemovedAds) {
-        "Thank you! Ads are disabled."
-    } else {
-        "One-time purchase to remove ads on all devices using the same Google Play account."
-    }
-    val purchaseLabel = when {
-        hasRemovedAds -> "Purchased"
-        isPurchaseInProgress -> "Processing..."
-        priceLabel != null -> "Buy $priceLabel"
-        else -> "Buy"
-    }
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = onPurchaseClick,
-                    enabled = !hasRemovedAds && isBillingReady && !isPurchaseInProgress,
-                ) {
-                    Text(purchaseLabel)
-                }
-                OutlinedButton(
-                    onClick = onRestoreClick,
-                    enabled = isBillingReady && !isPurchaseInProgress,
-                ) {
-                    Text("Restore")
-                }
-            }
-        }
     }
 }
 

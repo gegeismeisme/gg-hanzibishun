@@ -1,7 +1,7 @@
 ---
 title: Play Store Ready Checklist
 owner: Bishun Studio
-updated: 2025-12-24
+updated: 2025-12-25
 ---
 
 ## Product & UX
@@ -16,20 +16,17 @@ updated: 2025-12-24
 
 ## Monetization
 
-- [x] Google Play Billing integrated (non-consumable "Remove Ads")
 - [x] AdMob SDK integrated
-- [x] App Open Ad (startup) + Rewarded Ad (30 min ad-free after reward)
-- [ ] Create AdMob app + ad units and replace test IDs in `app/src/main/res/values/strings.xml`
-- [ ] Create Play Console in-app product ID: `remove_ads`
-- [ ] Test purchase flow + restore purchase on a second device/account
+- [x] Banner ad only (no full-screen ads, no in-app purchases)
+- [ ] Create an AdMob banner ad unit and replace `admob_banner_unit_id` in `app/src/main/res/values/strings.xml`
 
 ## Compliance
 
 - [x] Privacy policy drafted (`docs/privacy-policy.md`)
 - [ ] Host privacy policy on a public URL (required by Play Console)
-- [ ] Update Play Console Data safety form (ads + billing)
+- [ ] Update Play Console Data safety form (ads)
 - [ ] Accessibility pass (content descriptions, TalkBack labels)
-- [ ] Confirm permissions list (INTERNET, ACCESS_NETWORK_STATE)
+- [ ] Confirm permissions list (INTERNET, ACCESS_NETWORK_STATE, AD_ID)
 
 ## Store Assets
 

@@ -15,8 +15,8 @@ android {
         applicationId = "com.yourstudio.hskstroke.bishun"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -60,7 +60,6 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.billing.ktx)
     implementation(libs.google.play.services.ads)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

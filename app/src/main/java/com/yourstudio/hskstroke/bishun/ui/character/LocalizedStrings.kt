@@ -350,7 +350,7 @@ private val defaultCoursesStrings = CoursesStrings(
 )
 
 private val defaultAccountStrings = AccountStrings(
-    title = "Account & Purchases",
+    title = "Settings",
     signInCardTitle = "Sign-in status",
     signInDescriptionSignedIn = "Signed in. Purchases and unlocked levels remain linked to this device.",
     signInDescriptionSignedOut = "Guest mode keeps practice data offline. Sign in only when you are ready to unlock courses.",
@@ -363,14 +363,14 @@ private val defaultAccountStrings = AccountStrings(
     courseButtonSignedOut = "Sign in required",
     courseButtonUnlocked = "Browse courses",
     courseButtonLocked = "Unlock all courses",
-    supportTitle = "Support & compliance",
-    supportDescription = "Help articles, privacy toggles, and the feedback form now live here so compliance checks happen before login or purchases.",
+    supportTitle = "Support",
+    supportDescription = "Help articles, privacy toggles, and the feedback form live here.",
     supportFeedbackButton = "Send feedback",
     clearDataTitle = "Reset local data",
-    clearDataDescription = "Remove practice history, course progress, purchases, and preferences stored on this device.",
+    clearDataDescription = "Remove practice history, course progress, and preferences stored on this device.",
     clearDataButton = "Clear local records",
     clearDataDialogTitle = "Erase local data?",
-    clearDataDialogBody = "This removes practice history, streaks, unlocked levels, preferences, and dictionary searches from this device. This cannot be undone.",
+    clearDataDialogBody = "This removes practice history, streaks, preferences, and dictionary searches from this device. This cannot be undone.",
     consentSignInTitle = "Before signing in",
     consentSignInBullets = listOf(
         "Sign-in is only needed to associate purchases. Practice data stays on-device.",
@@ -541,7 +541,7 @@ private val spanishCoursesStrings = CoursesStrings(
 )
 
 private val spanishAccountStrings = AccountStrings(
-    title = "Cuenta y compras",
+    title = "Ajustes",
     signInCardTitle = "Estado de sesión",
     signInDescriptionSignedIn = "Sesión iniciada. Las compras y niveles desbloqueados siguen ligados a este dispositivo.",
     signInDescriptionSignedOut = "El modo invitado mantiene los datos de práctica sin conexión. Inicia sesión solo cuando quieras desbloquear cursos.",
@@ -554,14 +554,14 @@ private val spanishAccountStrings = AccountStrings(
     courseButtonSignedOut = "Se requiere sesión",
     courseButtonUnlocked = "Ver cursos",
     courseButtonLocked = "Desbloquear todos los cursos",
-    supportTitle = "Soporte y cumplimiento",
-    supportDescription = "La ayuda, la privacidad y el formulario de comentarios viven aquí para que las revisiones ocurran antes de iniciar sesión o comprar.",
+    supportTitle = "Soporte",
+    supportDescription = "La ayuda, la privacidad y el formulario de comentarios viven aquí.",
     supportFeedbackButton = "Enviar comentarios",
     clearDataTitle = "Restablecer datos locales",
-    clearDataDescription = "Elimina el historial de práctica, el progreso, las compras y las preferencias guardadas en este dispositivo.",
+    clearDataDescription = "Elimina el historial de práctica, el progreso y las preferencias guardadas en este dispositivo.",
     clearDataButton = "Borrar registros locales",
     clearDataDialogTitle = "¿Borrar datos locales?",
-    clearDataDialogBody = "Se eliminarán el historial, las rachas, los niveles desbloqueados, las preferencias y las búsquedas del diccionario de este dispositivo. Esta acción no se puede deshacer.",
+    clearDataDialogBody = "Se eliminarán el historial, las rachas, las preferencias y las búsquedas del diccionario de este dispositivo. Esta acción no se puede deshacer.",
     consentSignInTitle = "Antes de iniciar sesión",
     consentSignInBullets = listOf(
         "Solo necesitas iniciar sesión para asociar compras. Los datos de práctica permanecen en el dispositivo.",
@@ -647,7 +647,7 @@ private val japaneseCoursesStrings = CoursesStrings(
 )
 
 private val japaneseAccountStrings = AccountStrings(
-    title = "\u30a2\u30ab\u30a6\u30f3\u30c8\u3068\u8cfc\u5165",
+    title = "\u8a2d\u5b9a",
     signInCardTitle = "\u30b5\u30a4\u30f3\u30a4\u30f3\u30b9\u30c6\u30fc\u30bf\u30b9",
     signInDescriptionSignedIn = "\u30b5\u30a4\u30f3\u30a4\u30f3\u3057\u3066\u3044\u307e\u3059\u3002\u8cfc\u5165\u304a\u3088\u3073\u30ed\u30c3\u30af\u89e3\u9664\u3055\u308c\u305f\u30ec\u30d9\u30eb\u306f\u3001\u3053\u306e\u30c7\u30d0\u30a4\u30b9\u306b\u30ea\u30f3\u30af\u3055\u308c\u305f\u307e\u307e\u306b\u306a\u308a\u307e\u3059\u3002",
     signInDescriptionSignedOut = "\u30b2\u30b9\u30c8 \u30e2\u30fc\u30c9\u3067\u306f\u3001\u7df4\u7fd2\u30c7\u30fc\u30bf\u3092\u30aa\u30d5\u30e9\u30a4\u30f3\u306b\u4fdd\u3061\u307e\u3059\u3002\u30b3\u30fc\u30b9\u306e\u30ed\u30c3\u30af\u3092\u89e3\u9664\u3059\u308b\u6e96\u5099\u304c\u3067\u304d\u3066\u3044\u308b\u5834\u5408\u306b\u306e\u307f\u30b5\u30a4\u30f3\u30a4\u30f3\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
@@ -660,14 +660,14 @@ private val japaneseAccountStrings = AccountStrings(
     courseButtonSignedOut = "\u30b5\u30a4\u30f3\u30a4\u30f3\u304c\u5fc5\u8981\u3067\u3059",
     courseButtonUnlocked = "\u30b3\u30fc\u30b9\u3092\u95b2\u89a7\u3059\u308b",
     courseButtonLocked = "\u3059\u3079\u3066\u306e\u30b3\u30fc\u30b9\u306e\u30ed\u30c3\u30af\u3092\u89e3\u9664\u3059\u308b",
-    supportTitle = "\u30b5\u30dd\u30fc\u30c8\u3068\u30b3\u30f3\u30d7\u30e9\u30a4\u30a2\u30f3\u30b9",
-    supportDescription = "\u30d8\u30eb\u30d7\u8a18\u4e8b\u3001\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u5207\u308a\u66ff\u3048\u3001\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af \u30d5\u30a9\u30fc\u30e0\u304c\u3053\u3053\u306b\u8868\u793a\u3055\u308c\u308b\u3088\u3046\u306b\u306a\u308a\u3001\u30ed\u30b0\u30a4\u30f3\u307e\u305f\u306f\u8cfc\u5165\u524d\u306b\u30b3\u30f3\u30d7\u30e9\u30a4\u30a2\u30f3\u30b9 \u30c1\u30a7\u30c3\u30af\u304c\u884c\u308f\u308c\u307e\u3059\u3002",
+    supportTitle = "\u30b5\u30dd\u30fc\u30c8",
+    supportDescription = "\u30d8\u30eb\u30d7\u3001\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u8a2d\u5b9a\u3001\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u306f\u3053\u3053\u304b\u3089\u5229\u7528\u3067\u304d\u307e\u3059\u3002",
     supportFeedbackButton = "\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u3092\u9001\u4fe1\u3059\u308b",
     clearDataTitle = "\u30ed\u30fc\u30ab\u30eb\u30c7\u30fc\u30bf\u3092\u30ea\u30bb\u30c3\u30c8\u3059\u308b",
-    clearDataDescription = "\u3053\u306e\u30c7\u30d0\u30a4\u30b9\u306b\u4fdd\u5b58\u3055\u308c\u3066\u3044\u308b\u7df4\u7fd2\u5c65\u6b74\u3001\u30b3\u30fc\u30b9\u306e\u9032\u884c\u72b6\u6cc1\u3001\u8cfc\u5165\u5185\u5bb9\u3001\u8a2d\u5b9a\u3092\u524a\u9664\u3057\u307e\u3059\u3002",
+    clearDataDescription = "\u3053\u306e\u30c7\u30d0\u30a4\u30b9\u306b\u4fdd\u5b58\u3055\u308c\u3066\u3044\u308b\u7df4\u7fd2\u5c65\u6b74\u3001\u30b3\u30fc\u30b9\u306e\u9032\u884c\u72b6\u6cc1\u3001\u8a2d\u5b9a\u3092\u524a\u9664\u3057\u307e\u3059\u3002",
     clearDataButton = "\u30ed\u30fc\u30ab\u30eb\u8a18\u9332\u3092\u30af\u30ea\u30a2\u3059\u308b",
     clearDataDialogTitle = "\u30ed\u30fc\u30ab\u30eb\u30c7\u30fc\u30bf\u3092\u6d88\u53bb\u3057\u307e\u3059\u304b\uff1f",
-    clearDataDialogBody = "\u3053\u308c\u306b\u3088\u308a\u3001\u7df4\u7fd2\u5c65\u6b74\u3001\u30b9\u30c8\u30ea\u30fc\u30af\u3001\u30ed\u30c3\u30af\u89e3\u9664\u3055\u308c\u305f\u30ec\u30d9\u30eb\u3001\u8a2d\u5b9a\u3001\u8f9e\u66f8\u691c\u7d22\u304c\u3053\u306e\u30c7\u30d0\u30a4\u30b9\u304b\u3089\u524a\u9664\u3055\u308c\u307e\u3059\u3002\u3053\u308c\u3092\u5143\u306b\u623b\u3059\u3053\u3068\u306f\u3067\u304d\u307e\u305b\u3093\u3002",
+    clearDataDialogBody = "\u3053\u308c\u306b\u3088\u308a\u3001\u7df4\u7fd2\u5c65\u6b74\u3001\u30b9\u30c8\u30ea\u30fc\u30af\u3001\u8a2d\u5b9a\u3001\u8f9e\u66f8\u691c\u7d22\u304c\u3053\u306e\u30c7\u30d0\u30a4\u30b9\u304b\u3089\u524a\u9664\u3055\u308c\u307e\u3059\u3002\u3053\u308c\u3092\u5143\u306b\u623b\u3059\u3053\u3068\u306f\u3067\u304d\u307e\u305b\u3093\u3002",
     consentSignInTitle = "\u30b5\u30a4\u30f3\u30a4\u30f3\u3059\u308b\u524d\u306b",
     consentSignInConfirm = "\u540c\u610f\u3057\u3066\u30b5\u30a4\u30f3\u30a4\u30f3\u3059\u308b",
     consentUnlockTitle = "\u30d7\u30ec\u30df\u30a2\u30e0\u30ec\u30c3\u30b9\u30f3\u306e\u30ed\u30c3\u30af\u3092\u89e3\u9664\u3059\u308b",
@@ -797,7 +797,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
     ),
     helpConfirm = "Got it",
     privacyTitle = "Privacy preferences",
-    privacyIntro = "Offline-first by default. Ads require internet and can be removed with a one-time purchase.",
+    privacyIntro = "Offline-first by default. Ads require internet.",
     dataSafetyHeading = "Data safety snapshot",
     privacySummaryRows = listOf(
         SummaryRowText(
@@ -813,8 +813,8 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
             detail = "Text logs are attached only when you explicitly send feedback.",
         ),
         SummaryRowText(
-            title = "Advertising & purchases",
-            detail = "If ads are enabled, Google Mobile Ads processes ad-related data. Purchases are handled by Google Play Billing.",
+            title = "Advertising",
+            detail = "If ads are enabled, Google Mobile Ads processes ad-related data.",
         ),
     ),
     contactSupportLabel = "Contact: %s",
@@ -830,7 +830,6 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
                 "Board preferences such as grids, colors, and template visibility.",
                 "Optional plain-text logs attached only when you send feedback.",
                 "Optional advertising data processed by Google Mobile Ads (if ads are enabled).",
-                "Optional purchase status from Google Play (Remove Ads).",
             ),
         ),
         PolicySectionText(
@@ -855,7 +854,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
                 "Clear the app's storage in Android settings to reset all data.",
                 "Use the Privacy dialog to toggle analytics, crash logs, or network prefetch.",
                 "Review and edit feedback logs before sending.",
-                "Use the Account screen to purchase/restore Remove Ads.",
+                "The app is free; there are no in-app purchases.",
             ),
         ),
         PolicySectionText(
@@ -930,7 +929,7 @@ private fun localizedStringsJa(locale: Locale): LocalizedStrings {
         helpTitle = "\u30d8\u30eb\u30d7",
         helpConfirm = "\u4e86\u89e3",
         privacyTitle = "\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u8a2d\u5b9a",
-        privacyIntro = "\u30aa\u30d5\u30e9\u30a4\u30f3\u512a\u5148\u3002\u5e83\u544a\u306b\u306f\u30a4\u30f3\u30bf\u30fc\u30cd\u30c3\u30c8\u304c\u5fc5\u8981\u3067\u30011\u56de\u306e\u8cfc\u5165\u3067\u5e83\u544a\u3092\u524a\u9664\u3067\u304d\u307e\u3059\u3002",
+        privacyIntro = "\u30aa\u30d5\u30e9\u30a4\u30f3\u512a\u5148\u3002\u5e83\u544a\u306e\u8868\u793a\u306b\u306f\u30a4\u30f3\u30bf\u30fc\u30cd\u30c3\u30c8\u304c\u5fc5\u8981\u3067\u3059\u3002",
         contactSupportLabel = "\u304a\u554f\u3044\u5408\u308f\u305b: %s",
         emailSupportButton = "\u30e1\u30fc\u30eb\u3067\u9023\u7d61",
         viewPolicyButton = "\u30dd\u30ea\u30b7\u30fc\u5168\u6587",
@@ -1024,7 +1023,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
     ),
     helpConfirm = "Entendido",
     privacyTitle = "Preferencias de privacidad",
-    privacyIntro = "La app es offline-first. Los anuncios requieren internet y puedes eliminarlos con una compra única.",
+    privacyIntro = "La app es offline-first. Los anuncios requieren internet.",
     dataSafetyHeading = "Resumen de seguridad de datos",
     privacySummaryRows = listOf(
         SummaryRowText(
@@ -1040,8 +1039,8 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
             detail = "Los registros de texto se adjuntan únicamente cuando envías comentarios.",
         ),
         SummaryRowText(
-            title = "Publicidad y compras",
-            detail = "Si los anuncios están habilitados, Google Mobile Ads procesa datos relacionados con anuncios. Las compras se gestionan mediante Google Play Billing.",
+            title = "Publicidad",
+            detail = "Si los anuncios están habilitados, Google Mobile Ads procesa datos relacionados con anuncios.",
         ),
     ),
     contactSupportLabel = "Contacto: %s",
@@ -1057,7 +1056,6 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
                 "Preferencias del tablero como cuadrículas, colores y plantillas.",
                 "Registros de texto opcionales solo cuando envías comentarios.",
                 "Datos publicitarios opcionales procesados por Google Mobile Ads (si hay anuncios).",
-                "Estado de compra opcional de Google Play (Eliminar anuncios).",
             ),
         ),
         PolicySectionText(
@@ -1082,7 +1080,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
                 "Borra los datos de la app en Ajustes de Android para reiniciar todo.",
                 "Usa el diálogo de Privacidad para activar o desactivar analíticas, registros o prefetch.",
                 "Revisa y edita los registros antes de enviarlos.",
-                "Usa la pantalla de Cuenta para comprar o restaurar Eliminar anuncios.",
+                "La app es gratis; no hay compras dentro de la app.",
             ),
         ),
         PolicySectionText(

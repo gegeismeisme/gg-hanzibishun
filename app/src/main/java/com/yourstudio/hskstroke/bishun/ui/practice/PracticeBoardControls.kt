@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Create
@@ -51,9 +50,6 @@ fun PracticeBoardControls(
     showTemplate: Boolean,
     showHskIcon: Boolean,
     hskEntry: HskEntry?,
-    showRewardedAdButton: Boolean,
-    rewardedAdEnabled: Boolean,
-    onWatchRewardedAd: () -> Unit,
     onStartPractice: () -> Unit,
     onRequestHint: () -> Unit,
     onCoursePrev: () -> Unit,
@@ -134,15 +130,6 @@ fun PracticeBoardControls(
                 icon = Icons.Filled.School,
                 description = boardStrings.hskLabel,
                 onClick = onHskInfoClick,
-                buttonSize = boardButtonSize,
-            )
-        }
-        if (showRewardedAdButton) {
-            IconActionButton(
-                icon = Icons.Filled.CardGiftcard,
-                description = boardStrings.rewardedLabel,
-                onClick = onWatchRewardedAd,
-                enabled = rewardedAdEnabled,
                 buttonSize = boardButtonSize,
             )
         }
