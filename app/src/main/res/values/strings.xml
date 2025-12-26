@@ -1,6 +1,3 @@
 <resources>
     <string name="app_name">Bishun</string>
-    <string name="admob_app_id">ca-app-pub-7675636192816302~9876642906</string>
-    <!-- Replace with your own AdMob banner unit ID for release. -->
-    <string name="admob_banner_unit_id">ca-app-pub-7675636192816302/4519131177</string>
 </resources>

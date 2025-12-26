@@ -122,7 +122,6 @@ data class PracticeBoardStrings(
     val pronunciationLabel: String,
     val dictionaryLabel: String,
     val hskLabel: String,
-    val rewardedLabel: String,
 )
 
 private val defaultPracticeBoardStrings = PracticeBoardStrings(
@@ -134,7 +133,6 @@ private val defaultPracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "Play pronunciation",
     dictionaryLabel = "Show dictionary entry",
     hskLabel = "HSK info",
-    rewardedLabel = "Watch an ad (30 min ad-free)",
 )
 
 private val spanishPracticeBoardStrings = PracticeBoardStrings(
@@ -146,7 +144,6 @@ private val spanishPracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "Reproducir pronunciaci\u00f3n",
     dictionaryLabel = "Mostrar definici\u00f3n",
     hskLabel = "Informaci\u00f3n HSK",
-    rewardedLabel = "Ver anuncio (30 min sin anuncios)",
 )
 
 private val japanesePracticeBoardStrings = PracticeBoardStrings(
@@ -158,7 +155,6 @@ private val japanesePracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "\u767a\u97f3\u3092\u518d\u751f",
     dictionaryLabel = "\u8f9e\u66f8\u3092\u898b\u308b",
     hskLabel = "HSK\u60c5\u5831",
-    rewardedLabel = "\u5e83\u544a\u3092\u898b\u308b\uff0830\u5206\u5e83\u544a\u306a\u3057\uff09",
 )
 
 private val japaneseProgressStrings = ProgressStrings(
@@ -797,7 +793,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
     ),
     helpConfirm = "Got it",
     privacyTitle = "Privacy preferences",
-    privacyIntro = "Offline-first by default. Ads require internet.",
+    privacyIntro = "Offline-first by default.",
     dataSafetyHeading = "Data safety snapshot",
     privacySummaryRows = listOf(
         SummaryRowText(
@@ -813,8 +809,8 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
             detail = "Text logs are attached only when you explicitly send feedback.",
         ),
         SummaryRowText(
-            title = "Advertising",
-            detail = "If ads are enabled, Google Mobile Ads processes ad-related data.",
+            title = "Network",
+            detail = "No ads or purchases. INTERNET is reserved for optional future downloads/external links.",
         ),
     ),
     contactSupportLabel = "Contact: %s",
@@ -829,7 +825,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
                 "Up to 40 local practice records for resuming sessions.",
                 "Board preferences such as grids, colors, and template visibility.",
                 "Optional plain-text logs attached only when you send feedback.",
-                "Optional advertising data processed by Google Mobile Ads (if ads are enabled).",
+                "No advertising or purchase data.",
             ),
         ),
         PolicySectionText(
@@ -843,8 +839,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
         PolicySectionText(
             title = "3. Permissions",
             bullets = listOf(
-                "INTERNET used to load ads (if enabled) and reserved for future downloads/external links.",
-                "ACCESS_NETWORK_STATE used by the ads SDK.",
+                "INTERNET reserved for optional future downloads/external links.",
                 "No access to precise location or contacts.",
             ),
         ),
@@ -929,7 +924,7 @@ private fun localizedStringsJa(locale: Locale): LocalizedStrings {
         helpTitle = "\u30d8\u30eb\u30d7",
         helpConfirm = "\u4e86\u89e3",
         privacyTitle = "\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u8a2d\u5b9a",
-        privacyIntro = "\u30aa\u30d5\u30e9\u30a4\u30f3\u512a\u5148\u3002\u5e83\u544a\u306e\u8868\u793a\u306b\u306f\u30a4\u30f3\u30bf\u30fc\u30cd\u30c3\u30c8\u304c\u5fc5\u8981\u3067\u3059\u3002",
+        privacyIntro = "\u30aa\u30d5\u30e9\u30a4\u30f3\u512a\u5148\u3002",
         contactSupportLabel = "\u304a\u554f\u3044\u5408\u308f\u305b: %s",
         emailSupportButton = "\u30e1\u30fc\u30eb\u3067\u9023\u7d61",
         viewPolicyButton = "\u30dd\u30ea\u30b7\u30fc\u5168\u6587",
@@ -1023,7 +1018,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
     ),
     helpConfirm = "Entendido",
     privacyTitle = "Preferencias de privacidad",
-    privacyIntro = "La app es offline-first. Los anuncios requieren internet.",
+    privacyIntro = "La app es offline-first.",
     dataSafetyHeading = "Resumen de seguridad de datos",
     privacySummaryRows = listOf(
         SummaryRowText(
@@ -1039,8 +1034,8 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
             detail = "Los registros de texto se adjuntan únicamente cuando envías comentarios.",
         ),
         SummaryRowText(
-            title = "Publicidad",
-            detail = "Si los anuncios están habilitados, Google Mobile Ads procesa datos relacionados con anuncios.",
+            title = "Red",
+            detail = "Sin anuncios ni compras. INTERNET se reserva para descargas opcionales/enlaces externos.",
         ),
     ),
     contactSupportLabel = "Contacto: %s",
@@ -1055,7 +1050,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
                 "Hasta 40 registros locales para reanudar sesiones.",
                 "Preferencias del tablero como cuadrículas, colores y plantillas.",
                 "Registros de texto opcionales solo cuando envías comentarios.",
-                "Datos publicitarios opcionales procesados por Google Mobile Ads (si hay anuncios).",
+                "Sin datos publicitarios ni de compras.",
             ),
         ),
         PolicySectionText(
@@ -1069,8 +1064,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
         PolicySectionText(
             title = "3. Permisos",
             bullets = listOf(
-                "INTERNET se usa para cargar anuncios (si están habilitados) y para futuras descargas/enlaces externos.",
-                "ACCESS_NETWORK_STATE es usado por el SDK de anuncios.",
+                "INTERNET se reserva para descargas opcionales/enlaces externos.",
                 "Sin acceso a ubicación precisa ni contactos.",
             ),
         ),

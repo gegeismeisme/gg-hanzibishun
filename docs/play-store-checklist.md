@@ -16,17 +16,15 @@ updated: 2025-12-25
 
 ## Monetization
 
-- [x] AdMob SDK integrated
-- [x] Banner ad only (no full-screen ads, no in-app purchases)
-- [ ] Create an AdMob banner ad unit and replace `admob_banner_unit_id` in `app/src/main/res/values/strings.xml`
+- [x] No ads, no in-app purchases (fully free tool)
 
 ## Compliance
 
 - [x] Privacy policy drafted (`docs/privacy-policy.md`)
 - [ ] Host privacy policy on a public URL (required by Play Console)
-- [ ] Update Play Console Data safety form (ads)
+- [ ] Update Play Console Data safety form
 - [ ] Accessibility pass (content descriptions, TalkBack labels)
-- [ ] Confirm permissions list (INTERNET, ACCESS_NETWORK_STATE, AD_ID)
+- [ ] Confirm permissions list (INTERNET)
 
 ## Store Assets
 

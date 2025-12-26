@@ -1,8 +1,6 @@
 package com.yourstudio.hskstroke.bishun.ui.navigation
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
@@ -11,7 +9,6 @@ import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material3.Icon
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -23,15 +20,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.yourstudio.hskstroke.bishun.R
-import com.yourstudio.hskstroke.bishun.ads.BannerAd
 import com.yourstudio.hskstroke.bishun.ui.account.AccountScreen
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterRoute
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
@@ -82,38 +76,28 @@ fun BishunApp() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            Column {
-                val bannerUnitId = stringResource(R.string.admob_banner_unit_id)
-                if (bannerUnitId.isNotBlank()) {
-                    BannerAd(
-                        adUnitId = bannerUnitId,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    HorizontalDivider()
-                }
-                NavigationBar {
-                    destinations.forEach { destination ->
-                        val selected = destination.route == currentRoute
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+            NavigationBar {
+                destinations.forEach { destination ->
+                    val selected = destination.route == currentRoute
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = {
+                            navController.navigate(destination.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
                                 }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = destination.icon,
-                                    contentDescription = destination.label,
-                                )
-                            },
-                            label = { Text(destination.label) },
-                        )
-                    }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = destination.icon,
+                                contentDescription = destination.label,
+                            )
+                        },
+                        label = { Text(destination.label) },
+                    )
                 }
             }
         },
