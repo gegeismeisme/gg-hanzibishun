@@ -41,10 +41,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class CharacterViewModel(
     private val appContext: Context,
@@ -87,10 +83,6 @@ class CharacterViewModel(
     val completedSymbols: StateFlow<Set<String>> = _completedSymbols.asStateFlow()
     private val _courseEvents = MutableSharedFlow<CourseEvent>()
     val courseEvents: SharedFlow<CourseEvent> = _courseEvents.asSharedFlow()
-    private val _feedbackSubmission = MutableStateFlow<FeedbackSubmission?>(null)
-    val feedbackSubmission: StateFlow<FeedbackSubmission?> = _feedbackSubmission.asStateFlow()
-    private val _lastFeedbackSubmission = MutableStateFlow<Long?>(null)
-    val lastFeedbackSubmission: StateFlow<Long?> = _lastFeedbackSubmission.asStateFlow()
     private val _userPreferences = MutableStateFlow(UserPreferences())
     val userPreferences: StateFlow<UserPreferences> = _userPreferences.asStateFlow()
 
@@ -103,10 +95,13 @@ class CharacterViewModel(
     private var courseEntries: Map<Int, List<String>> = emptyMap()
 
     init {
+        viewModelScope.launch {
+            val catalog = loadCourseCatalogIfNeeded()
+            updateHskProgress(hskProgressStore.completed.value, catalog)
+        }
         observeHskProgress()
         observePracticeHistory()
         observeUserPreferences()
-        preloadLastFeedbackTimestamp()
         loadCharacter(DEFAULT_CHAR)
     }
 
@@ -371,26 +366,45 @@ class CharacterViewModel(
         viewModelScope.launch {
             hskProgressStore.completed.collect { completed ->
                 _completedSymbols.value = completed
-                val entries = hskRepository.allEntries()
-                courseEntries = entries
-                    .groupBy { it.level }
-                    .mapValues { (_, items) ->
-                        items
-                            .sortedBy { it.writingLevel ?: Int.MAX_VALUE }
-                            .map { it.symbol }
-                    }
-                _courseCatalog.value = courseEntries
-                val perLevel = mutableMapOf<Int, HskLevelSummary>()
-                val nextTargets = mutableMapOf<Int, String?>()
-                entries.groupBy { it.level }.forEach { (level, items) ->
-                    val sorted = items.sortedBy { it.writingLevel ?: Int.MAX_VALUE }
-                    val done = items.count { completed.contains(it.symbol) }
-                    perLevel[level] = HskLevelSummary(done, items.size)
-                    nextTargets[level] = sorted.firstOrNull { !completed.contains(it.symbol) }?.symbol
-                }
-                _hskProgress.value = HskProgressSummary(perLevel, nextTargets)
+                val catalog = loadCourseCatalogIfNeeded()
+                updateHskProgress(completed, catalog)
             }
         }
+    }
+
+    private suspend fun loadCourseCatalogIfNeeded(): Map<Int, List<String>> {
+        if (courseEntries.isNotEmpty()) {
+            if (_courseCatalog.value.isEmpty()) {
+                _courseCatalog.value = courseEntries
+            }
+            return courseEntries
+        }
+
+        val entries = runCatching { hskRepository.allEntries().toList() }
+            .getOrElse { emptyList() }
+
+        val catalog = entries
+            .groupBy { it.level }
+            .mapValues { (_, items) ->
+                items
+                    .sortedBy { it.writingLevel ?: Int.MAX_VALUE }
+                    .map { it.symbol }
+            }
+
+        courseEntries = catalog
+        _courseCatalog.value = catalog
+        return catalog
+    }
+
+    private fun updateHskProgress(completed: Set<String>, catalog: Map<Int, List<String>>) {
+        val perLevel = mutableMapOf<Int, HskLevelSummary>()
+        val nextTargets = mutableMapOf<Int, String?>()
+        catalog.forEach { (level, symbols) ->
+            val done = symbols.count { completed.contains(it) }
+            perLevel[level] = HskLevelSummary(done, symbols.size)
+            nextTargets[level] = symbols.firstOrNull { !completed.contains(it) }
+        }
+        _hskProgress.value = HskProgressSummary(perLevel, nextTargets)
     }
 
     private fun observePracticeHistory() {
@@ -449,64 +463,18 @@ class CharacterViewModel(
         }
     }
 
-    fun setAnalyticsOptIn(enabled: Boolean) {
-        viewModelScope.launch { userPreferencesStore.setAnalyticsOptIn(enabled) }
-    }
-
-    fun setCrashReportsOptIn(enabled: Boolean) {
-        viewModelScope.launch { userPreferencesStore.setCrashReportsOptIn(enabled) }
-    }
-
-    fun setNetworkPrefetch(enabled: Boolean) {
-        viewModelScope.launch { userPreferencesStore.setNetworkPrefetch(enabled) }
-    }
-
-    fun saveFeedbackDraft(topic: String, message: String, contact: String) {
-        viewModelScope.launch { userPreferencesStore.saveFeedbackDraft(topic, message, contact) }
-    }
-
     fun clearLocalData() {
         viewModelScope.launch {
             practiceHistoryStore.clear()
             hskProgressStore.clear()
             userPreferencesStore.clearAll()
             _practiceHistory.value = emptyList()
-            _hskProgress.value = HskProgressSummary()
             _completedSymbols.value = emptySet()
             _courseSession.value = null
-            _courseCatalog.value = emptyMap()
             _userPreferences.value = UserPreferences()
             _boardSettings.value = BoardSettings()
-        }
-    }
-
-    fun submitFeedback(topic: String, message: String, contact: String) {
-        viewModelScope.launch {
-            userPreferencesStore.clearFeedbackDraft()
-            val timestamp = System.currentTimeMillis()
-            val trimmedTopic = topic.trim()
-            val trimmedMessage = message.trim()
-            val trimmedContact = contact.trim()
-            _feedbackSubmission.value = FeedbackSubmission(
-                topic = trimmedTopic,
-                message = trimmedMessage,
-                contact = trimmedContact,
-            )
-            _lastFeedbackSubmission.value = timestamp
-            logFeedbackToFile(trimmedTopic, trimmedMessage, trimmedContact, timestamp)
-        }
-    }
-
-    fun consumeFeedbackSubmission() {
-        _feedbackSubmission.value = null
-    }
-
-    suspend fun readFeedbackLog(): String = withContext(Dispatchers.IO) {
-        val file = File(appContext.filesDir, FEEDBACK_LOG_FILE)
-        if (!file.exists()) {
-            ""
-        } else {
-            file.readText().trim()
+            val catalog = loadCourseCatalogIfNeeded()
+            updateHskProgress(emptySet(), catalog)
         }
     }
 
@@ -537,37 +505,6 @@ class CharacterViewModel(
     fun clearCourseSession() {
         _courseSession.value = null
         viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
-    }
-
-    private fun preloadLastFeedbackTimestamp() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val file = File(appContext.filesDir, FEEDBACK_LOG_FILE)
-            if (!file.exists()) return@launch
-            val epochLine = file.readLines()
-                .asReversed()
-                .firstOrNull { it.startsWith("epoch=") }
-                ?: return@launch
-            val millis = epochLine.substringAfter("epoch=").toLongOrNull()
-            if (millis != null) {
-                _lastFeedbackSubmission.value = millis
-            }
-        }
-    }
-
-    private suspend fun logFeedbackToFile(topic: String, message: String, contact: String, timestamp: Long) {
-        val file = File(appContext.filesDir, FEEDBACK_LOG_FILE)
-        val readable = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
-        val summary = buildString {
-            appendLine("----")
-            appendLine("epoch=$timestamp")
-            appendLine("time=$readable")
-            appendLine("topic=$topic")
-            appendLine("contact=$contact")
-            appendLine("message=$message")
-        }
-        withContext(Dispatchers.IO) {
-            file.appendText(summary)
-        }
     }
 
     private suspend fun clearUserStrokes() {
@@ -726,7 +663,6 @@ class CharacterViewModel(
         private const val DEMO_FADE_DURATION = 250L
         private const val DEMO_REVEAL_DURATION = 120L
         private const val DEMO_LOOP_PAUSE = 600L
-        private const val FEEDBACK_LOG_FILE = "feedback-log.txt"
 
         fun factory(appContext: Context): ViewModelProvider.Factory {
             val applicationContext = appContext.applicationContext
@@ -768,12 +704,6 @@ data class HskProgressSummary(
     val totalCompleted: Int get() = perLevel.values.sumOf { it.completed }
     val totalCharacters: Int get() = perLevel.values.sumOf { it.total }
 }
-
-data class FeedbackSubmission(
-    val topic: String,
-    val message: String,
-    val contact: String,
-)
 
 data class CourseSession(
     val level: Int,

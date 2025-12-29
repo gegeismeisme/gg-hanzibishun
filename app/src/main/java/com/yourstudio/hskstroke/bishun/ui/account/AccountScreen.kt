@@ -1,8 +1,4 @@
 package com.yourstudio.hskstroke.bishun.ui.account
-
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,114 +15,36 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
 import com.yourstudio.hskstroke.bishun.ui.character.AccountStrings
-import com.yourstudio.hskstroke.bishun.ui.character.FeedbackSubmission
 import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
-import com.yourstudio.hskstroke.bishun.ui.support.FeedbackDialog
 import com.yourstudio.hskstroke.bishun.ui.support.HelpDialog
 import com.yourstudio.hskstroke.bishun.ui.support.PrivacyDialog
-import com.yourstudio.hskstroke.bishun.ui.support.SUPPORT_EMAIL
-import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
     modifier: Modifier = Modifier,
-    userPreferences: UserPreferences,
-    lastFeedbackTimestamp: Long?,
-    feedbackSubmission: FeedbackSubmission?,
-    onAnalyticsChange: (Boolean) -> Unit,
-    onCrashChange: (Boolean) -> Unit,
-    onPrefetchChange: (Boolean) -> Unit,
-    onFeedbackDraftChange: (String, String, String) -> Unit,
-    onFeedbackSubmit: (String, String, String) -> Unit,
-    onFeedbackHandled: () -> Unit,
-    onLoadFeedbackLog: suspend () -> String,
     onClearLocalData: () -> Unit,
     languageOverride: String?,
 ) {
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showPrivacyDialog by rememberSaveable { mutableStateOf(false) }
-    var showFeedbackDialog by rememberSaveable { mutableStateOf(false) }
     var showClearDataDialog by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val strings = rememberLocalizedStrings(languageOverride)
     val accountStrings = strings.account
-    val supportStrings = strings.support
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val shareFeedbackLog = remember(onLoadFeedbackLog, context) {
-        {
-            coroutineScope.launch {
-                val logText = onLoadFeedbackLog().takeIf { it.isNotBlank() }
-                if (logText.isNullOrBlank()) {
-                    Toast.makeText(context, supportStrings.feedbackLogEmpty, Toast.LENGTH_LONG).show()
-                    return@launch
-                }
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, "Hanzi feedback log")
-                    putExtra(Intent.EXTRA_TEXT, logText)
-                }
-                val chooser = Intent.createChooser(shareIntent, "Share feedback log")
-                val canHandle = shareIntent.resolveActivity(context.packageManager) != null
-                if (canHandle) {
-                    runCatching { context.startActivity(chooser) }
-                        .onFailure {
-                            Toast.makeText(context, supportStrings.feedbackLogShareError, Toast.LENGTH_LONG).show()
-                        }
-                } else {
-                    Toast.makeText(context, supportStrings.feedbackLogNoApps, Toast.LENGTH_LONG).show()
-                }
-            }
-            Unit
-        }
-    }
-
-    LaunchedEffect(feedbackSubmission) {
-        val submission = feedbackSubmission ?: return@LaunchedEffect
-        val subject = if (submission.topic.isNotBlank()) {
-            "Hanzi Stroke Order feedback: ${submission.topic}"
-        } else {
-            "Hanzi Stroke Order feedback"
-        }
-        val contactLine = submission.contact.takeIf { it.isNotBlank() }?.let { "\n\nContact: $it" } ?: ""
-        val body = submission.message.ifBlank { "(No message)" } + contactLine
-        val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:")
-            putExtra(Intent.EXTRA_EMAIL, arrayOf(SUPPORT_EMAIL))
-            putExtra(Intent.EXTRA_SUBJECT, subject)
-            putExtra(Intent.EXTRA_TEXT, body)
-        }
-        val chooser = Intent.createChooser(intent, "Send feedback")
-        val canHandle = intent.resolveActivity(context.packageManager) != null
-        if (canHandle) {
-            runCatching { context.startActivity(chooser) }
-                .onFailure {
-                    Toast.makeText(context, supportStrings.feedbackEmailError, Toast.LENGTH_LONG).show()
-                }
-        } else {
-            Toast.makeText(context, supportStrings.feedbackEmailNoApp, Toast.LENGTH_LONG).show()
-        }
-        onFeedbackHandled()
-    }
 
     Column(
         modifier = modifier
@@ -140,7 +58,6 @@ fun AccountScreen(
             strings = strings,
             onHelpClick = { showHelpDialog = true },
             onPrivacyClick = { showPrivacyDialog = true },
-            onFeedbackClick = { showFeedbackDialog = true },
         )
         AccountCard(
             title = accountStrings.clearDataTitle,
@@ -153,25 +70,7 @@ fun AccountScreen(
         HelpDialog(strings = strings, onDismiss = { showHelpDialog = false })
     }
     if (showPrivacyDialog) {
-        PrivacyDialog(
-            prefs = userPreferences,
-            onAnalyticsChange = onAnalyticsChange,
-            onCrashChange = onCrashChange,
-            onPrefetchChange = onPrefetchChange,
-            onDismiss = { showPrivacyDialog = false },
-            strings = strings,
-        )
-    }
-    if (showFeedbackDialog) {
-        FeedbackDialog(
-            prefs = userPreferences,
-            lastSubmittedAt = lastFeedbackTimestamp,
-            strings = supportStrings,
-            onShareLog = shareFeedbackLog,
-            onDraftChange = onFeedbackDraftChange,
-            onSubmit = onFeedbackSubmit,
-            onDismiss = { showFeedbackDialog = false },
-        )
+        PrivacyDialog(onDismiss = { showPrivacyDialog = false }, strings = strings)
     }
     if (showClearDataDialog) {
         AlertDialog(
@@ -241,7 +140,6 @@ private fun SupportCard(
     accountStrings: AccountStrings,
     onHelpClick: () -> Unit,
     onPrivacyClick: () -> Unit,
-    onFeedbackClick: () -> Unit,
     strings: LocalizedStrings,
 ) {
     Card(
@@ -269,9 +167,6 @@ private fun SupportCard(
             }
             Button(onClick = onPrivacyClick) {
                 Text(strings.privacyTitle)
-            }
-            OutlinedButton(onClick = onFeedbackClick) {
-                Text(accountStrings.supportFeedbackButton)
             }
         }
     }

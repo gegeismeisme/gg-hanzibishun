@@ -1,9 +1,9 @@
 ---
-title: Hanzi Stroke Order - Privacy Policy
+title: Hanzi Dictionary & Strokes - Privacy Policy
 updated: 2025-12-26
 ---
 
-Hanzi Stroke Order (the "App") is an offline-first learning tool published by Bishun Studio. This document explains what information is processed, how it is stored, and how you can control it.
+Hanzi Dictionary & Strokes (the "App", package name `com.yourstudio.hskstroke.bishun`) is an offline-first learning tool published by `ark_go`. This document explains what information is processed, how it is stored, and how you can control it.
 
 ## 1. Data We Collect / Process
 
@@ -12,7 +12,7 @@ Hanzi Stroke Order (the "App") is an offline-first learning tool published by Bi
 | Character resources | Local JSON stroke data bundled inside the APK. | Assets only; not user data. |
 | Practice history | Characters practiced, stroke progress, and history needed to resume. | Stored locally using Android DataStore; never uploaded. |
 | Settings | Board options (grid, stroke color, template visibility), language override. | Stored locally via DataStore. |
-| Crash/feedback logs *(optional)* | If you explicitly choose "Send Feedback" we include a plain-text log to help debug issues. | Stored temporarily in app-private storage; shared only through your chosen email/share app. |
+| Dictionary history | Recent lookups for quick access. | Stored locally via DataStore; never uploaded. |
 
 We do **not** collect names, contacts, or precise location.
 
@@ -21,20 +21,18 @@ We do **not** collect names, contacts, or precise location.
 - Resume your latest character/course session.
 - Display learning statistics and practice history on your device.
 - Remember board and demo preferences.
-- Investigate bugs only when you manually share feedback logs.
 
-No information leaves your device unless you explicitly export it (for example, by emailing/sharing feedback).
+The App does not upload any data. All storage is local-only on your device.
 
 ## 3. Permissions
 
 | Permission | Reason |
 | --- | --- |
-| `android.permission.INTERNET` | Reserved for optional future downloads/external links. The core learning features work offline. |
+| *(none)* | The App does not request network access or any dangerous permissions. |
 
 ## 4. Your Controls
 
-- **Reset data**: Clear the app storage from Android Settings → Apps → Bishun → Storage → Clear data.
-- **Feedback logs**: Before sending, you can preview and edit the log text.
+- **Reset data**: Android Settings > Apps > (this app) > Storage > Clear data.
 
 ## 5. Children's Privacy
 
@@ -50,4 +48,4 @@ Email: `qq260316514@gmail.com`
 
 ---
 
-By installing or using Hanzi Stroke Order you agree to this policy. If you disagree, uninstall the App or clear its data.
+By installing or using Hanzi Dictionary & Strokes you agree to this policy. If you disagree, uninstall the App or clear its data.

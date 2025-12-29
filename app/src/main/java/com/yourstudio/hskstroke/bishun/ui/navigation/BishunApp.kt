@@ -70,8 +70,6 @@ fun BishunApp() {
         factory = LibraryViewModel.factory(context),
     )
     val userPreferences by sharedCharacterViewModel.userPreferences.collectAsState()
-    val lastFeedbackTimestamp by sharedCharacterViewModel.lastFeedbackSubmission.collectAsState()
-    val feedbackSubmission by sharedCharacterViewModel.feedbackSubmission.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -166,16 +164,6 @@ fun BishunApp() {
             composable(MainDestination.Account.route) {
                 AccountScreen(
                     modifier = Modifier.fillMaxSize(),
-                    userPreferences = userPreferences,
-                    lastFeedbackTimestamp = lastFeedbackTimestamp,
-                    feedbackSubmission = feedbackSubmission,
-                    onAnalyticsChange = sharedCharacterViewModel::setAnalyticsOptIn,
-                    onCrashChange = sharedCharacterViewModel::setCrashReportsOptIn,
-                    onPrefetchChange = sharedCharacterViewModel::setNetworkPrefetch,
-                    onFeedbackDraftChange = sharedCharacterViewModel::saveFeedbackDraft,
-                    onFeedbackSubmit = sharedCharacterViewModel::submitFeedback,
-                    onFeedbackHandled = sharedCharacterViewModel::consumeFeedbackSubmission,
-                    onLoadFeedbackLog = { sharedCharacterViewModel.readFeedbackLog() },
                     onClearLocalData = sharedCharacterViewModel::clearLocalData,
                     languageOverride = userPreferences.languageOverride,
                 )

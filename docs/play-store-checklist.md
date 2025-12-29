@@ -24,7 +24,7 @@ updated: 2025-12-25
 - [ ] Host privacy policy on a public URL (required by Play Console)
 - [ ] Update Play Console Data safety form
 - [ ] Accessibility pass (content descriptions, TalkBack labels)
-- [ ] Confirm permissions list (INTERNET)
+- [ ] Confirm permissions list (none)
 
 ## Store Assets
 

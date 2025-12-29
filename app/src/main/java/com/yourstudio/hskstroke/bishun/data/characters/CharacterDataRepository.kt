@@ -3,7 +3,7 @@ package com.yourstudio.hskstroke.bishun.data.characters
 import com.yourstudio.hskstroke.bishun.data.characters.model.CharacterJsonDto
 
 /**
- * Loads raw Hanzi Writer JSON payloads from local assets or the CDN.
+ * Loads raw Hanzi Writer JSON payloads from local assets (offline-only).
  * Stage 2 will map these DTOs onto domain models/geometry objects.
  */
 interface CharacterDataRepository {

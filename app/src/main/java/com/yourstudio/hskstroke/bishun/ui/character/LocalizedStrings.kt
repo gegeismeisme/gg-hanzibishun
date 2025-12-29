@@ -314,7 +314,7 @@ fun rememberLocalizedStrings(languageOverride: String?): LocalizedStrings {
 
 private val defaultCoursesStrings = CoursesStrings(
     title = "Courses",
-    description = "Preview every HSK pack for free. Unlock premium levels later to keep the offline lessons.",
+    description = "Browse HSK levels and practice each character fully offline.",
     emptyCatalogMessage = "No course data found. Make sure assets/learn-datas is bundled.",
     filterAll = "All",
     filterRemaining = "Remaining",
@@ -360,7 +360,7 @@ private val defaultAccountStrings = AccountStrings(
     courseButtonUnlocked = "Browse courses",
     courseButtonLocked = "Unlock all courses",
     supportTitle = "Support",
-    supportDescription = "Help articles, privacy toggles, and the feedback form live here.",
+    supportDescription = "Help articles and privacy information live here.",
     supportFeedbackButton = "Send feedback",
     clearDataTitle = "Reset local data",
     clearDataDescription = "Remove practice history, course progress, and preferences stored on this device.",
@@ -505,7 +505,7 @@ private val japaneseLibraryStrings = LibraryStrings(
 
 private val spanishCoursesStrings = CoursesStrings(
     title = "Cursos",
-    description = "Previsualiza cada paquete HSK gratis. Desbloquea los niveles premium más adelante para conservar las lecciones sin conexión.",
+    description = "Explora niveles HSK y practica cada carácter completamente sin conexión.",
     emptyCatalogMessage = "No se encontraron datos del curso. Comprueba que assets/learn-datas esté incluido en el APK.",
     filterAll = "Todos",
     filterRemaining = "Pendientes",
@@ -551,7 +551,7 @@ private val spanishAccountStrings = AccountStrings(
     courseButtonUnlocked = "Ver cursos",
     courseButtonLocked = "Desbloquear todos los cursos",
     supportTitle = "Soporte",
-    supportDescription = "La ayuda, la privacidad y el formulario de comentarios viven aquí.",
+    supportDescription = "La ayuda y la información de privacidad viven aquí.",
     supportFeedbackButton = "Enviar comentarios",
     clearDataTitle = "Restablecer datos locales",
     clearDataDescription = "Elimina el historial de práctica, el progreso y las preferencias guardadas en este dispositivo.",
@@ -657,7 +657,7 @@ private val japaneseAccountStrings = AccountStrings(
     courseButtonUnlocked = "\u30b3\u30fc\u30b9\u3092\u95b2\u89a7\u3059\u308b",
     courseButtonLocked = "\u3059\u3079\u3066\u306e\u30b3\u30fc\u30b9\u306e\u30ed\u30c3\u30af\u3092\u89e3\u9664\u3059\u308b",
     supportTitle = "\u30b5\u30dd\u30fc\u30c8",
-    supportDescription = "\u30d8\u30eb\u30d7\u3001\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u8a2d\u5b9a\u3001\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u306f\u3053\u3053\u304b\u3089\u5229\u7528\u3067\u304d\u307e\u3059\u3002",
+    supportDescription = "\u30d8\u30eb\u30d7\u3068\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u60c5\u5831\u306f\u3053\u3053\u304b\u3089\u5229\u7528\u3067\u304d\u307e\u3059\u3002",
     supportFeedbackButton = "\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u3092\u9001\u4fe1\u3059\u308b",
     clearDataTitle = "\u30ed\u30fc\u30ab\u30eb\u30c7\u30fc\u30bf\u3092\u30ea\u30bb\u30c3\u30c8\u3059\u308b",
     clearDataDescription = "\u3053\u306e\u30c7\u30d0\u30a4\u30b9\u306b\u4fdd\u5b58\u3055\u308c\u3066\u3044\u308b\u7df4\u7fd2\u5c65\u6b74\u3001\u30b3\u30fc\u30b9\u306e\u9032\u884c\u72b6\u6cc1\u3001\u8a2d\u5b9a\u3092\u524a\u9664\u3057\u307e\u3059\u3002",
@@ -783,17 +783,17 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
             ),
         ),
         HelpSectionText(
-            title = "Support & feedback",
+            title = "Support",
             description = "Need help? Reach out anytime.",
             bullets = listOf(
                 "Email: qq260316514@gmail.com",
-                "Profile → Feedback lets you attach logs before sending.",
+                "This app runs fully offline and never uploads your data.",
             ),
         ),
     ),
     helpConfirm = "Got it",
-    privacyTitle = "Privacy preferences",
-    privacyIntro = "Offline-first by default.",
+    privacyTitle = "Privacy",
+    privacyIntro = "Fully offline by default.",
     dataSafetyHeading = "Data safety snapshot",
     privacySummaryRows = listOf(
         SummaryRowText(
@@ -802,15 +802,11 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
         ),
         SummaryRowText(
             title = "Offline assets",
-            detail = "Stroke JSON and course packs ship inside the APK; optional prefetch won't run unless enabled.",
-        ),
-        SummaryRowText(
-            title = "Logs & feedback",
-            detail = "Text logs are attached only when you explicitly send feedback.",
+            detail = "Stroke JSON and course packs ship inside the APK.",
         ),
         SummaryRowText(
             title = "Network",
-            detail = "No ads or purchases. INTERNET is reserved for optional future downloads/external links.",
+            detail = "No network permission. The app does not access the internet and never uploads your data.",
         ),
     ),
     contactSupportLabel = "Contact: %s",
@@ -822,41 +818,38 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
             title = "1. Data we collect",
             bullets = listOf(
                 "Character resources packaged in the APK for rendering stroke order.",
-                "Up to 40 local practice records for resuming sessions.",
-                "Board preferences such as grids, colors, and template visibility.",
-                "Optional plain-text logs attached only when you send feedback.",
-                "No advertising or purchase data.",
+                "Local practice history, HSK progress, and resume state.",
+                "Board preferences such as grids, colors, template visibility, and language override.",
+                "Recent dictionary searches stored on-device.",
+                "No advertising, no in-app purchases.",
             ),
         ),
         PolicySectionText(
             title = "2. How data is used",
             bullets = listOf(
-                "Resume course progress and compute streaks locally.",
-                "Display dictionary cards and HSK summaries without internet access.",
-                "Investigate bugs only if you share logs manually.",
+                "Resume practice and course progress locally.",
+                "Display dictionary cards and HSK summaries fully offline.",
+                "Compute progress and streaks locally.",
             ),
         ),
         PolicySectionText(
             title = "3. Permissions",
             bullets = listOf(
-                "INTERNET reserved for optional future downloads/external links.",
-                "No access to precise location or contacts.",
+                "No network permission required. The app works offline.",
+                "No access to precise location, contacts, camera, or microphone.",
             ),
         ),
         PolicySectionText(
             title = "4. Your controls",
             bullets = listOf(
                 "Clear the app's storage in Android settings to reset all data.",
-                "Use the Privacy dialog to toggle analytics, crash logs, or network prefetch.",
-                "Review and edit feedback logs before sending.",
-                "The app is free; there are no in-app purchases.",
+                "All data stays on this device unless you back up your phone.",
             ),
         ),
         PolicySectionText(
             title = "5. Contact",
             bullets = listOf(
                 "Email: qq260316514@gmail.com",
-                "GitHub: https://github.com/chanind/hanzi-writer-data (resource reference).",
             ),
         ),
     ),
@@ -923,7 +916,7 @@ private fun localizedStringsJa(locale: Locale): LocalizedStrings {
         courseLegendHint = "\u30d0\u30c3\u30b8\u304b\u3089\u518d\u958b\u30fb\u30b9\u30ad\u30c3\u30d7\u30fb\u3084\u308a\u76f4\u3057\u30fb\u7d42\u4e86\u304c\u3067\u304d\u307e\u3059",
         helpTitle = "\u30d8\u30eb\u30d7",
         helpConfirm = "\u4e86\u89e3",
-        privacyTitle = "\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u8a2d\u5b9a",
+        privacyTitle = "\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc",
         privacyIntro = "\u30aa\u30d5\u30e9\u30a4\u30f3\u512a\u5148\u3002",
         contactSupportLabel = "\u304a\u554f\u3044\u5408\u308f\u305b: %s",
         emailSupportButton = "\u30e1\u30fc\u30eb\u3067\u9023\u7d61",
@@ -1008,17 +1001,17 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
             ),
         ),
         HelpSectionText(
-            title = "Soporte y comentarios",
+            title = "Soporte",
             description = "¿Necesitas ayuda? Escríbenos.",
             bullets = listOf(
                 "Correo: qq260316514@gmail.com",
-                "Perfil → Feedback permite adjuntar registros antes de enviarlos.",
+                "La app funciona sin conexión y nunca sube tus datos.",
             ),
         ),
     ),
     helpConfirm = "Entendido",
-    privacyTitle = "Preferencias de privacidad",
-    privacyIntro = "La app es offline-first.",
+    privacyTitle = "Privacidad",
+    privacyIntro = "Funciona sin conexión por defecto.",
     dataSafetyHeading = "Resumen de seguridad de datos",
     privacySummaryRows = listOf(
         SummaryRowText(
@@ -1027,15 +1020,11 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
         ),
         SummaryRowText(
             title = "Recursos sin conexión",
-            detail = "Los paquetes de trazos y cursos vienen en el APK; el prefetch opcional solo funciona si lo habilitas.",
-        ),
-        SummaryRowText(
-            title = "Registros y comentarios",
-            detail = "Los registros de texto se adjuntan únicamente cuando envías comentarios.",
+            detail = "Los paquetes de trazos y cursos vienen en el APK.",
         ),
         SummaryRowText(
             title = "Red",
-            detail = "Sin anuncios ni compras. INTERNET se reserva para descargas opcionales/enlaces externos.",
+            detail = "Sin permiso de red. La app no accede a internet ni sube tus datos.",
         ),
     ),
     contactSupportLabel = "Contacto: %s",
@@ -1047,41 +1036,38 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
             title = "1. Datos que recopilamos",
             bullets = listOf(
                 "Recursos de caracteres incluidos en el APK para mostrar el orden de los trazos.",
-                "Hasta 40 registros locales para reanudar sesiones.",
-                "Preferencias del tablero como cuadrículas, colores y plantillas.",
-                "Registros de texto opcionales solo cuando envías comentarios.",
-                "Sin datos publicitarios ni de compras.",
+                "Historial local de práctica, progreso HSK y estado de reanudación.",
+                "Preferencias del tablero y ajuste de idioma guardados localmente.",
+                "Búsquedas recientes del diccionario guardadas en el dispositivo.",
+                "Sin anuncios ni compras dentro de la app.",
             ),
         ),
         PolicySectionText(
             title = "2. Uso de los datos",
             bullets = listOf(
-                "Reanudar el progreso del curso y calcular rachas localmente.",
-                "Mostrar tarjetas de diccionario y resúmenes HSK sin internet.",
-                "Investigar errores solo si compartes registros manualmente.",
+                "Reanudar práctica y cursos localmente.",
+                "Mostrar tarjetas y resúmenes HSK totalmente sin conexión.",
+                "Calcular progreso y rachas en el dispositivo.",
             ),
         ),
         PolicySectionText(
             title = "3. Permisos",
             bullets = listOf(
-                "INTERNET se reserva para descargas opcionales/enlaces externos.",
-                "Sin acceso a ubicación precisa ni contactos.",
+                "No requiere permiso de red. Funciona sin conexión.",
+                "Sin acceso a ubicación precisa, contactos, cámara o micrófono.",
             ),
         ),
         PolicySectionText(
             title = "4. Tus controles",
             bullets = listOf(
                 "Borra los datos de la app en Ajustes de Android para reiniciar todo.",
-                "Usa el diálogo de Privacidad para activar o desactivar analíticas, registros o prefetch.",
-                "Revisa y edita los registros antes de enviarlos.",
-                "La app es gratis; no hay compras dentro de la app.",
+                "Los datos se quedan en tu dispositivo salvo copias de seguridad del sistema.",
             ),
         ),
         PolicySectionText(
             title = "5. Contacto",
             bullets = listOf(
                 "Correo: qq260316514@gmail.com",
-                "GitHub: https://github.com/chanind/hanzi-writer-data (referencia de recursos).",
             ),
         ),
     ),

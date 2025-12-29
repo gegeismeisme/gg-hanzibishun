@@ -15,8 +15,8 @@ android {
         applicationId = "com.yourstudio.hskstroke.bishun"
         minSdk = 24
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.0.9"
+        versionCode = 11
+        versionName = "1.0.11"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -57,7 +57,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.okhttp)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
     testImplementation(libs.junit)

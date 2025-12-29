@@ -7,11 +7,8 @@ import com.yourstudio.hskstroke.bishun.data.characters.DefaultCharacterDataRepos
 import com.yourstudio.hskstroke.bishun.data.characters.DefaultCharacterDefinitionRepository
 import com.yourstudio.hskstroke.bishun.data.characters.cache.CharacterDiskCache
 import com.yourstudio.hskstroke.bishun.data.characters.source.CharacterAssetDataSource
-import com.yourstudio.hskstroke.bishun.data.characters.source.JsDelivrCharacterDataSource
-import com.yourstudio.hskstroke.bishun.data.characters.source.OssCharacterDataSource
 import com.yourstudio.hskstroke.bishun.hanzi.parser.CharacterParser
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
 import java.io.File
 
 object CharacterDataModule {
@@ -23,19 +20,11 @@ object CharacterDataModule {
         }
     }
 
-    private val httpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder().build()
-    }
-
     fun provideDataRepository(context: Context): CharacterDataRepository {
         val assetDataSource = CharacterAssetDataSource(context.assets, json)
         val cacheDir = File(context.filesDir, "character_cache")
         val diskCache = CharacterDiskCache(cacheDir, json)
-        val remoteSources = listOf(
-            JsDelivrCharacterDataSource(httpClient, json),
-            OssCharacterDataSource(httpClient, json),
-        )
-        return DefaultCharacterDataRepository(assetDataSource, diskCache, remoteSources)
+        return DefaultCharacterDataRepository(assetDataSource, diskCache)
     }
 
     fun provideDefinitionRepository(context: Context): CharacterDefinitionRepository {

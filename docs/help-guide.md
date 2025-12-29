@@ -1,6 +1,6 @@
 ---
-title: Hanzi Stroke Order – Help & Onboarding
-updated: 2025-12-02
+title: Hanzi Dictionary & Strokes - Help & Onboarding
+updated: 2025-12-26
 ---
 
 ## Quick Start
@@ -42,11 +42,9 @@ Tap the square area next to the large Kaishu glyph to expand the word card. It s
 - **Template not visible** – Check the settings column; enable “楷书描红”.  
 - **Resource missing** – Confirm the bundled data contains the character (stored in `assets/characters`). Add missing JSON via future updates.
 
-## Support & Feedback
+## Support
 
-- Use the avatar menu → Feedback to send a report (log preview included).
 - Email: `qq260316514@gmail.com`
-- GitHub Issues: `https://github.com/<pending repo>/issues`
 
 ## Roadmap Highlights
 
