@@ -115,6 +115,29 @@ private fun HskProgressView(
             .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        val progressStrings = strings.progress
+        val dailySymbol = remember(summary) { pickDailySymbol(summary) }
+        val dailyCompletedToday = remember(dailySymbol, practiceHistory) {
+            if (dailySymbol.isNullOrBlank()) {
+                false
+            } else {
+                val zone = ZoneId.systemDefault()
+                val today = LocalDate.now(zone)
+                practiceHistory.any { entry ->
+                    entry.symbol == dailySymbol &&
+                        entry.completed &&
+                        Instant.ofEpochMilli(entry.timestamp).atZone(zone).toLocalDate() == today
+                }
+            }
+        }
+        DailyPracticeCard(
+            strings = progressStrings,
+            symbol = dailySymbol,
+            completedToday = dailyCompletedToday,
+            onPractice = {
+                dailySymbol?.let(onJumpToChar)
+            },
+        )
         val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }
         ProgressOverviewCard(overview = overview, strings = strings)
         LevelBreakdownList(
@@ -129,6 +152,64 @@ private fun HskProgressView(
             history = practiceHistory,
             onJumpToChar = onJumpToChar,
         )
+    }
+}
+
+private fun pickDailySymbol(summary: HskProgressSummary): String? {
+    val levels = summary.nextTargets.keys.sorted()
+    levels.forEach { level ->
+        val symbol = summary.nextTargets[level]
+        if (!symbol.isNullOrBlank()) return symbol
+    }
+    return null
+}
+
+@Composable
+private fun DailyPracticeCard(
+    strings: ProgressStrings,
+    symbol: String?,
+    completedToday: Boolean,
+    onPractice: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 2.dp,
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(text = strings.dailyTitle, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = strings.dailyDescription,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = symbol ?: "—",
+                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                )
+                Button(onClick = onPractice, enabled = !symbol.isNullOrBlank()) {
+                    Text(strings.dailyPracticeLabel)
+                }
+            }
+            if (completedToday) {
+                Text(
+                    text = strings.dailyCompletedLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 

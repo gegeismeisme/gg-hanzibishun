@@ -167,6 +167,12 @@ fun BishunApp(
                             launchSingleTop = true
                         }
                     },
+                    onLoadPracticeQueue = { symbols ->
+                        sharedCharacterViewModel.startPracticeQueue(symbols)
+                        navController.navigate(MainDestination.Home.route) {
+                            launchSingleTop = true
+                        }
+                    },
                     languageOverride = userPreferences.languageOverride,
                 )
             }

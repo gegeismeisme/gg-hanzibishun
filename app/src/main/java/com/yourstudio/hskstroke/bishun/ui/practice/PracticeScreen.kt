@@ -34,6 +34,7 @@ import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
 import com.yourstudio.hskstroke.bishun.ui.audio.VolumeSafetyDialog
 import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
 import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeQueueSession
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
 import com.yourstudio.hskstroke.bishun.ui.character.WordInfoUiState
@@ -47,6 +48,7 @@ fun PracticeContent(
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
     courseSession: CourseSession?,
+    practiceQueueSession: PracticeQueueSession?,
     boardSettings: BoardSettings,
     isDemoPlaying: Boolean,
     wordEntry: WordEntry?,
@@ -71,6 +73,10 @@ fun PracticeContent(
     onCourseRestart: () -> Unit,
     onResumeCourse: (String) -> Unit,
     onCourseExit: () -> Unit,
+    onPracticeQueueNext: () -> Unit,
+    onPracticeQueuePrev: () -> Unit,
+    onPracticeQueueRestart: () -> Unit,
+    onPracticeQueueExit: () -> Unit,
     courseStrings: CoursesStrings,
     locale: Locale,
     modifier: Modifier = Modifier,
@@ -117,18 +123,43 @@ fun PracticeContent(
             .fillMaxSize(),
     ) {
         val summary = practiceState.toSummary()
+        val activeSequenceSymbol = practiceQueueSession?.currentSymbol ?: courseSession?.currentSymbol
+        val activeSequenceProgress = practiceQueueSession?.progressText ?: courseSession?.progressText
+        val activeHasPrev = practiceQueueSession?.hasPrevious ?: courseSession?.hasPrevious ?: false
+        val activeHasNext = practiceQueueSession?.hasNext ?: courseSession?.hasNext ?: false
+        val onSequencePrev = when {
+            practiceQueueSession != null -> onPracticeQueuePrev
+            courseSession != null -> onCoursePrev
+            else -> null
+        }
+        val onSequenceNext = when {
+            practiceQueueSession != null -> onPracticeQueueNext
+            courseSession != null -> onCourseNext
+            else -> null
+        }
+        val onSequenceRestart = when {
+            practiceQueueSession != null -> onPracticeQueueRestart
+            courseSession != null -> onCourseRestart
+            else -> null
+        }
+        val onSequenceExit = when {
+            practiceQueueSession != null -> onPracticeQueueExit
+            courseSession != null -> onCourseExit
+            else -> null
+        }
         PracticeSummaryBadge(
             progressText = summary.progressText,
             statusText = summary.statusText,
-            courseSession = courseSession,
-            onCourseResume = {
-                val targetSymbol = courseSession?.currentSymbol ?: definition.symbol
-                onResumeCourse(targetSymbol)
-            },
-            onCourseSkip = onCourseSkip,
-            onCourseRestart = onCourseRestart,
-            onCourseExit = onCourseExit,
+            sequenceSymbol = activeSequenceSymbol,
+            sequenceProgressText = activeSequenceProgress,
+            sequenceHasPrevious = activeHasPrev,
+            sequenceHasNext = activeHasNext,
+            onSequencePrevious = onSequencePrev,
+            onSequenceNext = onSequenceNext,
+            onSequenceRestart = onSequenceRestart,
+            onSequenceExit = onSequenceExit,
             courseStrings = courseStrings,
+            boardStrings = boardStrings,
             locale = locale,
             modifier = Modifier.fillMaxWidth(),
         )

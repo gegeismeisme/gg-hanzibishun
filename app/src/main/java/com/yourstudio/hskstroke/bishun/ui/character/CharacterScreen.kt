@@ -64,6 +64,7 @@ fun CharacterRoute(
     val wordInfoUiState by viewModel.wordInfoUiState.collectAsState()
     val hskEntry by viewModel.hskEntry.collectAsState()
     val courseSession by viewModel.courseSession.collectAsState()
+    val practiceQueueSession by viewModel.practiceQueueSession.collectAsState()
     val boardSettings by viewModel.boardSettings.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
     val context = LocalContext.current
@@ -83,6 +84,7 @@ fun CharacterRoute(
         wordInfoUiState = wordInfoUiState,
         hskEntry = hskEntry,
         courseSession = courseSession,
+        practiceQueueSession = practiceQueueSession,
         boardSettings = boardSettings,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
@@ -104,6 +106,10 @@ fun CharacterRoute(
         onCourseSkip = viewModel::skipCourseCharacter,
         onCourseRestart = viewModel::restartCourseLevel,
         onCourseExit = viewModel::clearCourseSession,
+        onPracticeQueueNext = viewModel::goToNextPracticeQueueCharacter,
+        onPracticeQueuePrev = viewModel::goToPreviousPracticeQueueCharacter,
+        onPracticeQueueRestart = viewModel::restartPracticeQueue,
+        onPracticeQueueExit = viewModel::exitPracticeQueue,
         languageOverride = userPreferences.languageOverride,
         onLanguageChange = viewModel::setLanguageOverride,
         onLoadCharacter = viewModel::jumpToCharacter,
@@ -120,6 +126,7 @@ fun CharacterScreen(
     wordInfoUiState: WordInfoUiState,
     hskEntry: HskEntry?,
     courseSession: CourseSession?,
+    practiceQueueSession: PracticeQueueSession?,
     boardSettings: BoardSettings,
     languageOverride: String?,
     onLoadCharacter: (String) -> Unit,
@@ -143,6 +150,10 @@ fun CharacterScreen(
     onCourseSkip: () -> Unit,
     onCourseRestart: () -> Unit,
     onCourseExit: () -> Unit,
+    onPracticeQueueNext: () -> Unit,
+    onPracticeQueuePrev: () -> Unit,
+    onPracticeQueueRestart: () -> Unit,
+    onPracticeQueueExit: () -> Unit,
     onLanguageChange: (String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -198,6 +209,7 @@ fun CharacterScreen(
                     renderSnapshot = renderSnapshot,
                     practiceState = practiceState,
                     courseSession = courseSession,
+                    practiceQueueSession = practiceQueueSession,
                     boardSettings = boardSettings,
                     isDemoPlaying = demoState.isPlaying || calligraphyDemoState.isPlaying,
                     wordEntry = wordEntry,
@@ -230,6 +242,10 @@ fun CharacterScreen(
                     onCourseRestart = onCourseRestart,
                     onResumeCourse = onLoadCharacter,
                     onCourseExit = onCourseExit,
+                    onPracticeQueueNext = onPracticeQueueNext,
+                    onPracticeQueuePrev = onPracticeQueuePrev,
+                    onPracticeQueueRestart = onPracticeQueueRestart,
+                    onPracticeQueueExit = onPracticeQueueExit,
                     courseStrings = strings.courses,
                     locale = strings.locale,
                     modifier = Modifier.weight(1f),

@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -18,9 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
 import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
 import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import java.util.Locale
 import kotlin.math.max
@@ -51,12 +51,16 @@ fun PracticeState.toSummary(): PracticeSummaryUi {
 fun PracticeSummaryBadge(
     progressText: String,
     statusText: String,
-    courseSession: CourseSession?,
-    onCourseResume: (() -> Unit)?,
-    onCourseSkip: (() -> Unit)?,
-    onCourseRestart: (() -> Unit)?,
-    onCourseExit: (() -> Unit)?,
+    sequenceSymbol: String?,
+    sequenceProgressText: String?,
+    sequenceHasPrevious: Boolean,
+    sequenceHasNext: Boolean,
+    onSequencePrevious: (() -> Unit)?,
+    onSequenceNext: (() -> Unit)?,
+    onSequenceRestart: (() -> Unit)?,
+    onSequenceExit: (() -> Unit)?,
     courseStrings: CoursesStrings,
+    boardStrings: PracticeBoardStrings,
     locale: Locale,
     modifier: Modifier = Modifier,
 ) {
@@ -66,7 +70,7 @@ fun PracticeSummaryBadge(
         shape = MaterialTheme.shapes.large,
         modifier = modifier,
     ) {
-        if (courseSession == null) {
+        if (sequenceSymbol == null || sequenceProgressText == null) {
             Row(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -103,8 +107,8 @@ fun PracticeSummaryBadge(
                         text = String.format(
                             locale,
                             courseStrings.activeCourseStatusFormat,
-                            courseSession.currentSymbol ?: "-",
-                            courseSession.progressText,
+                            sequenceSymbol,
+                            sequenceProgressText,
                         ),
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
@@ -113,31 +117,31 @@ fun PracticeSummaryBadge(
                 }
                 val buttonSize = 28.dp
                 IconActionButton(
-                    icon = Icons.Filled.PlayArrow,
-                    description = courseStrings.activeResume,
-                    onClick = { onCourseResume?.invoke() },
-                    enabled = onCourseResume != null,
+                    icon = Icons.Filled.SkipPrevious,
+                    description = boardStrings.previousLabel,
+                    onClick = { onSequencePrevious?.invoke() },
+                    enabled = onSequencePrevious != null && sequenceHasPrevious,
                     buttonSize = buttonSize,
                 )
                 IconActionButton(
                     icon = Icons.Filled.SkipNext,
-                    description = courseStrings.activeSkip,
-                    onClick = { onCourseSkip?.invoke() },
-                    enabled = onCourseSkip != null,
+                    description = boardStrings.nextLabel,
+                    onClick = { onSequenceNext?.invoke() },
+                    enabled = onSequenceNext != null && sequenceHasNext,
                     buttonSize = buttonSize,
                 )
                 IconActionButton(
                     icon = Icons.Filled.RestartAlt,
                     description = courseStrings.activeRestart,
-                    onClick = { onCourseRestart?.invoke() },
-                    enabled = onCourseRestart != null,
+                    onClick = { onSequenceRestart?.invoke() },
+                    enabled = onSequenceRestart != null,
                     buttonSize = buttonSize,
                 )
                 IconActionButton(
                     icon = Icons.Filled.Close,
                     description = courseStrings.activeExit,
-                    onClick = { onCourseExit?.invoke() },
-                    enabled = onCourseExit != null,
+                    onClick = { onSequenceExit?.invoke() },
+                    enabled = onSequenceExit != null,
                     buttonSize = buttonSize,
                 )
             }

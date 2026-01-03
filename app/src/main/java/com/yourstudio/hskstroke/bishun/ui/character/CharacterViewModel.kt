@@ -77,6 +77,8 @@ class CharacterViewModel(
     val practiceHistory: StateFlow<List<PracticeHistoryEntry>> = _practiceHistory.asStateFlow()
     private val _courseSession = MutableStateFlow<CourseSession?>(null)
     val courseSession: StateFlow<CourseSession?> = _courseSession.asStateFlow()
+    private val _practiceQueueSession = MutableStateFlow<PracticeQueueSession?>(null)
+    val practiceQueueSession: StateFlow<PracticeQueueSession?> = _practiceQueueSession.asStateFlow()
     private val _boardSettings = MutableStateFlow(BoardSettings())
     val boardSettings: StateFlow<BoardSettings> = _boardSettings.asStateFlow()
     private val _courseCatalog = MutableStateFlow<Map<Int, List<String>>>(emptyMap())
@@ -127,6 +129,38 @@ class CharacterViewModel(
 
     fun jumpToCharacter(symbol: String) {
         loadCharacter(symbol)
+    }
+
+    fun startPracticeQueue(symbols: List<String>) {
+        val queue = symbols.asSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .map(::firstCodePoint)
+            .distinct()
+            .toList()
+        if (queue.isEmpty()) return
+
+        _practiceQueueSession.value = PracticeQueueSession(symbols = queue, index = 0)
+        loadCharacter(queue.first())
+    }
+
+    fun goToNextPracticeQueueCharacter() {
+        navigatePracticeQueue(1)
+    }
+
+    fun goToPreviousPracticeQueueCharacter() {
+        navigatePracticeQueue(-1)
+    }
+
+    fun restartPracticeQueue() {
+        val session = _practiceQueueSession.value ?: return
+        if (session.symbols.isEmpty()) return
+        _practiceQueueSession.value = session.copy(index = 0)
+        loadCharacter(session.symbols.first())
+    }
+
+    fun exitPracticeQueue() {
+        _practiceQueueSession.value = null
     }
 
     fun startCourse(level: Int, symbol: String) {
@@ -296,10 +330,12 @@ class CharacterViewModel(
     }
 
     private fun loadCharacter(input: String) {
-        val normalized = input.trim().ifEmpty { return }
+        val trimmed = input.trim().ifEmpty { return }
+        val symbol = firstCodePoint(trimmed)
+        _query.value = symbol
         _uiState.value = CharacterUiState.Loading
         viewModelScope.launch {
-            val result = repository.load(normalized)
+            val result = repository.load(symbol)
             result.fold(
                 onSuccess = {
                     _uiState.value = CharacterUiState.Success(it)
@@ -311,6 +347,7 @@ class CharacterViewModel(
                     _wordInfoUiState.value = WordInfoUiState.Idle
                     loadHskInfo(it.symbol)
                     alignCourseSession(it.symbol)
+                    alignPracticeQueueSession(it.symbol)
                 },
                 onFailure = {
                     val message = it.message ?: "加载失败，请稍后再试"
@@ -489,6 +526,25 @@ class CharacterViewModel(
         }
     }
 
+    private fun navigatePracticeQueue(delta: Int) {
+        val session = _practiceQueueSession.value ?: return
+        val newIndex = (session.index + delta).coerceIn(0, session.symbols.size - 1)
+        if (newIndex == session.index) return
+        val nextSymbol = session.symbols[newIndex]
+        _practiceQueueSession.value = session.copy(index = newIndex)
+        loadCharacter(nextSymbol)
+    }
+
+    private fun alignPracticeQueueSession(symbol: String) {
+        val session = _practiceQueueSession.value ?: return
+        val index = session.symbols.indexOf(symbol)
+        if (index == -1) {
+            _practiceQueueSession.value = null
+        } else if (index != session.index) {
+            _practiceQueueSession.value = session.copy(index = index)
+        }
+    }
+
     fun clearLocalData() {
         viewModelScope.launch {
             practiceHistoryStore.clear()
@@ -497,6 +553,7 @@ class CharacterViewModel(
             _practiceHistory.value = emptyList()
             _completedSymbols.value = emptySet()
             _courseSession.value = null
+            _practiceQueueSession.value = null
             _userPreferences.value = UserPreferences()
             _boardSettings.value = BoardSettings()
             val catalog = loadCourseCatalogIfNeeded()
@@ -531,6 +588,11 @@ class CharacterViewModel(
     fun clearCourseSession() {
         _courseSession.value = null
         viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
+    }
+
+    private fun firstCodePoint(input: String): String {
+        val codePoint = Character.codePointAt(input, 0)
+        return String(Character.toChars(codePoint))
     }
 
     private suspend fun clearUserStrokes() {
@@ -733,6 +795,16 @@ data class HskProgressSummary(
 
 data class CourseSession(
     val level: Int,
+    val symbols: List<String>,
+    val index: Int,
+) {
+    val progressText: String get() = "${(index + 1).coerceAtLeast(1)}/${symbols.size}"
+    val currentSymbol: String? get() = symbols.getOrNull(index)
+    val hasPrevious: Boolean get() = index > 0
+    val hasNext: Boolean get() = index < symbols.lastIndex
+}
+
+data class PracticeQueueSession(
     val symbols: List<String>,
     val index: Int,
 ) {

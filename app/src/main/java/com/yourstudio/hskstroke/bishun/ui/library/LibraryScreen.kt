@@ -60,6 +60,7 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel,
     onLoadInPractice: (String) -> Unit = {},
+    onLoadPracticeQueue: (List<String>) -> Unit = {},
     languageOverride: String? = null,
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -218,7 +219,21 @@ fun LibraryScreen(
                     }
                 }
             },
-            confirmButton = {},
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        practiceDialogWord = null
+                        val targets = characters.ifEmpty { listOf(word.take(1)) }
+                        if (targets.size <= 1) {
+                            onLoadInPractice(targets.first())
+                        } else {
+                            onLoadPracticeQueue(targets)
+                        }
+                    },
+                ) {
+                    Text(libraryStrings.practiceCharactersLabel)
+                }
+            },
             dismissButton = {
                 TextButton(onClick = { practiceDialogWord = null }) {
                     Text(strings.account.cancelLabel)
