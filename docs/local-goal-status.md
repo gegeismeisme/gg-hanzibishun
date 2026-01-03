@@ -19,6 +19,7 @@
 ## 已完成（关键项）
 
 - [x] 底部 4 Tab：`Home / Learn / Dict / Me`
+- [x] Home 二级 Tab：`练习 / 今日一字`，每日入口不再挤压笔顺/画布区域（点击“练习”自动切回练习）
 - [x] 字典数据：预置 SQLite（`word.db`）+ 按需查询，避免运行时全量解析
 - [x] 字典体验：Search/Saved/History；每条显示拼音/释义摘要；与练习联动；词语一键练习（多字拆分）
 - [x] 今日一字：DataStore 单一事实源（symbol/epochDay/完成/streak/详情摘要）
@@ -30,10 +31,10 @@
 
 ## 待完成（P0/P1：建议收费前完成）
 
-- [ ] 工程化：拆分 `CharacterViewModel`（已抽出 HSK 目录/进度计算与 Daily UseCase；下一步把练习渲染/字典词条加载也拆出）
-- [ ] 测试：补齐关键路径测试（已补单测：HSK 目录/进度计算、提醒时间计算、LaunchRequest 解析；下一步补 Compose/UI 与端到端路径）
-- [ ] 文案与多语言一致性：清理/统一对外展示文本（已清理新增提醒文案；下一步统一 Tab/设置等对外文案口径）
-- [ ] 资产/包体策略：已移除未使用的 `app/src/main/assets/characters/all.json`，仍需评估大量小文件的取舍（包体、加载、维护成本）
+- [ ] 工程化：拆分 `CharacterViewModel`（已抽出 HSK 目录/进度计算与 Daily UseCase；已抽离练习渲染 `PracticeRenderController` 与词条加载 `WordInfoController`；下一步继续拆分练习状态机/课程/队列逻辑）
+- [ ] 测试：补齐关键路径测试（已补单测：HSK 目录/进度计算、提醒时间计算、LaunchRequest 解析；已补 Compose/UI smoke：底部导航 + Home 二级 Tab；下一步补查词→练习/今日一字→练习/Widget Intent 端到端）
+- [ ] 文案与多语言一致性：清理/统一对外展示文本（已清理新增提醒文案；已将底部 Tab 与 Onboarding 文案纳入 `LocalizedStrings`；下一步把 Toast/Error 等 ViewModel 文案改为可本地化的 key/枚举）
+- [ ] 资产/包体策略：已移除未使用的 `app/src/main/assets/characters/all.json`；已补策略评估与路线图（`docs/characters-asset-strategy.md`），仍需决定 Zip/SQLite 方案并落地双轨 fallback
 
 ## 可选增强（P2/长期）
 

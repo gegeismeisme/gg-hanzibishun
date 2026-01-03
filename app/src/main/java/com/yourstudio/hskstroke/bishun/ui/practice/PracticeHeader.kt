@@ -32,12 +32,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterUiState
 import com.yourstudio.hskstroke.bishun.ui.character.DemoState
 import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.ui.testing.TestTags
 
 @Composable
 fun SearchBarRow(
@@ -95,7 +97,8 @@ fun SearchBarRow(
                 textStyle = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier
                     .width(92.dp)
-                    .heightIn(min = 56.dp),
+                    .heightIn(min = 56.dp)
+                    .testTag(TestTags.HOME_QUERY_FIELD),
             )
             IconActionButton(
                 icon = Icons.Filled.CloudDownload,

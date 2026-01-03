@@ -67,15 +67,24 @@ class CharacterViewModel(
 
     private val _renderSnapshot = MutableStateFlow<RenderStateSnapshot?>(null)
     val renderSnapshot: StateFlow<RenderStateSnapshot?> = _renderSnapshot.asStateFlow()
+    private val renderController = PracticeRenderController(
+        scope = viewModelScope,
+        snapshots = _renderSnapshot,
+    )
+    private val renderState: RenderState?
+        get() = renderController.state
 
     private val _practiceState = MutableStateFlow(PracticeState())
     val practiceState: StateFlow<PracticeState> = _practiceState.asStateFlow()
     private val _demoState = MutableStateFlow(DemoState())
     val demoState: StateFlow<DemoState> = _demoState.asStateFlow()
-    private val _wordEntry = MutableStateFlow<WordEntry?>(null)
-    val wordEntry: StateFlow<WordEntry?> = _wordEntry.asStateFlow()
-    private val _wordInfoUiState = MutableStateFlow<WordInfoUiState>(WordInfoUiState.Idle)
-    val wordInfoUiState: StateFlow<WordInfoUiState> = _wordInfoUiState.asStateFlow()
+    private val wordInfoController = WordInfoController(
+        wordRepository = wordRepository,
+        scope = viewModelScope,
+        currentSymbol = { currentDefinition?.symbol },
+    )
+    val wordEntry: StateFlow<WordEntry?> = wordInfoController.wordEntry
+    val wordInfoUiState: StateFlow<WordInfoUiState> = wordInfoController.uiState
     private val _hskEntry = MutableStateFlow<HskEntry?>(null)
     val hskEntry: StateFlow<HskEntry?> = _hskEntry.asStateFlow()
     private val _hskProgress = MutableStateFlow(HskProgressSummary())
@@ -98,8 +107,6 @@ class CharacterViewModel(
     val userPreferences: StateFlow<UserPreferences> = _userPreferences.asStateFlow()
 
     private var currentDefinition: CharacterDefinition? = null
-    private var renderState: RenderState? = null
-    private var renderStateJob: Job? = null
     private var loadCharacterJob: Job? = null
     private var loadCharacterToken: Long = 0
     private var pendingAutoStartPracticeToken: Long? = null
@@ -422,8 +429,7 @@ class CharacterViewModel(
                     setupRenderState(it)
                     cancelCompletionReset()
                     resetPracticeState(it)
-                    _wordEntry.value = null
-                    _wordInfoUiState.value = WordInfoUiState.Idle
+                    wordInfoController.reset()
                     loadHskInfo(it.symbol)
                     alignCourseSession(it.symbol)
                     alignPracticeQueueSession(it.symbol)
@@ -436,8 +442,7 @@ class CharacterViewModel(
                 onFailure = {
                     val message = it.message ?: "加载失败，请稍后再试"
                     _uiState.value = CharacterUiState.Error(message)
-                    _wordEntry.value = null
-                    _wordInfoUiState.value = WordInfoUiState.Idle
+                    wordInfoController.reset()
                     _hskEntry.value = null
                     if (pendingAutoStartPracticeToken == token) {
                         pendingAutoStartPracticeToken = null
@@ -449,15 +454,7 @@ class CharacterViewModel(
     }
 
     private fun setupRenderState(definition: CharacterDefinition) {
-        renderStateJob?.cancel()
-        renderState?.dispose()
-        val newRenderState = RenderState(definition, RenderStateOptions())
-        renderState = newRenderState
-        renderStateJob = viewModelScope.launch {
-            newRenderState.state.collect { snapshot ->
-                _renderSnapshot.value = snapshot
-            }
-        }
+        renderController.setup(definition)
     }
 
     private fun resetPracticeState(definition: CharacterDefinition) {
@@ -476,33 +473,7 @@ class CharacterViewModel(
     }
 
     fun requestWordInfo(symbol: String? = currentDefinition?.symbol) {
-        val normalized = symbol?.trim().takeIf { !it.isNullOrEmpty() } ?: return
-        val currentEntry = _wordEntry.value
-        val currentState = _wordInfoUiState.value
-        if (currentEntry?.word == normalized && currentState is WordInfoUiState.Loaded) return
-        if (currentState is WordInfoUiState.Loading) return
-
-        _wordInfoUiState.value = WordInfoUiState.Loading
-        viewModelScope.launch {
-            runCatching { wordRepository.getWord(normalized) }
-                .onSuccess { entry ->
-                    if (currentDefinition?.symbol != normalized) return@launch
-                    if (entry == null) {
-                        _wordEntry.value = null
-                        _wordInfoUiState.value = WordInfoUiState.NotFound
-                    } else {
-                        _wordEntry.value = entry
-                        _wordInfoUiState.value = WordInfoUiState.Loaded
-                    }
-                }
-                .onFailure { throwable ->
-                    if (currentDefinition?.symbol != normalized) return@launch
-                    _wordEntry.value = null
-                    _wordInfoUiState.value = WordInfoUiState.Error(
-                        throwable.message ?: "Unable to load dictionary entry.",
-                    )
-                }
-        }
+        wordInfoController.request(symbol)
     }
 
     private fun loadHskInfo(symbol: String) {
@@ -835,8 +806,8 @@ class CharacterViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        renderStateJob?.cancel()
-        renderState?.dispose()
+        renderController.dispose()
+        wordInfoController.reset()
     }
 
     companion object {

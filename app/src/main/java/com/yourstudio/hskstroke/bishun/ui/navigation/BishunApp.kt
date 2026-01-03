@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -29,20 +30,22 @@ import androidx.navigation.compose.rememberNavController
 import com.yourstudio.hskstroke.bishun.ui.account.AccountScreen
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterRoute
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
+import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.learn.LearnScreen
 import com.yourstudio.hskstroke.bishun.ui.learn.LearnTab
 import com.yourstudio.hskstroke.bishun.ui.library.LibraryScreen
 import com.yourstudio.hskstroke.bishun.ui.library.LibraryViewModel
+import com.yourstudio.hskstroke.bishun.ui.testing.TestTags
 
 private sealed class MainDestination(
     val route: String,
-    val label: String,
     val icon: ImageVector,
+    val testTag: String,
 ) {
-    data object Home : MainDestination("home", "首页", Icons.Outlined.Home)
-    data object Learn : MainDestination("learn", "学习", Icons.Outlined.AutoStories)
-    data object Library : MainDestination("library", "字典", Icons.AutoMirrored.Outlined.MenuBook)
-    data object Account : MainDestination("account", "我的", Icons.Outlined.Person)
+    data object Home : MainDestination("home", Icons.Outlined.Home, TestTags.NAV_HOME)
+    data object Learn : MainDestination("learn", Icons.Outlined.AutoStories, TestTags.NAV_LEARN)
+    data object Library : MainDestination("library", Icons.AutoMirrored.Outlined.MenuBook, TestTags.NAV_LIBRARY)
+    data object Account : MainDestination("account", Icons.Outlined.Person, TestTags.NAV_ACCOUNT)
 
     companion object {
         val items: List<MainDestination> = listOf(
@@ -78,6 +81,7 @@ fun BishunApp(
         factory = LibraryViewModel.factory(context),
     )
     val userPreferences by sharedCharacterViewModel.userPreferences.collectAsState()
+    val navigationStrings = rememberLocalizedStrings(userPreferences.languageOverride).navigation
 
     LaunchedEffect(launchRequest) {
         when (val request = launchRequest) {
@@ -111,7 +115,14 @@ fun BishunApp(
             NavigationBar {
                 destinations.forEach { destination ->
                     val selected = destination.route == currentRoute
+                    val label = when (destination) {
+                        MainDestination.Home -> navigationStrings.homeLabel
+                        MainDestination.Learn -> navigationStrings.learnLabel
+                        MainDestination.Library -> navigationStrings.libraryLabel
+                        MainDestination.Account -> navigationStrings.accountLabel
+                    }
                     NavigationBarItem(
+                        modifier = Modifier.testTag(destination.testTag),
                         selected = selected,
                         onClick = {
                             if (selected) return@NavigationBarItem
@@ -126,10 +137,10 @@ fun BishunApp(
                         icon = {
                             Icon(
                                 imageVector = destination.icon,
-                                contentDescription = destination.label,
+                                contentDescription = label,
                             )
                         },
-                        label = { Text(destination.label) },
+                        label = { Text(label) },
                     )
                 }
             }
@@ -144,13 +155,13 @@ fun BishunApp(
         ) {
             composable(MainDestination.Home.route) {
                 CharacterRoute(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag(TestTags.SCREEN_HOME),
                     viewModel = sharedCharacterViewModel,
                 )
             }
             composable(MainDestination.Learn.route) {
                 LearnScreen(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag(TestTags.SCREEN_LEARN),
                     viewModel = sharedCharacterViewModel,
                     onNavigateToPractice = {
                         navController.navigate(MainDestination.Home.route) {
@@ -162,7 +173,7 @@ fun BishunApp(
             }
             composable(LEGACY_COURSES_ROUTE) {
                 LearnScreen(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag(TestTags.SCREEN_LEARN),
                     viewModel = sharedCharacterViewModel,
                     onNavigateToPractice = {
                         navController.navigate(MainDestination.Home.route) {
@@ -175,7 +186,7 @@ fun BishunApp(
             }
             composable(LEGACY_PROGRESS_ROUTE) {
                 LearnScreen(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag(TestTags.SCREEN_LEARN),
                     viewModel = sharedCharacterViewModel,
                     onNavigateToPractice = {
                         navController.navigate(MainDestination.Home.route) {
@@ -188,7 +199,7 @@ fun BishunApp(
             }
             composable(MainDestination.Library.route) {
                 LibraryScreen(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag(TestTags.SCREEN_LIBRARY),
                     viewModel = libraryViewModel,
                     onLoadInPractice = { symbol ->
                         sharedCharacterViewModel.jumpToCharacter(symbol)
@@ -207,7 +218,7 @@ fun BishunApp(
             }
             composable(MainDestination.Account.route) {
                 AccountScreen(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag(TestTags.SCREEN_ACCOUNT),
                     onClearLocalData = sharedCharacterViewModel::clearLocalData,
                     languageOverride = userPreferences.languageOverride,
                     onShowOnboarding = onShowOnboarding,

@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
                     if (shouldShowOnboarding) {
                         OnboardingScreen(
                             modifier = Modifier.fillMaxSize(),
+                            languageOverride = userPreferences.languageOverride,
                             onFinish = {
                                 forceShowOnboarding = false
                                 scope.launch { preferencesStore.setOnboardingCompleted(true) }

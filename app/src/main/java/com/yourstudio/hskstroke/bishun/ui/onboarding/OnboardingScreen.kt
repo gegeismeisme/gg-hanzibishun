@@ -28,16 +28,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
+import com.yourstudio.hskstroke.bishun.ui.testing.TestTags
 
 @Composable
 fun OnboardingScreen(
     modifier: Modifier = Modifier,
     onFinish: () -> Unit,
     onSkip: () -> Unit,
+    languageOverride: String? = null,
 ) {
-    val pages = remember { onboardingPages }
+    val strings = rememberLocalizedStrings(languageOverride)
+    val onboardingStrings = strings.onboarding
+    val pages = remember(onboardingStrings) {
+        onboardingIcons.zip(onboardingStrings.pages).map { (icon, text) ->
+            OnboardingPage(
+                icon = icon,
+                title = text.title,
+                body = text.body,
+            )
+        }
+    }
+    if (pages.isEmpty()) return
     var index by rememberSaveable { mutableIntStateOf(0) }
     val clampedIndex = index.coerceIn(0, pages.lastIndex)
     val page = pages[clampedIndex]
@@ -54,12 +69,12 @@ fun OnboardingScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Hanzi",
+                text = onboardingStrings.appTitle,
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onSkip) {
-                Text("Skip")
+            TextButton(onClick = onSkip, modifier = Modifier.testTag(TestTags.ONBOARDING_SKIP)) {
+                Text(onboardingStrings.skipLabel)
             }
         }
 
@@ -109,8 +124,9 @@ fun OnboardingScreen(
             TextButton(
                 onClick = { index = (clampedIndex - 1).coerceAtLeast(0) },
                 enabled = clampedIndex > 0,
+                modifier = Modifier.testTag(TestTags.ONBOARDING_BACK),
             ) {
-                Text("Back")
+                Text(onboardingStrings.backLabel)
             }
             Button(
                 onClick = {
@@ -120,8 +136,9 @@ fun OnboardingScreen(
                         index = (clampedIndex + 1).coerceAtMost(pages.lastIndex)
                     }
                 },
+                modifier = Modifier.testTag(TestTags.ONBOARDING_NEXT),
             ) {
-                Text(if (isLastPage) "Start" else "Next")
+                Text(if (isLastPage) onboardingStrings.startLabel else onboardingStrings.nextLabel)
             }
         }
     }
@@ -133,26 +150,9 @@ private data class OnboardingPage(
     val body: String,
 )
 
-private val onboardingPages = listOf(
-    OnboardingPage(
-        icon = Icons.Outlined.Search,
-        title = "Look up characters fast",
-        body = "Search stroke order and pronunciation offline, anytime you need it.",
-    ),
-    OnboardingPage(
-        icon = Icons.Outlined.Create,
-        title = "Practice with guidance",
-        body = "Trace strokes and get hints to improve accuracy and confidence.",
-    ),
-    OnboardingPage(
-        icon = Icons.AutoMirrored.Outlined.MenuBook,
-        title = "Dictionary when you need details",
-        body = "Open the dictionary card to see pinyin and meaning without leaving practice.",
-    ),
-    OnboardingPage(
-        icon = Icons.AutoMirrored.Outlined.VolumeUp,
-        title = "Safer pronunciation playback",
-        body = "Enable volume reminders to avoid playing audio too loud in public.",
-    ),
+private val onboardingIcons = listOf(
+    Icons.Outlined.Search,
+    Icons.Outlined.Create,
+    Icons.AutoMirrored.Outlined.MenuBook,
+    Icons.AutoMirrored.Outlined.VolumeUp,
 )
-

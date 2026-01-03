@@ -113,6 +113,27 @@ data class SupportStrings(
     val feedbackEmailNoApp: String,
 )
 
+data class NavigationStrings(
+    val homeLabel: String,
+    val learnLabel: String,
+    val libraryLabel: String,
+    val accountLabel: String,
+)
+
+data class OnboardingPageText(
+    val title: String,
+    val body: String,
+)
+
+data class OnboardingStrings(
+    val appTitle: String,
+    val skipLabel: String,
+    val backLabel: String,
+    val nextLabel: String,
+    val startLabel: String,
+    val pages: List<OnboardingPageText>,
+)
+
 data class PracticeBoardStrings(
     val startLabel: String,
     val hintLabel: String,
@@ -296,6 +317,8 @@ data class LibraryStrings(
 data class LocalizedStrings(
     val locale: Locale,
     val appTitle: String,
+    val navigation: NavigationStrings,
+    val onboarding: OnboardingStrings,
     val searchLabel: String,
     val loadButton: String,
     val clearButton: String,
@@ -876,9 +899,110 @@ private val japaneseSupportStrings = SupportStrings(
     feedbackEmailError = "\u30e1\u30fc\u30eb\u3092\u958b\u3051\u307e\u305b\u3093\u3067\u3057\u305f\u3002\u30ed\u30b0\u306f\u30ed\u30fc\u30ab\u30eb\u306b\u4fdd\u5b58\u3055\u308c\u307e\u3059\u3002\u5f8c\u3067\u30a2\u30ab\u30a6\u30f3\u30c8\u304b\u3089\u5171\u6709\u3057\u307e\u3059\u3002",
     feedbackEmailNoApp = "\u30e1\u30fc\u30eb\u30a2\u30d7\u30ea\u304c\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u3055\u308c\u3066\u3044\u307e\u305b\u3093\u3002\u30ed\u30b0\u306f\u30ed\u30fc\u30ab\u30eb\u306b\u4fdd\u5b58\u3055\u308c\u307e\u3059\u3002\u5f8c\u3067\u30a2\u30ab\u30a6\u30f3\u30c8\u304b\u3089\u5171\u6709\u3057\u307e\u3059\u3002",
 )
+private val defaultNavigationStrings = NavigationStrings(
+    homeLabel = "首页",
+    learnLabel = "学习",
+    libraryLabel = "字典",
+    accountLabel = "我的",
+)
+
+private val spanishNavigationStrings = NavigationStrings(
+    homeLabel = "Inicio",
+    learnLabel = "Aprender",
+    libraryLabel = "Diccionario",
+    accountLabel = "Ajustes",
+)
+
+private val japaneseNavigationStrings = NavigationStrings(
+    homeLabel = "ホーム",
+    learnLabel = "学習",
+    libraryLabel = "辞書",
+    accountLabel = "設定",
+)
+
+private val defaultOnboardingStrings = OnboardingStrings(
+    appTitle = "Hanzi",
+    skipLabel = "Skip",
+    backLabel = "Back",
+    nextLabel = "Next",
+    startLabel = "Start",
+    pages = listOf(
+        OnboardingPageText(
+            title = "Look up characters fast",
+            body = "Search stroke order and pronunciation offline, anytime you need it.",
+        ),
+        OnboardingPageText(
+            title = "Practice with guidance",
+            body = "Trace strokes and get hints to improve accuracy and confidence.",
+        ),
+        OnboardingPageText(
+            title = "Dictionary when you need details",
+            body = "Open the dictionary card to see pinyin and meaning without leaving practice.",
+        ),
+        OnboardingPageText(
+            title = "Safer pronunciation playback",
+            body = "Enable volume reminders to avoid playing audio too loud in public.",
+        ),
+    ),
+)
+
+private val spanishOnboardingStrings = OnboardingStrings(
+    appTitle = "Hanzi",
+    skipLabel = "Saltar",
+    backLabel = "Atrás",
+    nextLabel = "Siguiente",
+    startLabel = "Empezar",
+    pages = listOf(
+        OnboardingPageText(
+            title = "Busca caracteres rápido",
+            body = "Consulta el orden de trazos y la pronunciación sin conexión, cuando lo necesites.",
+        ),
+        OnboardingPageText(
+            title = "Practica con guía",
+            body = "Traza los trazos y recibe pistas para mejorar la precisión y la confianza.",
+        ),
+        OnboardingPageText(
+            title = "Diccionario cuando necesites detalles",
+            body = "Abre la tarjeta del diccionario para ver pinyin y significado sin salir de la práctica.",
+        ),
+        OnboardingPageText(
+            title = "Reproducción de audio más segura",
+            body = "Activa recordatorios de volumen para evitar reproducir audio demasiado alto en público.",
+        ),
+    ),
+)
+
+private val japaneseOnboardingStrings = OnboardingStrings(
+    appTitle = "漢字",
+    skipLabel = "スキップ",
+    backLabel = "戻る",
+    nextLabel = "次へ",
+    startLabel = "開始",
+    pages = listOf(
+        OnboardingPageText(
+            title = "素早く漢字を調べる",
+            body = "筆順と発音をオフラインでいつでも確認できます。",
+        ),
+        OnboardingPageText(
+            title = "ガイド付きで練習",
+            body = "なぞって練習し、ヒントで精度と自信を高めましょう。",
+        ),
+        OnboardingPageText(
+            title = "必要なときに辞書",
+            body = "練習を離れずに辞書カードで読み方と意味を確認できます。",
+        ),
+        OnboardingPageText(
+            title = "より安全な音量で再生",
+            body = "公共の場で音が大きすぎないよう、音量リマインダーを有効にできます。",
+        ),
+    ),
+)
+
 private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStrings(
     locale = locale,
     appTitle = "中国字笔顺",
+    navigation = defaultNavigationStrings,
+    onboarding = defaultOnboardingStrings,
     searchLabel = "Hanzi",
     loadButton = "Load character",
     clearButton = "Clear input",
@@ -1062,6 +1186,8 @@ private fun localizedStringsJa(locale: Locale): LocalizedStrings {
     return base.copy(
         locale = locale,
         appTitle = "\u6f22\u5b57\u7b46\u9806",
+        navigation = japaneseNavigationStrings,
+        onboarding = japaneseOnboardingStrings,
         searchLabel = "\u6f22\u5b57",
         loadButton = "\u6587\u5b57\u3092\u8aad\u307f\u8fbc\u3080",
         clearButton = "\u30af\u30ea\u30a2",
@@ -1101,6 +1227,8 @@ private fun localizedStringsJa(locale: Locale): LocalizedStrings {
 private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStrings(
     locale = locale,
     appTitle = "中国字笔顺",
+    navigation = spanishNavigationStrings,
+    onboarding = spanishOnboardingStrings,
     searchLabel = "Hanzi",
     loadButton = "Cargar carácter",
     clearButton = "Borrar",

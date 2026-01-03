@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,12 +29,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,8 +57,14 @@ import com.yourstudio.hskstroke.bishun.ui.practice.PracticeGrid
 import com.yourstudio.hskstroke.bishun.ui.practice.StrokeColorOption
 import com.yourstudio.hskstroke.bishun.ui.practice.SearchBarRow
 import com.yourstudio.hskstroke.bishun.ui.practice.rememberCalligraphyDemoController
+import com.yourstudio.hskstroke.bishun.ui.testing.TestTags
 import java.time.LocalDate
 import java.time.ZoneId
+
+private enum class HomePracticeTab {
+    Practice,
+    Daily,
+}
 @Composable
 fun CharacterRoute(
     modifier: Modifier = Modifier,
@@ -203,12 +213,20 @@ fun CharacterScreen(
     val useCalligraphyDemo = showTemplate && calligraphyDemoController != null
     val playCalligraphyDemo: (Boolean) -> Unit = calligraphyDemoController?.play ?: {}
     val stopCalligraphyDemo: () -> Unit = calligraphyDemoController?.stop ?: {}
+    var selectedHomeTabKey by rememberSaveable { mutableStateOf(HomePracticeTab.Practice.name) }
+    val selectedHomeTab = remember(selectedHomeTabKey) { HomePracticeTab.valueOf(selectedHomeTabKey) }
+    val homeTabs = remember(strings) {
+        listOf(
+            Triple(HomePracticeTab.Practice, strings.progress.dailyPracticeLabel, TestTags.HOME_TAB_PRACTICE),
+            Triple(HomePracticeTab.Daily, strings.progress.dailyTitle, TestTags.HOME_TAB_DAILY),
+        )
+    }
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = 16.dp, end = 16.dp, top = 48.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SearchBarRow(
                 query = query,
@@ -230,6 +248,20 @@ fun CharacterScreen(
                 languageOverride = languageOverride,
                 onLanguageChange = onLanguageChange,
             )
+            TabRow(
+                selectedTabIndex = selectedHomeTab.ordinal,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                homeTabs.forEach { (tab, label, tag) ->
+                    Tab(
+                        modifier = Modifier.testTag(tag),
+                        selected = selectedHomeTab == tab,
+                        onClick = { selectedHomeTabKey = tab.name },
+                        text = { Text(label) },
+                    )
+                }
+            }
             val zone = remember { ZoneId.systemDefault() }
             val todayEpochDay = remember(zone) { LocalDate.now(zone).toEpochDay() }
             val suggestedDailySymbol = remember(hskProgress) { pickDailySymbol(hskProgress) }
@@ -286,69 +318,84 @@ fun CharacterScreen(
                     dailyPracticeCompletedEpochDay == todayEpochDay &&
                     completedSymbol == resolvedSymbol
             }
-            DailyPracticeBadge(
-                title = strings.progress.dailyTitle,
-                practiceLabel = strings.progress.dailyPracticeLabel,
-                completedLabel = strings.progress.dailyCompletedLabel,
-                symbol = resolvedDailySymbol,
-                pinyin = resolvedDailyPinyin,
-                explanationSummary = resolvedDailyExplanationSummary,
-                completedToday = dailyCompletedToday,
-                onPractice = onStartDailyPractice,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            when (uiState) {
-                CharacterUiState.Loading -> Text(strings.loadingLabel)
-                is CharacterUiState.Error -> PracticeErrorBanner(
-                    message = uiState.message,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                is CharacterUiState.Success -> PracticeContent(
-                    definition = uiState.definition,
-                    renderSnapshot = renderSnapshot,
-                    practiceState = practiceState,
-                    courseSession = courseSession,
-                    practiceQueueSession = practiceQueueSession,
-                    boardSettings = boardSettings,
-                    isDemoPlaying = demoState.isPlaying || calligraphyDemoState.isPlaying,
-                    wordEntry = wordEntry,
-                    wordInfoUiState = wordInfoUiState,
-                    onRequestWordInfo = onRequestWordInfo,
-                    hskEntry = hskEntry,
-                    showTemplate = showTemplate,
-                    boardStrings = strings.boardControls,
-                    onTemplateToggle = { enabled ->
-                        onTemplateToggleSetting(enabled)
-                        if (!enabled) {
-                            stopCalligraphyDemo()
-                        }
-                    },
-                    calligraphyDemoState = calligraphyDemoState,
-                    onStopCalligraphyDemo = stopCalligraphyDemo,
-                    onStartPractice = {
-                        stopCalligraphyDemo()
-                        onStartPractice()
-                    },
-                    onRequestHint = onRequestHint,
-                    onStrokeStart = onStrokeStart,
-                    onStrokeMove = onStrokeMove,
-                    onStrokeEnd = onStrokeEnd,
-                    onGridModeChange = onGridModeChange,
-                    onStrokeColorChange = onStrokeColorChange,
-                    onCourseNext = onCourseNext,
-                    onCoursePrev = onCoursePrev,
-                    onCourseSkip = onCourseSkip,
-                    onCourseRestart = onCourseRestart,
-                    onResumeCourse = onLoadCharacter,
-                    onCourseExit = onCourseExit,
-                    onPracticeQueueNext = onPracticeQueueNext,
-                    onPracticeQueuePrev = onPracticeQueuePrev,
-                    onPracticeQueueRestart = onPracticeQueueRestart,
-                    onPracticeQueueExit = onPracticeQueueExit,
-                    courseStrings = strings.courses,
-                    locale = strings.locale,
-                    modifier = Modifier.weight(1f),
-                )
+            when (selectedHomeTab) {
+                HomePracticeTab.Daily -> {
+                    DailyPracticeBadge(
+                        title = strings.progress.dailyTitle,
+                        practiceLabel = strings.progress.dailyPracticeLabel,
+                        completedLabel = strings.progress.dailyCompletedLabel,
+                        symbol = resolvedDailySymbol,
+                        pinyin = resolvedDailyPinyin,
+                        explanationSummary = resolvedDailyExplanationSummary,
+                        completedToday = dailyCompletedToday,
+                        onPractice = {
+                            selectedHomeTabKey = HomePracticeTab.Practice.name
+                            onStartDailyPractice()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(TestTags.HOME_DAILY_BADGE),
+                    )
+                }
+
+                HomePracticeTab.Practice -> {
+                    when (uiState) {
+                        CharacterUiState.Loading -> Text(strings.loadingLabel)
+                        is CharacterUiState.Error -> PracticeErrorBanner(
+                            message = uiState.message,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        is CharacterUiState.Success -> PracticeContent(
+                            definition = uiState.definition,
+                            renderSnapshot = renderSnapshot,
+                            practiceState = practiceState,
+                            courseSession = courseSession,
+                            practiceQueueSession = practiceQueueSession,
+                            boardSettings = boardSettings,
+                            isDemoPlaying = demoState.isPlaying || calligraphyDemoState.isPlaying,
+                            wordEntry = wordEntry,
+                            wordInfoUiState = wordInfoUiState,
+                            onRequestWordInfo = onRequestWordInfo,
+                            hskEntry = hskEntry,
+                            showTemplate = showTemplate,
+                            boardStrings = strings.boardControls,
+                            onTemplateToggle = { enabled ->
+                                onTemplateToggleSetting(enabled)
+                                if (!enabled) {
+                                    stopCalligraphyDemo()
+                                }
+                            },
+                            calligraphyDemoState = calligraphyDemoState,
+                            onStopCalligraphyDemo = stopCalligraphyDemo,
+                            onStartPractice = {
+                                stopCalligraphyDemo()
+                                onStartPractice()
+                            },
+                            onRequestHint = onRequestHint,
+                            onStrokeStart = onStrokeStart,
+                            onStrokeMove = onStrokeMove,
+                            onStrokeEnd = onStrokeEnd,
+                            onGridModeChange = onGridModeChange,
+                            onStrokeColorChange = onStrokeColorChange,
+                            onCourseNext = onCourseNext,
+                            onCoursePrev = onCoursePrev,
+                            onCourseSkip = onCourseSkip,
+                            onCourseRestart = onCourseRestart,
+                            onResumeCourse = onLoadCharacter,
+                            onCourseExit = onCourseExit,
+                            onPracticeQueueNext = onPracticeQueueNext,
+                            onPracticeQueuePrev = onPracticeQueuePrev,
+                            onPracticeQueueRestart = onPracticeQueueRestart,
+                            onPracticeQueueExit = onPracticeQueueExit,
+                            courseStrings = strings.courses,
+                            locale = strings.locale,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag(TestTags.HOME_PRACTICE_CONTENT),
+                        )
+                    }
+                }
             }
         }
     }
@@ -401,7 +448,11 @@ private fun DailyPracticeBadge(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                TextButton(onClick = onPractice, enabled = enabled) {
+                TextButton(
+                    onClick = onPractice,
+                    enabled = enabled,
+                    modifier = Modifier.testTag(TestTags.HOME_DAILY_PRACTICE_BUTTON),
+                ) {
                     Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(practiceLabel)
