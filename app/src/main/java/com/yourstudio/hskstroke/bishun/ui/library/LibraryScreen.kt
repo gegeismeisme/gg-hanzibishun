@@ -15,12 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -44,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
 import com.yourstudio.hskstroke.bishun.ui.character.LibraryStrings
@@ -51,6 +54,7 @@ import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.library.LibraryError
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun LibraryScreen(
     modifier: Modifier = Modifier,
@@ -71,6 +75,25 @@ fun LibraryScreen(
             LibraryTab.Favorites to libraryStrings.tabFavoritesLabel,
             LibraryTab.History to libraryStrings.tabHistoryLabel,
         )
+    }
+
+    var practiceDialogWord by rememberSaveable { mutableStateOf<String?>(null) }
+    val requestPractice: (String) -> Unit = { rawWord ->
+        val word = rawWord.trim()
+        if (word.isNotBlank()) {
+            viewModel.recordRecentWord(word)
+            val targets = word.asSequence()
+                .filter { it in '\u4e00'..'\u9fff' }
+                .map { it.toString() }
+                .distinct()
+                .toList()
+            if (targets.size <= 1) {
+                val symbol = targets.firstOrNull() ?: word.take(1)
+                onLoadInPractice(symbol)
+            } else {
+                practiceDialogWord = word
+            }
+        }
     }
     Column(
         modifier = modifier.fillMaxSize(),
@@ -123,12 +146,16 @@ fun LibraryScreen(
             LibraryTab.Favorites -> {
                 FavoritesTab(
                     favorites = uiState.favorites,
+                    details = uiState.wordDetails,
                     strings = libraryStrings,
+                    locale = locale,
+                    onPractice = requestPractice,
                     onOpen = {
                         viewModel.loadCharacter(it)
                         selectedTabKey = LibraryTab.Search.name
                     },
                     onRemove = viewModel::toggleFavorite,
+                    onRemoveSelected = viewModel::removeFavorites,
                     onClearAll = viewModel::clearFavorites,
                 )
             }
@@ -138,7 +165,10 @@ fun LibraryScreen(
                     recentWords = uiState.recentWords,
                     pinnedWords = uiState.pinnedRecentWords,
                     favorites = uiState.favorites,
+                    details = uiState.wordDetails,
                     strings = libraryStrings,
+                    locale = locale,
+                    onPractice = requestPractice,
                     onOpen = {
                         viewModel.loadCharacter(it)
                         selectedTabKey = LibraryTab.Search.name
@@ -146,10 +176,55 @@ fun LibraryScreen(
                     onTogglePinned = viewModel::togglePinnedRecent,
                     onToggleFavorite = viewModel::toggleFavorite,
                     onRemove = viewModel::removeRecentWord,
+                    onPinSelected = viewModel::pinRecentWords,
+                    onUnpinSelected = viewModel::unpinRecentWords,
+                    onSaveSelected = viewModel::addFavorites,
+                    onUnsaveSelected = viewModel::removeFavorites,
+                    onRemoveSelected = viewModel::removeRecentWords,
                     onClearAll = viewModel::clearHistory,
                 )
             }
         }
+    }
+
+    practiceDialogWord?.let { word ->
+        val characters = remember(word) {
+            word.asSequence()
+                .filter { it in '\u4e00'..'\u9fff' }
+                .map { it.toString() }
+                .distinct()
+                .toList()
+        }
+        AlertDialog(
+            onDismissRequest = { practiceDialogWord = null },
+            title = { Text(libraryStrings.practiceCharactersLabel) },
+            text = {
+                if (characters.isEmpty()) {
+                    Text(word.take(1), style = MaterialTheme.typography.titleLarge)
+                } else {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        characters.forEach { symbol ->
+                            AssistChip(
+                                onClick = {
+                                    practiceDialogWord = null
+                                    onLoadInPractice(symbol)
+                                },
+                                label = { Text(symbol) },
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { practiceDialogWord = null }) {
+                    Text(strings.account.cancelLabel)
+                }
+            },
+        )
     }
 }
 
@@ -253,18 +328,38 @@ private fun LibrarySearchTab(
 @Composable
 private fun FavoritesTab(
     favorites: List<String>,
+    details: Map<String, WordEntry>,
     strings: LibraryStrings,
+    locale: Locale,
+    onPractice: (String) -> Unit,
     onOpen: (String) -> Unit,
     onRemove: (String) -> Unit,
+    onRemoveSelected: (Collection<String>) -> Unit,
     onClearAll: () -> Unit,
 ) {
     var showClearDialog by rememberSaveable { mutableStateOf(false) }
     var sortModeKey by rememberSaveable { mutableStateOf(SavedSortMode.Recent.name) }
     val sortMode = remember(sortModeKey) { SavedSortMode.valueOf(sortModeKey) }
+    var isSelecting by rememberSaveable { mutableStateOf(false) }
+    var selectedWords by remember { mutableStateOf(setOf<String>()) }
+    var filterQuery by rememberSaveable { mutableStateOf("") }
     val sortedFavorites = remember(favorites, sortMode) {
         when (sortMode) {
             SavedSortMode.Recent -> favorites
             SavedSortMode.Name -> favorites.sorted()
+        }
+    }
+    val filteredFavorites = remember(sortedFavorites, filterQuery, details) {
+        sortedFavorites.filter { word -> matchesLibraryFilterQuery(word, details[word], filterQuery) }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(favorites, filteredFavorites) {
+        if (favorites.isEmpty()) {
+            isSelecting = false
+            selectedWords = emptySet()
+        } else if (selectedWords.isNotEmpty()) {
+            val allowed = filteredFavorites.toSet()
+            selectedWords = selectedWords.filter { it in allowed }.toSet()
         }
     }
 
@@ -301,13 +396,64 @@ private fun FavoritesTab(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = strings.favoritesHeader,
+                text = if (isSelecting) {
+                    String.format(locale, strings.selectedCountFormat, selectedWords.size)
+                } else {
+                    strings.favoritesHeader
+                },
                 style = MaterialTheme.typography.titleMedium,
             )
-            OutlinedButton(
-                onClick = { showClearDialog = true },
-                enabled = favorites.isNotEmpty(),
-            ) { Text(strings.favoritesClearLabel) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isSelecting) {
+                    TextButton(
+                        onClick = {
+                            isSelecting = false
+                            selectedWords = emptySet()
+                        },
+                    ) { Text(strings.doneLabel) }
+                } else {
+                    TextButton(
+                        onClick = { isSelecting = true },
+                        enabled = favorites.isNotEmpty(),
+                    ) { Text(strings.editLabel) }
+                    OutlinedButton(
+                        onClick = { showClearDialog = true },
+                        enabled = favorites.isNotEmpty(),
+                    ) { Text(strings.favoritesClearLabel) }
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = filterQuery,
+            onValueChange = { filterQuery = it.take(64) },
+            label = { Text(strings.favoritesFilterLabel) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        if (isSelecting) {
+            val allSelected = filteredFavorites.isNotEmpty() && selectedWords.size == filteredFavorites.size
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                TextButton(
+                    onClick = {
+                        selectedWords = if (allSelected) {
+                            emptySet()
+                        } else {
+                            filteredFavorites.toSet()
+                        }
+                    },
+                    enabled = filteredFavorites.isNotEmpty(),
+                ) { Text(if (allSelected) strings.deselectAllLabel else strings.selectAllLabel) }
+                OutlinedButton(
+                    onClick = {
+                        onRemoveSelected(selectedWords)
+                        selectedWords = emptySet()
+                        isSelecting = false
+                    },
+                    enabled = selectedWords.isNotEmpty(),
+                ) { Text(strings.favoritesRemoveLabel) }
+            }
         }
 
         SortModeRow(
@@ -316,15 +462,22 @@ private fun FavoritesTab(
             onSelect = { sortModeKey = it.name },
         )
 
-        if (sortedFavorites.isEmpty()) {
+        if (favorites.isEmpty()) {
             Text(strings.favoritesEmpty, style = MaterialTheme.typography.bodyMedium)
+        } else if (filteredFavorites.isEmpty() && filterQuery.isNotBlank()) {
+            Text(strings.filterNoResultsLabel, style = MaterialTheme.typography.bodyMedium)
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                sortedFavorites.forEach { word ->
+                filteredFavorites.forEach { word ->
                     FavoriteRow(
                         word = word,
                         strings = strings,
+                        entry = details[word],
+                        isSelectionMode = isSelecting,
+                        isSelected = selectedWords.contains(word),
+                        onToggleSelected = { selectedWords = toggleSelection(selectedWords, word) },
                         onOpen = { onOpen(word) },
+                        onPractice = { onPractice(word) },
                         onRemove = { onRemove(word) },
                     )
                 }
@@ -335,21 +488,33 @@ private fun FavoritesTab(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HistoryTab(
     recentWords: List<String>,
     pinnedWords: List<String>,
     favorites: List<String>,
+    details: Map<String, WordEntry>,
     strings: LibraryStrings,
+    locale: Locale,
+    onPractice: (String) -> Unit,
     onOpen: (String) -> Unit,
     onTogglePinned: (String) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onRemove: (String) -> Unit,
+    onPinSelected: (List<String>) -> Unit,
+    onUnpinSelected: (Collection<String>) -> Unit,
+    onSaveSelected: (List<String>) -> Unit,
+    onUnsaveSelected: (Collection<String>) -> Unit,
+    onRemoveSelected: (Collection<String>) -> Unit,
     onClearAll: () -> Unit,
 ) {
     var showClearDialog by rememberSaveable { mutableStateOf(false) }
     var sortModeKey by rememberSaveable { mutableStateOf(SavedSortMode.Recent.name) }
     val sortMode = remember(sortModeKey) { SavedSortMode.valueOf(sortModeKey) }
+    var isSelecting by rememberSaveable { mutableStateOf(false) }
+    var selectedWords by remember { mutableStateOf(setOf<String>()) }
+    var filterQuery by rememberSaveable { mutableStateOf("") }
     val pinnedSet = remember(pinnedWords) { pinnedWords.toSet() }
     val visiblePinned = remember(pinnedWords, sortMode) {
         when (sortMode) {
@@ -362,6 +527,23 @@ private fun HistoryTab(
         when (sortMode) {
             SavedSortMode.Recent -> rest
             SavedSortMode.Name -> rest.sorted()
+        }
+    }
+    val filteredPinned = remember(visiblePinned, filterQuery, details) {
+        visiblePinned.filter { word -> matchesLibraryFilterQuery(word, details[word], filterQuery) }
+    }
+    val filteredRecent = remember(visibleRecent, filterQuery, details) {
+        visibleRecent.filter { word -> matchesLibraryFilterQuery(word, details[word], filterQuery) }
+    }
+    val allVisible = remember(filteredPinned, filteredRecent) { filteredPinned + filteredRecent }
+
+    androidx.compose.runtime.LaunchedEffect(recentWords, pinnedWords, allVisible) {
+        if (recentWords.isEmpty() && pinnedWords.isEmpty()) {
+            isSelecting = false
+            selectedWords = emptySet()
+        } else if (selectedWords.isNotEmpty()) {
+            val allowed = allVisible.toSet()
+            selectedWords = selectedWords.filter { it in allowed }.toSet()
         }
     }
 
@@ -398,13 +580,103 @@ private fun HistoryTab(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = strings.historyHeader,
+                text = if (isSelecting) {
+                    String.format(locale, strings.selectedCountFormat, selectedWords.size)
+                } else {
+                    strings.historyHeader
+                },
                 style = MaterialTheme.typography.titleMedium,
             )
-            OutlinedButton(
-                onClick = { showClearDialog = true },
-                enabled = recentWords.isNotEmpty() || pinnedWords.isNotEmpty(),
-            ) { Text(strings.historyClearLabel) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isSelecting) {
+                    TextButton(
+                        onClick = {
+                            isSelecting = false
+                            selectedWords = emptySet()
+                        },
+                    ) { Text(strings.doneLabel) }
+                } else {
+                    TextButton(
+                        onClick = { isSelecting = true },
+                        enabled = recentWords.isNotEmpty() || pinnedWords.isNotEmpty(),
+                    ) { Text(strings.editLabel) }
+                    OutlinedButton(
+                        onClick = { showClearDialog = true },
+                        enabled = recentWords.isNotEmpty() || pinnedWords.isNotEmpty(),
+                    ) { Text(strings.historyClearLabel) }
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = filterQuery,
+            onValueChange = { filterQuery = it.take(64) },
+            label = { Text(strings.historyFilterLabel) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        if (isSelecting) {
+            val favoritesSet = remember(favorites) { favorites.toSet() }
+            val selectedPinned = remember(selectedWords, pinnedSet) { selectedWords.filter { it in pinnedSet }.toSet() }
+            val selectedUnpinned = remember(selectedWords, pinnedSet) { selectedWords.filterNot { it in pinnedSet }.toSet() }
+            val selectedFavorites = remember(selectedWords, favoritesSet) { selectedWords.filter { it in favoritesSet }.toSet() }
+            val selectedNotFavorites = remember(selectedWords, favoritesSet) { selectedWords.filterNot { it in favoritesSet }.toSet() }
+            val orderedToPin = remember(allVisible, selectedUnpinned) { allVisible.filter { it in selectedUnpinned } }
+            val orderedToSave = remember(allVisible, selectedNotFavorites) { allVisible.filter { it in selectedNotFavorites } }
+            val allSelected = allVisible.isNotEmpty() && selectedWords.size == allVisible.size
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AssistChip(
+                    onClick = {
+                        selectedWords = if (allSelected) emptySet() else allVisible.toSet()
+                    },
+                    label = { Text(if (allSelected) strings.deselectAllLabel else strings.selectAllLabel) },
+                )
+                AssistChip(
+                    onClick = {
+                        onPinSelected(orderedToPin)
+                        selectedWords = emptySet()
+                    },
+                    enabled = orderedToPin.isNotEmpty(),
+                    label = { Text(strings.historyPinLabel) },
+                )
+                AssistChip(
+                    onClick = {
+                        onUnpinSelected(selectedPinned)
+                        selectedWords = emptySet()
+                    },
+                    enabled = selectedPinned.isNotEmpty(),
+                    label = { Text(strings.historyUnpinLabel) },
+                )
+                AssistChip(
+                    onClick = {
+                        onSaveSelected(orderedToSave)
+                        selectedWords = emptySet()
+                    },
+                    enabled = orderedToSave.isNotEmpty(),
+                    label = { Text(strings.favoritesAddLabel) },
+                )
+                AssistChip(
+                    onClick = {
+                        onUnsaveSelected(selectedFavorites)
+                        selectedWords = emptySet()
+                    },
+                    enabled = selectedFavorites.isNotEmpty(),
+                    label = { Text(strings.favoritesRemoveLabel) },
+                )
+                AssistChip(
+                    onClick = {
+                        onRemoveSelected(selectedWords)
+                        selectedWords = emptySet()
+                    },
+                    enabled = selectedWords.isNotEmpty(),
+                    label = { Text(strings.deleteLabel) },
+                )
+            }
         }
 
         SortModeRow(
@@ -413,19 +685,24 @@ private fun HistoryTab(
             onSelect = { sortModeKey = it.name },
         )
 
-        if (visiblePinned.isNotEmpty()) {
+        if (filteredPinned.isNotEmpty()) {
             Text(
                 text = strings.historyPinnedHeader,
                 style = MaterialTheme.typography.labelLarge,
             )
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                visiblePinned.forEach { word ->
+                filteredPinned.forEach { word ->
                     HistoryRow(
                         word = word,
                         strings = strings,
+                        entry = details[word],
                         isPinned = true,
                         isFavorite = favorites.contains(word),
+                        isSelectionMode = isSelecting,
+                        isSelected = selectedWords.contains(word),
+                        onToggleSelected = { selectedWords = toggleSelection(selectedWords, word) },
                         onOpen = { onOpen(word) },
+                        onPractice = { onPractice(word) },
                         onTogglePinned = { onTogglePinned(word) },
                         onToggleFavorite = { onToggleFavorite(word) },
                         onRemove = { onRemove(word) },
@@ -434,19 +711,24 @@ private fun HistoryTab(
             }
         }
 
-        if (visibleRecent.isNotEmpty()) {
+        if (filteredRecent.isNotEmpty()) {
             Text(
                 text = strings.recentHeader,
                 style = MaterialTheme.typography.labelLarge,
             )
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                visibleRecent.forEach { word ->
+                filteredRecent.forEach { word ->
                     HistoryRow(
                         word = word,
                         strings = strings,
+                        entry = details[word],
                         isPinned = false,
                         isFavorite = favorites.contains(word),
+                        isSelectionMode = isSelecting,
+                        isSelected = selectedWords.contains(word),
+                        onToggleSelected = { selectedWords = toggleSelection(selectedWords, word) },
                         onOpen = { onOpen(word) },
+                        onPractice = { onPractice(word) },
                         onTogglePinned = { onTogglePinned(word) },
                         onToggleFavorite = { onToggleFavorite(word) },
                         onRemove = { onRemove(word) },
@@ -455,8 +737,14 @@ private fun HistoryTab(
             }
         }
 
-        if (visiblePinned.isEmpty() && visibleRecent.isEmpty()) {
-            Text(strings.historyEmpty, style = MaterialTheme.typography.bodyMedium)
+        if (filteredPinned.isEmpty() && filteredRecent.isEmpty()) {
+            val hasAnyHistory = recentWords.isNotEmpty() || pinnedWords.isNotEmpty()
+            val message = when {
+                !hasAnyHistory -> strings.historyEmpty
+                filterQuery.isNotBlank() -> strings.filterNoResultsLabel
+                else -> strings.historyEmpty
+            }
+            Text(message, style = MaterialTheme.typography.bodyMedium)
         }
 
         Spacer(modifier = Modifier.heightIn(min = 0.dp, max = 24.dp))
@@ -714,12 +1002,18 @@ private fun HelpCard(strings: LibraryStrings) {
 private fun FavoriteRow(
     word: String,
     strings: LibraryStrings,
+    entry: WordEntry?,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onToggleSelected: () -> Unit,
     onOpen: () -> Unit,
+    onPractice: () -> Unit,
     onRemove: () -> Unit,
 ) {
     var expanded by rememberSaveable(word) { mutableStateOf(false) }
+    val subtitle = remember(entry) { entry?.let(::buildEntrySubtitle).orEmpty() }
     Card(
-        onClick = onOpen,
+        onClick = if (isSelectionMode) onToggleSelected else onOpen,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
@@ -729,28 +1023,53 @@ private fun FavoriteRow(
                 .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = word,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = { expanded = true }) {
-                Icon(
-                    imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = strings.moreActionsLabel,
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onToggleSelected() },
                 )
+                Spacer(modifier = Modifier.width(8.dp))
             }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text(strings.favoritesRemoveLabel) },
-                    onClick = {
-                        expanded = false
-                        onRemove()
-                    },
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = word,
+                    style = MaterialTheme.typography.titleLarge,
                 )
+                if (subtitle.isNotBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (!isSelectionMode) {
+                IconButton(onClick = onPractice) {
+                    Icon(
+                        imageVector = Icons.Outlined.Gesture,
+                        contentDescription = strings.practiceButtonLabel,
+                    )
+                }
+                IconButton(onClick = { expanded = true }) {
+                    Icon(
+                        imageVector = Icons.Outlined.MoreVert,
+                        contentDescription = strings.moreActionsLabel,
+                    )
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(strings.favoritesRemoveLabel) },
+                        onClick = {
+                            expanded = false
+                            onRemove()
+                        },
+                    )
+                }
             }
         }
     }
@@ -760,16 +1079,22 @@ private fun FavoriteRow(
 private fun HistoryRow(
     word: String,
     strings: LibraryStrings,
+    entry: WordEntry?,
     isPinned: Boolean,
     isFavorite: Boolean,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onToggleSelected: () -> Unit,
     onOpen: () -> Unit,
+    onPractice: () -> Unit,
     onTogglePinned: () -> Unit,
     onToggleFavorite: () -> Unit,
     onRemove: () -> Unit,
 ) {
     var expanded by rememberSaveable(word) { mutableStateOf(false) }
+    val subtitle = remember(entry) { entry?.let(::buildEntrySubtitle).orEmpty() }
     Card(
-        onClick = onOpen,
+        onClick = if (isSelectionMode) onToggleSelected else onOpen,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
@@ -779,43 +1104,91 @@ private fun HistoryRow(
                 .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = word,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = { expanded = true }) {
-                Icon(
-                    imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = strings.moreActionsLabel,
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onToggleSelected() },
                 )
+                Spacer(modifier = Modifier.width(8.dp))
             }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text(if (isPinned) strings.historyUnpinLabel else strings.historyPinLabel) },
-                    onClick = {
-                        expanded = false
-                        onTogglePinned()
-                    },
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = word,
+                    style = MaterialTheme.typography.titleLarge,
                 )
-                DropdownMenuItem(
-                    text = { Text(if (isFavorite) strings.favoritesRemoveLabel else strings.favoritesAddLabel) },
-                    onClick = {
-                        expanded = false
-                        onToggleFavorite()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(strings.historyRemoveLabel) },
-                    onClick = {
-                        expanded = false
-                        onRemove()
-                    },
-                )
+                if (subtitle.isNotBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (!isSelectionMode) {
+                IconButton(onClick = onPractice) {
+                    Icon(
+                        imageVector = Icons.Outlined.Gesture,
+                        contentDescription = strings.practiceButtonLabel,
+                    )
+                }
+                IconButton(onClick = { expanded = true }) {
+                    Icon(
+                        imageVector = Icons.Outlined.MoreVert,
+                        contentDescription = strings.moreActionsLabel,
+                    )
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(if (isPinned) strings.historyUnpinLabel else strings.historyPinLabel) },
+                        onClick = {
+                            expanded = false
+                            onTogglePinned()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (isFavorite) strings.favoritesRemoveLabel else strings.favoritesAddLabel) },
+                        onClick = {
+                            expanded = false
+                            onToggleFavorite()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(strings.historyRemoveLabel) },
+                        onClick = {
+                            expanded = false
+                            onRemove()
+                        },
+                    )
+                }
             }
         }
+    }
+}
+
+private fun buildEntrySubtitle(entry: WordEntry): String {
+    val pinyin = entry.pinyin.trim()
+    val definition = entry.explanation.ifBlank { entry.more }.trim()
+    val condensed = definition.replace(WHITESPACE_REGEX, " ").trim()
+    val clipped = if (condensed.length > 80) condensed.take(80).trimEnd() + "…" else condensed
+    return when {
+        pinyin.isNotBlank() && clipped.isNotBlank() -> "$pinyin · $clipped"
+        pinyin.isNotBlank() -> pinyin
+        clipped.isNotBlank() -> clipped
+        else -> ""
+    }
+}
+
+private val WHITESPACE_REGEX = Regex("\\s+")
+
+private fun toggleSelection(selected: Set<String>, word: String): Set<String> {
+    return if (word in selected) {
+        selected - word
+    } else {
+        selected + word
     }
 }

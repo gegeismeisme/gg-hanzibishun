@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class LibraryUiState(
     val query: String = "",
@@ -22,6 +24,7 @@ data class LibraryUiState(
     val recentWords: List<String> = emptyList(),
     val pinnedRecentWords: List<String> = emptyList(),
     val favorites: List<String> = emptyList(),
+    val wordDetails: Map<String, WordEntry> = emptyMap(),
 )
 
 class LibraryViewModel(
@@ -31,6 +34,9 @@ class LibraryViewModel(
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+
+    private val detailsMutex = Mutex()
+    private val detailsInFlight = mutableSetOf<String>()
 
     init {
         observeLibraryData()
@@ -55,6 +61,12 @@ class LibraryViewModel(
         persistFavorites(emptyList())
     }
 
+    fun recordRecentWord(word: String) {
+        val normalized = normalizeSavedWord(word)
+        if (normalized.isEmpty()) return
+        persistRecentSearches(addRecentWord(normalized))
+    }
+
     fun toggleFavorite(word: String) {
         val normalized = normalizeSavedWord(word)
         if (normalized.isEmpty()) return
@@ -62,6 +74,36 @@ class LibraryViewModel(
         val removed = current.remove(normalized)
         if (!removed) current.add(0, normalized)
         persistFavorites(current.distinct().take(FAVORITES_LIMIT))
+    }
+
+    fun addFavorites(words: List<String>) {
+        val normalized = words.asSequence()
+            .map(::normalizeSavedWord)
+            .filter { it.isNotBlank() }
+            .distinct()
+            .toList()
+        if (normalized.isEmpty()) return
+
+        val current = _uiState.value.favorites
+        val currentSet = current.toSet()
+        val toAdd = normalized.filterNot { it in currentSet }
+        if (toAdd.isEmpty()) return
+
+        val updated = (toAdd + current).distinct().take(FAVORITES_LIMIT)
+        persistFavorites(updated)
+    }
+
+    fun removeFavorites(words: Collection<String>) {
+        val normalized = words.asSequence()
+            .map(::normalizeSavedWord)
+            .filter { it.isNotBlank() }
+            .toSet()
+        if (normalized.isEmpty()) return
+
+        val current = _uiState.value.favorites
+        val updated = current.filterNot { it in normalized }
+        if (updated.size == current.size) return
+        persistFavorites(updated)
     }
 
     fun submitQuery() {
@@ -140,11 +182,65 @@ class LibraryViewModel(
         persistRecentSearches(trimRecentWords(updatedRecent, updatedPinned))
     }
 
+    fun pinRecentWords(words: List<String>) {
+        val normalized = words.asSequence()
+            .map(::normalizeSavedWord)
+            .filter { it.isNotBlank() }
+            .distinct()
+            .toList()
+        if (normalized.isEmpty()) return
+
+        val currentPinned = _uiState.value.pinnedRecentWords.toMutableList()
+        val pinnedSet = currentPinned.toMutableSet()
+        val toPin = normalized.filterNot { it in pinnedSet }
+        if (toPin.isEmpty()) return
+
+        toPin.asReversed().forEach { word ->
+            currentPinned.add(0, word)
+            pinnedSet.add(word)
+        }
+        val updatedPinned = currentPinned.distinct().take(PINNED_LIMIT)
+        persistPinnedRecentWords(updatedPinned)
+        val updatedRecent = ensureRecentContainsAll(toPin)
+        persistRecentSearches(trimRecentWords(updatedRecent, updatedPinned))
+    }
+
+    fun unpinRecentWords(words: Collection<String>) {
+        val normalized = words.asSequence()
+            .map(::normalizeSavedWord)
+            .filter { it.isNotBlank() }
+            .toSet()
+        if (normalized.isEmpty()) return
+
+        val currentPinned = _uiState.value.pinnedRecentWords
+        val updatedPinned = currentPinned.filterNot { it in normalized }
+        if (updatedPinned.size == currentPinned.size) return
+        persistPinnedRecentWords(updatedPinned)
+        persistRecentSearches(trimRecentWords(_uiState.value.recentWords, updatedPinned))
+    }
+
     fun removeRecentWord(word: String) {
         val normalized = normalizeSavedWord(word)
         if (normalized.isEmpty()) return
         val updatedRecent = _uiState.value.recentWords.filterNot { it == normalized }
         val updatedPinned = _uiState.value.pinnedRecentWords.filterNot { it == normalized }
+        persistPinnedRecentWords(updatedPinned)
+        persistRecentSearches(trimRecentWords(updatedRecent, updatedPinned))
+    }
+
+    fun removeRecentWords(words: Collection<String>) {
+        val normalized = words.asSequence()
+            .map(::normalizeSavedWord)
+            .filter { it.isNotBlank() }
+            .toSet()
+        if (normalized.isEmpty()) return
+
+        val currentRecent = _uiState.value.recentWords
+        val currentPinned = _uiState.value.pinnedRecentWords
+        val updatedRecent = currentRecent.filterNot { it in normalized }
+        val updatedPinned = currentPinned.filterNot { it in normalized }
+        if (updatedRecent.size == currentRecent.size && updatedPinned.size == currentPinned.size) return
+
         persistPinnedRecentWords(updatedPinned)
         persistRecentSearches(trimRecentWords(updatedRecent, updatedPinned))
     }
@@ -200,6 +296,7 @@ class LibraryViewModel(
                         pinnedRecentWords = pinned,
                         favorites = favorites,
                     )
+                    prefetchWordDetails(recents + pinned + favorites)
                 }
         }
     }
@@ -208,10 +305,56 @@ class LibraryViewModel(
         return raw.trim().take(MAX_QUERY_LENGTH)
     }
 
+    private fun prefetchWordDetails(words: List<String>) {
+        val normalized = words.asSequence()
+            .map { normalizeSavedWord(it) }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .toList()
+        if (normalized.isEmpty()) return
+
+        viewModelScope.launch {
+            val pending = detailsMutex.withLock {
+                val currentState = _uiState.value
+                val missing = normalized.filterNot { word ->
+                    currentState.wordDetails.containsKey(word) || detailsInFlight.contains(word)
+                }
+                if (missing.isNotEmpty()) {
+                    detailsInFlight.addAll(missing)
+                }
+                missing
+            }
+            if (pending.isEmpty()) return@launch
+
+            val fetched = runCatching { wordRepository.getWords(pending) }.getOrElse { emptyList() }
+            detailsMutex.withLock {
+                detailsInFlight.removeAll(pending.toSet())
+            }
+            if (fetched.isEmpty()) return@launch
+
+            val updated = _uiState.value.wordDetails.toMutableMap()
+            fetched.forEach { entry ->
+                updated[entry.word] = entry
+            }
+            _uiState.value = _uiState.value.copy(wordDetails = updated)
+        }
+    }
+
     private fun ensureRecentContains(word: String): List<String> {
         val current = _uiState.value.recentWords.toMutableList()
         if (!current.contains(word)) {
             current.add(0, word)
+        }
+        return current
+    }
+
+    private fun ensureRecentContainsAll(words: List<String>): List<String> {
+        if (words.isEmpty()) return _uiState.value.recentWords
+        val current = _uiState.value.recentWords.toMutableList()
+        words.asReversed().forEach { word ->
+            if (!current.contains(word)) {
+                current.add(0, word)
+            }
         }
         return current
     }

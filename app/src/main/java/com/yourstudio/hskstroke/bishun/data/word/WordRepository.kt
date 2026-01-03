@@ -48,6 +48,32 @@ class WordRepository(
         }
     }
 
+    suspend fun getWords(words: List<String>): List<WordEntry> {
+        val normalized = words.asSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .toList()
+        if (normalized.isEmpty()) return emptyList()
+
+        return withContext(Dispatchers.IO) {
+            val db = openDatabase()
+            val results = ArrayList<WordEntry>(normalized.size)
+            normalized.chunked(IN_QUERY_CHUNK_SIZE).forEach { chunk ->
+                val placeholders = chunk.joinToString(separator = ",") { "?" }
+                db.rawQuery(
+                    "SELECT word, oldword, strokes, pinyin, radicals, explanation, more FROM words WHERE word IN ($placeholders)",
+                    chunk.toTypedArray(),
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        results.add(cursor.toWordEntry())
+                    }
+                }
+            }
+            results
+        }
+    }
+
     private suspend fun openDatabase(): SQLiteDatabase {
         database?.let { return it }
         return databaseMutex.withLock {
@@ -174,6 +200,7 @@ class WordRepository(
     private companion object {
         private const val DB_ASSET_PATH = "word/word.db"
         private const val DB_FILE_NAME = "word.db"
+        private const val IN_QUERY_CHUNK_SIZE = 400
     }
 }
 
@@ -188,4 +215,3 @@ private fun Cursor.toWordEntry(): WordEntry {
         more = getString(6).orEmpty(),
     )
 }
-
