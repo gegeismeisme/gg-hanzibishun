@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,6 +57,8 @@ private sealed class MainDestination(
 @Composable
 fun BishunApp(
     onShowOnboarding: () -> Unit = {},
+    launchRequest: AppLaunchRequest? = null,
+    onLaunchRequestHandled: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     val destinations = remember { MainDestination.items }
@@ -75,6 +78,32 @@ fun BishunApp(
         factory = LibraryViewModel.factory(context),
     )
     val userPreferences by sharedCharacterViewModel.userPreferences.collectAsState()
+
+    LaunchedEffect(launchRequest) {
+        when (val request = launchRequest) {
+            is AppLaunchRequest.PracticeSymbol -> {
+                sharedCharacterViewModel.startPracticeForSymbol(request.symbol)
+                navController.navigate(MainDestination.Home.route) {
+                    popUpTo(MainDestination.Home.route) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+                onLaunchRequestHandled()
+            }
+
+            is AppLaunchRequest.DictionaryQuery -> {
+                libraryViewModel.loadCharacter(request.query)
+                navController.navigate(MainDestination.Library.route) {
+                    popUpTo(MainDestination.Home.route) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+                onLaunchRequestHandled()
+            }
+
+            null -> Unit
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

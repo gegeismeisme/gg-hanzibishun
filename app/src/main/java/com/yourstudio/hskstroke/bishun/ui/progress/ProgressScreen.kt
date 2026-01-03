@@ -45,6 +45,7 @@ import com.yourstudio.hskstroke.bishun.ui.character.HskProgressSummary
 import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.character.ProgressStrings
 import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
+import com.yourstudio.hskstroke.bishun.ui.character.pickDailySymbol
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -66,6 +67,7 @@ fun ProgressScreen(
 ) {
     val hskProgress by viewModel.hskProgress.collectAsState()
     val practiceHistory by viewModel.practiceHistory.collectAsState()
+    val userPreferences by viewModel.userPreferences.collectAsState()
     val strings = rememberLocalizedStrings(languageOverride)
     val progressStrings = strings.progress
 
@@ -95,6 +97,8 @@ fun ProgressScreen(
                 strings = strings,
                 summary = hskProgress,
                 practiceHistory = practiceHistory,
+                dailySymbol = userPreferences.dailySymbol,
+                dailyEpochDay = userPreferences.dailyEpochDay,
                 onJumpToChar = onJumpToCharacter,
                 onNavigateToCourses = onNavigateToCourses,
             )
@@ -107,6 +111,8 @@ private fun HskProgressView(
     strings: LocalizedStrings,
     summary: HskProgressSummary,
     practiceHistory: List<PracticeHistoryEntry>,
+    dailySymbol: String?,
+    dailyEpochDay: Long?,
     onJumpToChar: (String) -> Unit,
     onNavigateToCourses: () -> Unit,
 ) {
@@ -116,15 +122,24 @@ private fun HskProgressView(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val progressStrings = strings.progress
-        val dailySymbol = remember(summary) { pickDailySymbol(summary) }
-        val dailyCompletedToday = remember(dailySymbol, practiceHistory) {
-            if (dailySymbol.isNullOrBlank()) {
+        val suggestedDailySymbol = remember(summary) { pickDailySymbol(summary) }
+        val zone = remember { ZoneId.systemDefault() }
+        val todayEpochDay = remember(zone) { LocalDate.now(zone).toEpochDay() }
+        val resolvedDailySymbol = remember(dailyEpochDay, dailySymbol, suggestedDailySymbol, todayEpochDay) {
+            val storedSymbol = dailySymbol?.trim()?.takeIf { it.isNotBlank() }
+            if (dailyEpochDay == todayEpochDay && storedSymbol != null) {
+                storedSymbol
+            } else {
+                suggestedDailySymbol
+            }
+        }
+        val dailyCompletedToday = remember(resolvedDailySymbol, practiceHistory, todayEpochDay, zone) {
+            if (resolvedDailySymbol.isNullOrBlank()) {
                 false
             } else {
-                val zone = ZoneId.systemDefault()
-                val today = LocalDate.now(zone)
+                val today = LocalDate.ofEpochDay(todayEpochDay)
                 practiceHistory.any { entry ->
-                    entry.symbol == dailySymbol &&
+                    entry.symbol == resolvedDailySymbol &&
                         entry.completed &&
                         Instant.ofEpochMilli(entry.timestamp).atZone(zone).toLocalDate() == today
                 }
@@ -132,10 +147,10 @@ private fun HskProgressView(
         }
         DailyPracticeCard(
             strings = progressStrings,
-            symbol = dailySymbol,
+            symbol = resolvedDailySymbol,
             completedToday = dailyCompletedToday,
             onPractice = {
-                dailySymbol?.let(onJumpToChar)
+                resolvedDailySymbol?.let(onJumpToChar)
             },
         )
         val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }
@@ -153,15 +168,6 @@ private fun HskProgressView(
             onJumpToChar = onJumpToChar,
         )
     }
-}
-
-private fun pickDailySymbol(summary: HskProgressSummary): String? {
-    val levels = summary.nextTargets.keys.sorted()
-    levels.forEach { level ->
-        val symbol = summary.nextTargets[level]
-        if (!symbol.isNullOrBlank()) return symbol
-    }
-    return null
 }
 
 @Composable

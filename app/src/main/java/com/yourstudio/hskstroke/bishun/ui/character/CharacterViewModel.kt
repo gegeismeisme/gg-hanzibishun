@@ -29,6 +29,7 @@ import com.yourstudio.hskstroke.bishun.hanzi.quiz.StrokeMatcher
 import com.yourstudio.hskstroke.bishun.ui.practice.BoardSettings
 import com.yourstudio.hskstroke.bishun.ui.practice.PracticeGrid
 import com.yourstudio.hskstroke.bishun.ui.practice.StrokeColorOption
+import com.yourstudio.hskstroke.bishun.widget.DailyHanziWidgetUpdater
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.min
 
 class CharacterViewModel(
@@ -93,6 +96,10 @@ class CharacterViewModel(
     private var currentDefinition: CharacterDefinition? = null
     private var renderState: RenderState? = null
     private var renderStateJob: Job? = null
+    private var loadCharacterJob: Job? = null
+    private var loadCharacterToken: Long = 0
+    private var pendingAutoStartPracticeToken: Long? = null
+    private var pendingAutoStartPracticeSymbol: String? = null
     private var completionResetJob: Job? = null
     private var activeUserStroke: UserStroke? = null
     private val userStrokeIds = mutableListOf<Int>()
@@ -129,6 +136,39 @@ class CharacterViewModel(
 
     fun jumpToCharacter(symbol: String) {
         loadCharacter(symbol)
+    }
+
+    fun startPracticeForSymbol(symbol: String) {
+        val trimmed = symbol.trim()
+        if (trimmed.isBlank()) return
+        val target = firstCodePoint(trimmed)
+        if (target.isBlank()) return
+        if (currentDefinition?.symbol == target) {
+            startPractice()
+            return
+        }
+
+        pendingAutoStartPracticeToken = loadCharacterToken + 1
+        pendingAutoStartPracticeSymbol = target
+        loadCharacter(target)
+    }
+
+    fun startDailyPractice() {
+        val zone = ZoneId.systemDefault()
+        val todayEpochDay = LocalDate.now(zone).toEpochDay()
+        val prefs = _userPreferences.value
+        val storedSymbol = prefs.dailySymbol
+            ?.trim()
+            ?.takeIf { it.isNotBlank() && prefs.dailyEpochDay == todayEpochDay }
+        val resolvedSymbol = storedSymbol ?: pickDailySymbol(_hskProgress.value)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+        if (resolvedSymbol.isNullOrBlank()) return
+
+        if (storedSymbol == null) {
+            persistDailyPractice(resolvedSymbol, todayEpochDay)
+        }
+        startPracticeForSymbol(resolvedSymbol)
     }
 
     fun startPracticeQueue(symbols: List<String>) {
@@ -332,10 +372,14 @@ class CharacterViewModel(
     private fun loadCharacter(input: String) {
         val trimmed = input.trim().ifEmpty { return }
         val symbol = firstCodePoint(trimmed)
+        loadCharacterJob?.cancel()
+        loadCharacterToken += 1
+        val token = loadCharacterToken
         _query.value = symbol
         _uiState.value = CharacterUiState.Loading
-        viewModelScope.launch {
+        loadCharacterJob = viewModelScope.launch {
             val result = repository.load(symbol)
+            if (token != loadCharacterToken) return@launch
             result.fold(
                 onSuccess = {
                     _uiState.value = CharacterUiState.Success(it)
@@ -348,6 +392,11 @@ class CharacterViewModel(
                     loadHskInfo(it.symbol)
                     alignCourseSession(it.symbol)
                     alignPracticeQueueSession(it.symbol)
+                    if (pendingAutoStartPracticeToken == token && pendingAutoStartPracticeSymbol == it.symbol) {
+                        pendingAutoStartPracticeToken = null
+                        pendingAutoStartPracticeSymbol = null
+                        startPractice()
+                    }
                 },
                 onFailure = {
                     val message = it.message ?: "加载失败，请稍后再试"
@@ -355,6 +404,10 @@ class CharacterViewModel(
                     _wordEntry.value = null
                     _wordInfoUiState.value = WordInfoUiState.Idle
                     _hskEntry.value = null
+                    if (pendingAutoStartPracticeToken == token) {
+                        pendingAutoStartPracticeToken = null
+                        pendingAutoStartPracticeSymbol = null
+                    }
                 },
             )
         }
@@ -467,7 +520,30 @@ class CharacterViewModel(
             perLevel[level] = HskLevelSummary(done, symbols.size)
             nextTargets[level] = symbols.firstOrNull { !completed.contains(it) }
         }
-        _hskProgress.value = HskProgressSummary(perLevel, nextTargets)
+        val summary = HskProgressSummary(perLevel, nextTargets)
+        _hskProgress.value = summary
+        maybeRefreshDailyPractice(summary)
+    }
+
+    private fun maybeRefreshDailyPractice(summary: HskProgressSummary) {
+        val zone = ZoneId.systemDefault()
+        val todayEpochDay = LocalDate.now(zone).toEpochDay()
+        val prefs = _userPreferences.value
+        val storedEpochDay = prefs.dailyEpochDay
+        val storedSymbol = prefs.dailySymbol?.trim()?.takeIf { it.isNotBlank() }
+        val suggestedSymbol = pickDailySymbol(summary)?.trim()?.takeIf { it.isNotBlank() }
+
+        val shouldUpdate = storedEpochDay != todayEpochDay || (storedSymbol == null && suggestedSymbol != null)
+        if (!shouldUpdate) return
+
+        persistDailyPractice(suggestedSymbol, todayEpochDay)
+    }
+
+    private fun persistDailyPractice(symbol: String?, epochDay: Long) {
+        viewModelScope.launch {
+            userPreferencesStore.setDailyPractice(symbol, epochDay)
+            runCatching { DailyHanziWidgetUpdater.updateAll(appContext) }
+        }
     }
 
     private fun observePracticeHistory() {

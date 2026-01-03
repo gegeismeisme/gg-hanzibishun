@@ -71,7 +71,7 @@ fun LearnScreen(
                     viewModel = viewModel,
                     onJumpToPractice = onNavigateToPractice,
                     onJumpToCharacter = { symbol ->
-                        viewModel.jumpToCharacter(symbol)
+                        viewModel.startPracticeForSymbol(symbol)
                         onNavigateToPractice()
                     },
                     onNavigateToCourses = { selectedTabKey = LearnTab.Courses.name },

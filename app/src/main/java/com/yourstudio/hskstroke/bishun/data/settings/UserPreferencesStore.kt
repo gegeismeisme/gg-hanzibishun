@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +22,8 @@ data class UserPreferences(
     val onboardingCompleted: Boolean = false,
     val courseLevel: Int? = null,
     val courseSymbol: String? = null,
+    val dailySymbol: String? = null,
+    val dailyEpochDay: Long? = null,
     val languageOverride: String? = null,
     val libraryRecentSearches: List<String> = emptyList(),
     val libraryPinnedSearches: List<String> = emptyList(),
@@ -41,6 +44,8 @@ class UserPreferencesStore(private val context: Context) {
             onboardingCompleted = prefs[KEY_ONBOARDING_COMPLETED] ?: prefs.asMap().isNotEmpty(),
             courseLevel = prefs[KEY_COURSE_LEVEL],
             courseSymbol = prefs[KEY_COURSE_SYMBOL],
+            dailySymbol = prefs[KEY_DAILY_SYMBOL],
+            dailyEpochDay = prefs[KEY_DAILY_EPOCH_DAY],
             languageOverride = prefs[KEY_LANGUAGE_OVERRIDE],
             libraryRecentSearches = decodeStringList(prefs[KEY_LIBRARY_RECENTS]),
             libraryPinnedSearches = decodeStringList(prefs[KEY_LIBRARY_PINNED_RECENTS]),
@@ -104,6 +109,17 @@ class UserPreferencesStore(private val context: Context) {
             } else {
                 prefs[KEY_COURSE_LEVEL] = level
                 prefs[KEY_COURSE_SYMBOL] = symbol
+            }
+        }
+    }
+
+    suspend fun setDailyPractice(symbol: String?, epochDay: Long) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_DAILY_EPOCH_DAY] = epochDay
+            if (symbol.isNullOrBlank()) {
+                prefs.remove(KEY_DAILY_SYMBOL)
+            } else {
+                prefs[KEY_DAILY_SYMBOL] = symbol
             }
         }
     }
@@ -184,6 +200,8 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_ONBOARDING_COMPLETED = androidx.datastore.preferences.core.booleanPreferencesKey("onboarding_completed")
         private val KEY_COURSE_LEVEL = intPreferencesKey("course_level")
         private val KEY_COURSE_SYMBOL = stringPreferencesKey("course_symbol")
+        private val KEY_DAILY_SYMBOL = stringPreferencesKey("daily_symbol")
+        private val KEY_DAILY_EPOCH_DAY = longPreferencesKey("daily_epoch_day")
         private val KEY_LANGUAGE_OVERRIDE = stringPreferencesKey("language_override")
         private val KEY_LIBRARY_RECENTS = stringPreferencesKey("library_recent_searches")
         private val KEY_LIBRARY_PINNED_RECENTS = stringPreferencesKey("library_pinned_recent_searches")

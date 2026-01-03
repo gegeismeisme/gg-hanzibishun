@@ -1,5 +1,6 @@
 package com.yourstudio.hskstroke.bishun
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,14 +20,19 @@ import androidx.compose.ui.platform.LocalContext
 import com.yourstudio.hskstroke.bishun.ui.navigation.BishunApp
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
+import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequest
+import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequests
 import com.yourstudio.hskstroke.bishun.ui.onboarding.OnboardingScreen
 import com.yourstudio.hskstroke.bishun.ui.theme.BishunTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private var launchRequest by mutableStateOf<AppLaunchRequest?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        launchRequest = AppLaunchRequests.parse(intent)
         setContent {
             val context = LocalContext.current
             val preferencesStore = remember { UserPreferencesStore(context.applicationContext) }
@@ -55,10 +61,18 @@ class MainActivity : ComponentActivity() {
                     } else {
                         BishunApp(
                             onShowOnboarding = { forceShowOnboarding = true },
+                            launchRequest = launchRequest,
+                            onLaunchRequestHandled = { launchRequest = null },
                         )
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        launchRequest = AppLaunchRequests.parse(intent)
     }
 }

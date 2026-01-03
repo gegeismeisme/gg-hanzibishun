@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -13,10 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,6 +52,8 @@ import com.yourstudio.hskstroke.bishun.ui.practice.PracticeGrid
 import com.yourstudio.hskstroke.bishun.ui.practice.StrokeColorOption
 import com.yourstudio.hskstroke.bishun.ui.practice.SearchBarRow
 import com.yourstudio.hskstroke.bishun.ui.practice.rememberCalligraphyDemoController
+import java.time.LocalDate
+import java.time.ZoneId
 @Composable
 fun CharacterRoute(
     modifier: Modifier = Modifier,
@@ -63,6 +69,7 @@ fun CharacterRoute(
     val wordEntry by viewModel.wordEntry.collectAsState()
     val wordInfoUiState by viewModel.wordInfoUiState.collectAsState()
     val hskEntry by viewModel.hskEntry.collectAsState()
+    val hskProgress by viewModel.hskProgress.collectAsState()
     val courseSession by viewModel.courseSession.collectAsState()
     val practiceQueueSession by viewModel.practiceQueueSession.collectAsState()
     val boardSettings by viewModel.boardSettings.collectAsState()
@@ -83,9 +90,12 @@ fun CharacterRoute(
         wordEntry = wordEntry,
         wordInfoUiState = wordInfoUiState,
         hskEntry = hskEntry,
+        hskProgress = hskProgress,
         courseSession = courseSession,
         practiceQueueSession = practiceQueueSession,
         boardSettings = boardSettings,
+        dailySymbol = userPreferences.dailySymbol,
+        dailyEpochDay = userPreferences.dailyEpochDay,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
         onClearQuery = viewModel::clearQuery,
@@ -93,6 +103,7 @@ fun CharacterRoute(
         onPlayDemoLoop = { viewModel.playDemo(loop = true) },
         onStopDemo = viewModel::stopDemo,
         onStartPractice = viewModel::startPractice,
+        onStartDailyPractice = viewModel::startDailyPractice,
         onRequestHint = viewModel::requestHint,
         onRequestWordInfo = viewModel::requestWordInfo,
         onStrokeStart = viewModel::onPracticeStrokeStart,
@@ -125,9 +136,12 @@ fun CharacterScreen(
     wordEntry: WordEntry?,
     wordInfoUiState: WordInfoUiState,
     hskEntry: HskEntry?,
+    hskProgress: HskProgressSummary,
     courseSession: CourseSession?,
     practiceQueueSession: PracticeQueueSession?,
     boardSettings: BoardSettings,
+    dailySymbol: String?,
+    dailyEpochDay: Long?,
     languageOverride: String?,
     onLoadCharacter: (String) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -137,6 +151,7 @@ fun CharacterScreen(
     onPlayDemoLoop: () -> Unit,
     onStopDemo: () -> Unit,
     onStartPractice: () -> Unit,
+    onStartDailyPractice: () -> Unit,
     onRequestHint: () -> Unit,
     onRequestWordInfo: (String) -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
@@ -198,6 +213,24 @@ fun CharacterScreen(
                 languageOverride = languageOverride,
                 onLanguageChange = onLanguageChange,
             )
+            val zone = remember { ZoneId.systemDefault() }
+            val todayEpochDay = remember(zone) { LocalDate.now(zone).toEpochDay() }
+            val suggestedDailySymbol = remember(hskProgress) { pickDailySymbol(hskProgress) }
+            val resolvedDailySymbol = remember(dailySymbol, dailyEpochDay, suggestedDailySymbol, todayEpochDay) {
+                val storedSymbol = dailySymbol?.trim()?.takeIf { it.isNotBlank() }
+                if (dailyEpochDay == todayEpochDay && storedSymbol != null) {
+                    storedSymbol
+                } else {
+                    suggestedDailySymbol
+                }
+            }
+            DailyPracticeBadge(
+                title = strings.progress.dailyTitle,
+                practiceLabel = strings.progress.dailyPracticeLabel,
+                symbol = resolvedDailySymbol,
+                onPractice = onStartDailyPractice,
+                modifier = Modifier.fillMaxWidth(),
+            )
             when (uiState) {
                 CharacterUiState.Loading -> Text(strings.loadingLabel)
                 is CharacterUiState.Error -> PracticeErrorBanner(
@@ -250,6 +283,55 @@ fun CharacterScreen(
                     locale = strings.locale,
                     modifier = Modifier.weight(1f),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailyPracticeBadge(
+    title: String,
+    practiceLabel: String,
+    symbol: String?,
+    onPractice: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val enabled = !symbol.isNullOrBlank()
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 2.dp,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = symbol ?: "—",
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            TextButton(onClick = onPractice, enabled = enabled) {
+                Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(practiceLabel)
             }
         }
     }
