@@ -21,6 +21,9 @@ data class UserPreferences(
     val volumeSafetyThresholdPercent: Int = 80,
     val volumeSafetyLowerToPercent: Int = 30,
     val onboardingCompleted: Boolean = false,
+    val dailyReminderEnabled: Boolean = false,
+    val dailyReminderTimeMinutes: Int = 20 * 60,
+    val dailyReminderOnlyWhenIncomplete: Boolean = true,
     val courseLevel: Int? = null,
     val courseSymbol: String? = null,
     val dailySymbol: String? = null,
@@ -49,6 +52,9 @@ class UserPreferencesStore(private val context: Context) {
             volumeSafetyThresholdPercent = prefs[KEY_VOLUME_SAFETY_THRESHOLD] ?: 80,
             volumeSafetyLowerToPercent = prefs[KEY_VOLUME_SAFETY_LOWER_TO] ?: 30,
             onboardingCompleted = prefs[KEY_ONBOARDING_COMPLETED] ?: prefs.asMap().isNotEmpty(),
+            dailyReminderEnabled = prefs[KEY_DAILY_REMINDER_ENABLED] ?: false,
+            dailyReminderTimeMinutes = prefs[KEY_DAILY_REMINDER_TIME_MINUTES] ?: DEFAULT_DAILY_REMINDER_TIME_MINUTES,
+            dailyReminderOnlyWhenIncomplete = prefs[KEY_DAILY_REMINDER_ONLY_WHEN_INCOMPLETE] ?: true,
             courseLevel = prefs[KEY_COURSE_LEVEL],
             courseSymbol = prefs[KEY_COURSE_SYMBOL],
             dailySymbol = prefs[KEY_DAILY_SYMBOL],
@@ -111,6 +117,25 @@ class UserPreferencesStore(private val context: Context) {
     suspend fun setOnboardingCompleted(completed: Boolean) {
         context.userPreferencesDataStore.edit { prefs ->
             prefs[KEY_ONBOARDING_COMPLETED] = completed
+        }
+    }
+
+    suspend fun setDailyReminderEnabled(enabled: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_DAILY_REMINDER_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setDailyReminderTimeMinutes(minutesOfDay: Int) {
+        val normalized = minutesOfDay.coerceIn(0, 23 * 60 + 59)
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_DAILY_REMINDER_TIME_MINUTES] = normalized
+        }
+    }
+
+    suspend fun setDailyReminderOnlyWhenIncomplete(enabled: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_DAILY_REMINDER_ONLY_WHEN_INCOMPLETE] = enabled
         }
     }
 
@@ -263,6 +288,10 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_VOLUME_SAFETY_THRESHOLD = intPreferencesKey("volume_safety_threshold_percent")
         private val KEY_VOLUME_SAFETY_LOWER_TO = intPreferencesKey("volume_safety_lower_to_percent")
         private val KEY_ONBOARDING_COMPLETED = androidx.datastore.preferences.core.booleanPreferencesKey("onboarding_completed")
+        private val KEY_DAILY_REMINDER_ENABLED = androidx.datastore.preferences.core.booleanPreferencesKey("daily_reminder_enabled")
+        private val KEY_DAILY_REMINDER_TIME_MINUTES = intPreferencesKey("daily_reminder_time_minutes")
+        private val KEY_DAILY_REMINDER_ONLY_WHEN_INCOMPLETE =
+            androidx.datastore.preferences.core.booleanPreferencesKey("daily_reminder_only_when_incomplete")
         private val KEY_COURSE_LEVEL = intPreferencesKey("course_level")
         private val KEY_COURSE_SYMBOL = stringPreferencesKey("course_symbol")
         private val KEY_DAILY_SYMBOL = stringPreferencesKey("daily_symbol")
@@ -278,6 +307,7 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_LIBRARY_PINNED_RECENTS = stringPreferencesKey("library_pinned_recent_searches")
         private val KEY_LIBRARY_FAVORITES = stringPreferencesKey("library_favorites")
         private const val LIST_DELIMITER = "\u0001"
+        private const val DEFAULT_DAILY_REMINDER_TIME_MINUTES = 20 * 60
 
         private fun decodeStringList(raw: String?): List<String> {
             if (raw.isNullOrBlank()) return emptyList()

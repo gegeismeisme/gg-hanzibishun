@@ -24,74 +24,25 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.yourstudio.hskstroke.bishun.data.daily.DailyPracticeGenerator
-import com.yourstudio.hskstroke.bishun.data.history.effectivePracticeStreakDays
-import com.yourstudio.hskstroke.bishun.data.word.WordRepository
-import com.yourstudio.hskstroke.bishun.data.word.buildExplanationSummary
-import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
+import com.yourstudio.hskstroke.bishun.data.daily.DailyPracticeUseCase
 import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequests
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.ZoneId
 
 class DailyHanziWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val applicationContext = context.applicationContext
-        val preferencesStore = UserPreferencesStore(applicationContext)
         val zone = ZoneId.systemDefault()
         val todayEpochDay = LocalDate.now(zone).toEpochDay()
-        val preferences = preferencesStore.data.first()
-
-        var symbol = preferences.dailySymbol?.trim()
-            ?.takeIf { it.isNotBlank() && preferences.dailyEpochDay == todayEpochDay }
-
-        if (symbol == null) {
-            val suggestedSymbol = DailyPracticeGenerator.suggestSymbol(applicationContext)
-                ?.trim()
-                ?.takeIf { it.isNotBlank() }
-            if (suggestedSymbol != null) {
-                preferencesStore.setDailyPractice(suggestedSymbol, todayEpochDay)
-                symbol = suggestedSymbol
-            }
-        }
-
-        val dailyCompletedToday = symbol != null &&
-            preferences.dailyPracticeCompletedEpochDay == todayEpochDay &&
-            preferences.dailyPracticeCompletedSymbol == symbol
-        val streakDays = effectivePracticeStreakDays(
-            storedDays = preferences.practiceStreakDays,
-            lastEpochDay = preferences.practiceStreakLastEpochDay,
+        val snapshot = DailyPracticeUseCase.ensureTodaySnapshot(
+            context = context,
             todayEpochDay = todayEpochDay,
+            ensureDetails = true,
         )
-        val cachedDailySymbol = preferences.dailySymbol?.trim().takeIf { !it.isNullOrBlank() }
-        val hasValidDailyDetails = symbol != null &&
-            cachedDailySymbol == symbol &&
-            preferences.dailyEpochDay == todayEpochDay
-        var pinyin = if (hasValidDailyDetails) {
-            preferences.dailyPinyin?.trim().takeIf { !it.isNullOrBlank() }
-        } else {
-            null
-        }
-        var explanationSummary = if (hasValidDailyDetails) {
-            preferences.dailyExplanationSummary?.trim().takeIf { !it.isNullOrBlank() }
-        } else {
-            null
-        }
-        if (symbol != null && pinyin == null && explanationSummary == null) {
-            val entry = runCatching { WordRepository(applicationContext).getWord(symbol) }.getOrNull()
-            val fetchedPinyin = entry?.pinyin?.trim()?.takeIf { it.isNotBlank() }
-            val fetchedSummary = entry?.explanation?.let { buildExplanationSummary(it) }
-            if (fetchedPinyin != null || fetchedSummary != null) {
-                preferencesStore.setDailyPracticeDetails(
-                    symbol = symbol,
-                    epochDay = todayEpochDay,
-                    pinyin = fetchedPinyin,
-                    explanationSummary = fetchedSummary,
-                )
-                pinyin = fetchedPinyin
-                explanationSummary = fetchedSummary
-            }
-        }
+        val symbol = snapshot.symbol
+        val pinyin = snapshot.pinyin
+        val explanationSummary = snapshot.explanationSummary
+        val dailyCompletedToday = snapshot.completedToday
+        val streakDays = snapshot.streakDays
         val practiceIntent = symbol?.let { AppLaunchRequests.practiceIntent(context, it) }
             ?: AppLaunchRequests.openAppIntent(context)
         val dictionaryIntent = symbol?.let { AppLaunchRequests.dictionaryIntent(context, it) }

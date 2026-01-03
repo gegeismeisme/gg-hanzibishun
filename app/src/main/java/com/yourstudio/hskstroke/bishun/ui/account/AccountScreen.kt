@@ -1,5 +1,11 @@
 package com.yourstudio.hskstroke.bishun.ui.account
 
+import android.Manifest
+import android.app.TimePickerDialog
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.yourstudio.hskstroke.bishun.data.settings.ThemeMode
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
@@ -45,6 +52,7 @@ import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.support.HelpDialog
 import com.yourstudio.hskstroke.bishun.ui.support.PrivacyDialog
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 @Composable
 fun AccountScreen(
@@ -66,6 +74,11 @@ fun AccountScreen(
     val preferencesStore = remember { UserPreferencesStore(context.applicationContext) }
     val userPreferences by preferencesStore.data.collectAsState(initial = UserPreferences())
     val scope = rememberCoroutineScope()
+    val requestNotificationPermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        scope.launch { preferencesStore.setDailyReminderEnabled(granted) }
+    }
 
     Column(
         modifier = modifier
@@ -94,6 +107,35 @@ fun AccountScreen(
             },
             onLowerToPercentChange = { percent ->
                 scope.launch { preferencesStore.setVolumeSafetyLowerToPercent(percent) }
+            },
+        )
+
+        DailyReminderCard(
+            enabled = userPreferences.dailyReminderEnabled,
+            minutesOfDay = userPreferences.dailyReminderTimeMinutes,
+            onlyWhenIncomplete = userPreferences.dailyReminderOnlyWhenIncomplete,
+            onEnabledChange = { enabled ->
+                if (!enabled) {
+                    scope.launch { preferencesStore.setDailyReminderEnabled(false) }
+                } else if (Build.VERSION.SDK_INT >= 33) {
+                    val granted = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS,
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (!granted) {
+                        requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        scope.launch { preferencesStore.setDailyReminderEnabled(true) }
+                    }
+                } else {
+                    scope.launch { preferencesStore.setDailyReminderEnabled(true) }
+                }
+            },
+            onTimeChange = { minutes ->
+                scope.launch { preferencesStore.setDailyReminderTimeMinutes(minutes) }
+            },
+            onOnlyWhenIncompleteChange = { enabled ->
+                scope.launch { preferencesStore.setDailyReminderOnlyWhenIncomplete(enabled) }
             },
         )
 
@@ -315,6 +357,78 @@ private fun GuidanceCard(onShowOnboarding: () -> Unit) {
     ) {
         Button(onClick = onShowOnboarding) {
             Text("Open guide")
+        }
+    }
+}
+
+@Composable
+private fun DailyReminderCard(
+    enabled: Boolean,
+    minutesOfDay: Int,
+    onlyWhenIncomplete: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onTimeChange: (Int) -> Unit,
+    onOnlyWhenIncompleteChange: (Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    val normalizedMinutes = minutesOfDay.coerceIn(0, 23 * 60 + 59)
+    val hour = normalizedMinutes / 60
+    val minute = normalizedMinutes % 60
+    val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+
+    SettingsCard(
+        title = "每日提醒",
+        description = "每天在指定时间提醒你练习今日一字。",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = "开启提醒", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = onEnabledChange,
+                )
+            }
+
+            if (enabled) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(text = "提醒时间：$formattedTime", style = MaterialTheme.typography.bodyMedium)
+                    Button(
+                        onClick = {
+                            TimePickerDialog(
+                                context,
+                                { _, pickedHour, pickedMinute ->
+                                    onTimeChange(pickedHour.coerceIn(0, 23) * 60 + pickedMinute.coerceIn(0, 59))
+                                },
+                                hour,
+                                minute,
+                                true,
+                            ).show()
+                        },
+                    ) {
+                        Text("修改")
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(text = "仅未完成时提醒", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = onlyWhenIncomplete,
+                        onCheckedChange = onOnlyWhenIncompleteChange,
+                    )
+                }
+            }
         }
     }
 }

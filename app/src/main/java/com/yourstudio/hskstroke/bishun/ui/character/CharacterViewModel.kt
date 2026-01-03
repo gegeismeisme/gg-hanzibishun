@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.yourstudio.hskstroke.bishun.data.characters.CharacterDefinitionRepository
 import com.yourstudio.hskstroke.bishun.data.characters.di.CharacterDataModule
+import com.yourstudio.hskstroke.bishun.data.daily.DailyPracticeUseCase
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
 import com.yourstudio.hskstroke.bishun.data.word.WordRepository
 import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
@@ -30,7 +31,6 @@ import com.yourstudio.hskstroke.bishun.ui.practice.BoardSettings
 import com.yourstudio.hskstroke.bishun.ui.practice.PracticeGrid
 import com.yourstudio.hskstroke.bishun.ui.practice.StrokeColorOption
 import com.yourstudio.hskstroke.bishun.widget.DailyHanziWidgetUpdater
-import com.yourstudio.hskstroke.bishun.data.word.buildExplanationSummary
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -159,19 +159,20 @@ class CharacterViewModel(
     fun startDailyPractice() {
         val zone = ZoneId.systemDefault()
         val todayEpochDay = LocalDate.now(zone).toEpochDay()
-        val prefs = _userPreferences.value
-        val storedSymbol = prefs.dailySymbol
-            ?.trim()
-            ?.takeIf { it.isNotBlank() && prefs.dailyEpochDay == todayEpochDay }
-        val resolvedSymbol = storedSymbol ?: pickDailySymbol(_hskProgress.value)
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-        if (resolvedSymbol.isNullOrBlank()) return
-
-        if (storedSymbol == null) {
-            persistDailyPractice(resolvedSymbol, todayEpochDay)
+        val suggestedSymbol = pickDailySymbol(_hskProgress.value)?.trim()?.takeIf { it.isNotBlank() }
+        viewModelScope.launch {
+            val snapshot = DailyPracticeUseCase.ensureTodaySnapshot(
+                context = appContext,
+                todayEpochDay = todayEpochDay,
+                suggestedSymbol = suggestedSymbol,
+                ensureDetails = false,
+                preferencesStore = userPreferencesStore,
+                wordRepository = wordRepository,
+            )
+            val resolvedSymbol = snapshot.symbol ?: return@launch
+            runCatching { DailyHanziWidgetUpdater.updateAll(appContext) }
+            startPracticeForSymbol(resolvedSymbol)
         }
-        startPracticeForSymbol(resolvedSymbol)
     }
 
     fun ensureDailyPracticeDetailsLoaded() {
@@ -191,14 +192,12 @@ class CharacterViewModel(
         dailyDetailsRequest = requestKey
 
         dailyDetailsJob = viewModelScope.launch {
-            val entry = runCatching { wordRepository.getWord(symbol) }.getOrNull()
-            val pinyin = entry?.pinyin?.trim()?.takeIf { it.isNotBlank() }
-            val explanationSummary = entry?.explanation?.let { buildExplanationSummary(it) }
-            userPreferencesStore.setDailyPracticeDetails(
-                symbol = symbol,
-                epochDay = todayEpochDay,
-                pinyin = pinyin,
-                explanationSummary = explanationSummary,
+            DailyPracticeUseCase.ensureTodaySnapshot(
+                context = appContext,
+                todayEpochDay = todayEpochDay,
+                ensureDetails = true,
+                preferencesStore = userPreferencesStore,
+                wordRepository = wordRepository,
             )
             runCatching { DailyHanziWidgetUpdater.updateAll(appContext) }
         }
@@ -569,12 +568,15 @@ class CharacterViewModel(
         val shouldUpdate = storedEpochDay != todayEpochDay || (storedSymbol == null && suggestedSymbol != null)
         if (!shouldUpdate) return
 
-        persistDailyPractice(suggestedSymbol, todayEpochDay)
-    }
-
-    private fun persistDailyPractice(symbol: String?, epochDay: Long) {
         viewModelScope.launch {
-            userPreferencesStore.setDailyPractice(symbol, epochDay)
+            DailyPracticeUseCase.ensureTodaySnapshot(
+                context = appContext,
+                todayEpochDay = todayEpochDay,
+                suggestedSymbol = suggestedSymbol,
+                ensureDetails = false,
+                preferencesStore = userPreferencesStore,
+                wordRepository = wordRepository,
+            )
             runCatching { DailyHanziWidgetUpdater.updateAll(appContext) }
         }
     }

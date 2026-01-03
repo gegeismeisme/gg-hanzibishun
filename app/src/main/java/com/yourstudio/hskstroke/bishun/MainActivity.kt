@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +25,7 @@ import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequest
 import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequests
 import com.yourstudio.hskstroke.bishun.ui.onboarding.OnboardingScreen
 import com.yourstudio.hskstroke.bishun.ui.theme.BishunTheme
+import com.yourstudio.hskstroke.bishun.notifications.DailyReminderScheduler
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -40,6 +42,14 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             var forceShowOnboarding by rememberSaveable { mutableStateOf(false) }
             val shouldShowOnboarding = forceShowOnboarding || !userPreferences.onboardingCompleted
+
+            LaunchedEffect(userPreferences.dailyReminderEnabled, userPreferences.dailyReminderTimeMinutes) {
+                DailyReminderScheduler.scheduleOrCancel(
+                    context = context.applicationContext,
+                    enabled = userPreferences.dailyReminderEnabled,
+                    minutesOfDay = userPreferences.dailyReminderTimeMinutes,
+                )
+            }
 
             BishunTheme(themeMode = userPreferences.themeMode) {
                 Surface(
