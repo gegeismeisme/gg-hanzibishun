@@ -1,5 +1,6 @@
 package com.yourstudio.hskstroke.bishun.ui.practice
 
+import android.media.AudioManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,12 +22,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.School
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
 import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
 import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
 import com.yourstudio.hskstroke.bishun.hanzi.model.Point
 import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
+import com.yourstudio.hskstroke.bishun.ui.audio.VolumeSafetyDialog
 import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
 import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
@@ -33,6 +39,7 @@ import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
 import com.yourstudio.hskstroke.bishun.ui.character.WordInfoUiState
 import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun PracticeContent(
@@ -71,6 +78,33 @@ fun PracticeContent(
     var showWordInfo by rememberSaveable(definition.symbol) { mutableStateOf(false) }
     var showHskDialog by rememberSaveable { mutableStateOf(false) }
     val ttsController = rememberTextToSpeechController()
+    var showVolumeSafetyDialog by rememberSaveable { mutableStateOf(false) }
+    var volumeAtDialog by rememberSaveable { mutableStateOf(0) }
+    var pendingSpeak by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val context = LocalContext.current
+    val audioManager = remember { context.getSystemService(AudioManager::class.java) }
+    val preferencesStore = remember { UserPreferencesStore(context.applicationContext) }
+    val userPreferences by preferencesStore.data.collectAsState(initial = UserPreferences())
+
+    val requestSpeakSafely: (String) -> Unit = request@{ text ->
+        if (!ttsController.isAvailable.value) return@request
+        val speakNow = { ttsController.speak(text) }
+        val manager = audioManager
+        if (manager == null || !userPreferences.volumeSafetyEnabled) {
+            speakNow()
+            return@request
+        }
+        val maxVolume = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        val currentVolume = manager.getStreamVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(0)
+        val currentPercent = (currentVolume * 100f / maxVolume).roundToInt().coerceIn(0, 100)
+        volumeAtDialog = currentPercent
+        if (currentPercent >= userPreferences.volumeSafetyThresholdPercent.coerceIn(0, 100)) {
+            pendingSpeak = speakNow
+            showVolumeSafetyDialog = true
+        } else {
+            speakNow()
+        }
+    }
     LaunchedEffect(showWordInfo, definition.symbol) {
         if (showWordInfo && wordInfoUiState is WordInfoUiState.Idle) {
             onRequestWordInfo(definition.symbol)
@@ -163,7 +197,7 @@ fun PracticeContent(
             primaryLabel = if (practiceState.isActive) boardStrings.hintLabel else boardStrings.startLabel,
             onPrimaryClick = if (practiceState.isActive) onRequestHint else onStartPractice,
             primaryEnabled = !isDemoPlaying,
-            onPlayPronunciation = { ttsController.speak(wordEntry?.word ?: definition.symbol) },
+            onPlayPronunciation = { requestSpeakSafely(wordEntry?.word ?: definition.symbol) },
             pronunciationEnabled = !isDemoPlaying && ttsController.isAvailable.value,
             onShowDictionary = {
                 showWordInfo = true
@@ -179,6 +213,8 @@ fun PracticeContent(
             wordInfoUiState = wordInfoUiState,
             onRetry = { onRequestWordInfo(definition.symbol) },
             onDismiss = { showWordInfo = false },
+            onPlayPronunciation = { requestSpeakSafely(wordEntry?.word ?: definition.symbol) },
+            pronunciationEnabled = ttsController.isAvailable.value,
             ttsController = ttsController,
         )
     }
@@ -186,6 +222,36 @@ fun PracticeContent(
         HskInfoDialog(
             entry = hskEntry,
             onDismiss = { showHskDialog = false },
+        )
+    }
+    if (showVolumeSafetyDialog && audioManager != null) {
+        VolumeSafetyDialog(
+            currentVolumePercent = volumeAtDialog,
+            thresholdPercent = userPreferences.volumeSafetyThresholdPercent.coerceIn(0, 100),
+            lowerToPercent = userPreferences.volumeSafetyLowerToPercent.coerceIn(0, 100),
+            onCheckVolume = {
+                audioManager.adjustStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.ADJUST_SAME,
+                    AudioManager.FLAG_SHOW_UI,
+                )
+                showVolumeSafetyDialog = false
+                pendingSpeak = null
+            },
+            onLowerAndPlay = {
+                val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                val target = (maxVolume * (userPreferences.volumeSafetyLowerToPercent / 100f))
+                    .roundToInt()
+                    .coerceIn(0, maxVolume)
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, AudioManager.FLAG_SHOW_UI)
+                showVolumeSafetyDialog = false
+                pendingSpeak?.invoke()
+                pendingSpeak = null
+            },
+            onDismiss = {
+                showVolumeSafetyDialog = false
+                pendingSpeak = null
+            },
         )
     }
 }

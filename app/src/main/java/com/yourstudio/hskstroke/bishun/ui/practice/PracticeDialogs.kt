@@ -40,6 +40,8 @@ fun WordInfoBottomSheet(
     wordInfoUiState: WordInfoUiState,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
+    onPlayPronunciation: () -> Unit,
+    pronunciationEnabled: Boolean,
     ttsController: TextToSpeechController,
 ) {
     val scrollState = rememberScrollState()
@@ -85,8 +87,8 @@ fun WordInfoBottomSheet(
                     )
                 }
                 IconButton(
-                    onClick = { ttsController.speak(entry?.word ?: symbol) },
-                    enabled = ttsController.isAvailable.value,
+                    onClick = onPlayPronunciation,
+                    enabled = pronunciationEnabled,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,

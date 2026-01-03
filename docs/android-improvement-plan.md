@@ -12,6 +12,8 @@
 - 已切换为底部 4 Tab 信息架构：`Home / Learn / Dict / Me`，其中 `Learn` 合并课程与进度（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/navigation/BishunApp.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/ui/learn/LearnScreen.kt`）。
 - 已把「词典词条」改为按需加载：进入练习页不再强制解析 `word.json`，仅在用户打开词典弹层时请求并显示 Loading/Retry（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/character/CharacterViewModel.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/ui/practice/PracticeDialogs.kt`）。
 - 已增强 TTS 初始化与可用性判断：只在引擎/语言可用时允许播放，并自动选择可用的中文 Locale（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/practice/PracticeTextToSpeech.kt`）。
+- 已新增「设置中心（Me）」：外观（主题模式）、音量安全、语言切换、帮助/隐私、数据清理等集中管理（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/account/AccountScreen.kt`）。
+- 已加入首次引导与可重复查看：首次启动进入引导页，可在设置页再次打开（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/onboarding/OnboardingScreen.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/MainActivity.kt`）。
 
 ## 1. 当前实现快照（基于仓库现状）
 
@@ -81,6 +83,7 @@
 
 3) 数据结构与存储策略（为后续扩展铺路）
 - 评估把 `word.json` 转为更适合移动端查询的格式（如 SQLite/Room 预置库，或拆分为单字/多字两套索引）。
+- 方案草案：`docs/dictionary-data-optimization.md`
 - 产出脚本与说明文档（数据如何生成、如何校验、如何更新）。
 
 ### Iteration C（4–6 周）：工程化与可维护性（P0/P1 长期）

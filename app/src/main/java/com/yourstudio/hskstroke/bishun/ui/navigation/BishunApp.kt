@@ -54,7 +54,9 @@ private sealed class MainDestination(
 }
 
 @Composable
-fun BishunApp() {
+fun BishunApp(
+    onShowOnboarding: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val destinations = remember { MainDestination.items }
     val currentBackStack by navController.currentBackStackEntryAsState()
@@ -173,6 +175,7 @@ fun BishunApp() {
                     modifier = Modifier.fillMaxSize(),
                     onClearLocalData = sharedCharacterViewModel::clearLocalData,
                     languageOverride = userPreferences.languageOverride,
+                    onShowOnboarding = onShowOnboarding,
                 )
             }
         }

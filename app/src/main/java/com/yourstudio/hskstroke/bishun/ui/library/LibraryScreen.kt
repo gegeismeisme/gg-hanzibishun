@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -83,7 +84,7 @@ fun LibraryScreen(
         RowActions(
             strings = libraryStrings,
             isLoading = uiState.isLoading,
-            hasResult = uiState.result != null,
+            hasResult = uiState.results.isNotEmpty(),
             onSearch = viewModel::submitQuery,
             onClear = viewModel::clearResult,
         )
@@ -108,12 +109,23 @@ fun LibraryScreen(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        uiState.result?.let { entry ->
+        val selectedEntry = remember(uiState.results, uiState.selectedWord) {
+            uiState.results.firstOrNull { it.word == uiState.selectedWord }
+                ?: uiState.results.firstOrNull()
+        }
+        selectedEntry?.let { entry ->
+            if (uiState.results.size > 1) {
+                SearchResultsRow(
+                    results = uiState.results,
+                    selectedWord = entry.word,
+                    onSelect = viewModel::selectWord,
+                )
+            }
             WordEntryCard(
                 strings = libraryStrings,
                 locale = locale,
                 entry = entry,
-                onPractice = { onLoadInPractice(entry.word) },
+                onPracticeSymbol = onLoadInPractice,
             )
         }
         HelpCard(strings = libraryStrings)
@@ -178,6 +190,34 @@ private fun RecentSearchesRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SearchResultsRow(
+    results: List<WordEntry>,
+    selectedWord: String,
+    onSelect: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Results",
+            style = MaterialTheme.typography.labelLarge,
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            results.forEach { entry ->
+                FilterChip(
+                    selected = entry.word == selectedWord,
+                    onClick = { onSelect(entry.word) },
+                    label = { Text(entry.word) },
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun RowActions(
     strings: LibraryStrings,
@@ -212,12 +252,13 @@ private fun RowActions(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WordEntryCard(
     strings: LibraryStrings,
     locale: Locale,
     entry: WordEntry,
-    onPractice: () -> Unit,
+    onPracticeSymbol: (String) -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -259,8 +300,35 @@ private fun WordEntryCard(
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Button(onClick = onPractice) {
-                Text(strings.practiceButtonLabel)
+            val practiceTargets = remember(entry.word) {
+                entry.word.asSequence()
+                    .filter { it in '\u4e00'..'\u9fff' }
+                    .map { it.toString() }
+                    .distinct()
+                    .toList()
+            }
+            if (practiceTargets.size <= 1) {
+                val symbol = practiceTargets.firstOrNull() ?: entry.word.take(1)
+                Button(onClick = { onPracticeSymbol(symbol) }) {
+                    Text(strings.practiceButtonLabel)
+                }
+            } else {
+                Text(
+                    text = "Practice characters",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    practiceTargets.forEach { symbol ->
+                        AssistChip(
+                            onClick = { onPracticeSymbol(symbol) },
+                            label = { Text(symbol) },
+                        )
+                    }
+                }
             }
         }
     }

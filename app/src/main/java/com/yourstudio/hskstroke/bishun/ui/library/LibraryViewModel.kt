@@ -15,7 +15,8 @@ import kotlinx.coroutines.launch
 
 data class LibraryUiState(
     val query: String = "",
-    val result: WordEntry? = null,
+    val results: List<WordEntry> = emptyList(),
+    val selectedWord: String? = null,
     val isLoading: Boolean = false,
     val error: LibraryError? = null,
     val recentSearches: List<String> = emptyList(),
@@ -40,7 +41,7 @@ class LibraryViewModel(
     }
 
     fun clearResult() {
-        _uiState.value = _uiState.value.copy(result = null, error = null)
+        _uiState.value = _uiState.value.copy(results = emptyList(), selectedWord = null, error = null)
     }
 
     fun clearHistory() {
@@ -52,26 +53,29 @@ class LibraryViewModel(
         if (symbol.isEmpty()) {
             _uiState.value = _uiState.value.copy(
                 error = LibraryError.EmptyQuery,
-                result = null,
+                results = emptyList(),
+                selectedWord = null,
             )
             return
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            runCatching { wordRepository.getWord(symbol) }
-                .onSuccess { entry ->
-                    _uiState.value = if (entry != null) {
+            runCatching { wordRepository.searchWords(symbol) }
+                .onSuccess { results ->
+                    _uiState.value = if (results.isNotEmpty()) {
                         val updatedRecents = addRecent(symbol)
                         persistRecentSearches(updatedRecents)
                         _uiState.value.copy(
                             isLoading = false,
-                            result = entry,
+                            results = results,
+                            selectedWord = results.first().word,
                             error = null,
                         )
                     } else {
                         _uiState.value.copy(
                             isLoading = false,
-                            result = null,
+                            results = emptyList(),
+                            selectedWord = null,
                             error = LibraryError.NotFound,
                         )
                     }
@@ -79,7 +83,8 @@ class LibraryViewModel(
                 .onFailure {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        result = null,
+                        results = emptyList(),
+                        selectedWord = null,
                         error = LibraryError.ReadFailure,
                     )
                 }
@@ -93,6 +98,14 @@ class LibraryViewModel(
             _uiState.value = _uiState.value.copy(query = trimmed)
         }
         submitQuery()
+    }
+
+    fun selectWord(word: String) {
+        val normalized = word.trim()
+        if (normalized.isEmpty()) return
+        if (_uiState.value.selectedWord != normalized) {
+            _uiState.value = _uiState.value.copy(selectedWord = normalized)
+        }
     }
 
     private fun addRecent(symbol: String): List<String> {
@@ -125,7 +138,7 @@ class LibraryViewModel(
     }
 
     companion object {
-        private const val MAX_QUERY_LENGTH = 2
+        private const val MAX_QUERY_LENGTH = 32
         private const val RECENT_LIMIT = 50
 
         fun factory(context: android.content.Context): ViewModelProvider.Factory {

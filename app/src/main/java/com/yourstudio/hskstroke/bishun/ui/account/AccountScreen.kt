@@ -1,50 +1,71 @@
 package com.yourstudio.hskstroke.bishun.ui.account
+
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.yourstudio.hskstroke.bishun.data.settings.ThemeMode
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
 import com.yourstudio.hskstroke.bishun.ui.character.AccountStrings
 import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.support.HelpDialog
 import com.yourstudio.hskstroke.bishun.ui.support.PrivacyDialog
+import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
     modifier: Modifier = Modifier,
     onClearLocalData: () -> Unit,
     languageOverride: String?,
+    onShowOnboarding: () -> Unit = {},
 ) {
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showPrivacyDialog by rememberSaveable { mutableStateOf(false) }
     var showClearDataDialog by rememberSaveable { mutableStateOf(false) }
+    var showClearRecentsDialog by rememberSaveable { mutableStateOf(false) }
+    var showLanguageMenu by rememberSaveable { mutableStateOf(false) }
+
     val scrollState = rememberScrollState()
     val strings = rememberLocalizedStrings(languageOverride)
     val accountStrings = strings.account
+    val context = LocalContext.current
+    val preferencesStore = remember { UserPreferencesStore(context.applicationContext) }
+    val userPreferences by preferencesStore.data.collectAsState(initial = UserPreferences())
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
@@ -53,19 +74,54 @@ fun AccountScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(text = accountStrings.title, style = MaterialTheme.typography.headlineSmall)
+
+        AppearanceCard(
+            themeMode = userPreferences.themeMode,
+            onThemeModeChange = { mode ->
+                scope.launch { preferencesStore.setThemeMode(mode) }
+            },
+        )
+
+        AudioSafetyCard(
+            enabled = userPreferences.volumeSafetyEnabled,
+            thresholdPercent = userPreferences.volumeSafetyThresholdPercent,
+            lowerToPercent = userPreferences.volumeSafetyLowerToPercent,
+            onEnabledChange = { enabled ->
+                scope.launch { preferencesStore.setVolumeSafetyEnabled(enabled) }
+            },
+            onThresholdPercentChange = { percent ->
+                scope.launch { preferencesStore.setVolumeSafetyThresholdPercent(percent) }
+            },
+            onLowerToPercentChange = { percent ->
+                scope.launch { preferencesStore.setVolumeSafetyLowerToPercent(percent) }
+            },
+        )
+
+        GuidanceCard(onShowOnboarding = onShowOnboarding)
+
+        LanguageCard(
+            languageOverride = userPreferences.languageOverride,
+            showMenu = showLanguageMenu,
+            onToggleMenu = { showLanguageMenu = it },
+            onLanguageChange = { tag ->
+                scope.launch { preferencesStore.setLanguageOverride(tag) }
+            },
+        )
+
         SupportCard(
             accountStrings = accountStrings,
             strings = strings,
             onHelpClick = { showHelpDialog = true },
             onPrivacyClick = { showPrivacyDialog = true },
         )
-        AccountCard(
-            title = accountStrings.clearDataTitle,
-            description = accountStrings.clearDataDescription,
-            buttonLabel = accountStrings.clearDataButton,
-            onClick = { showClearDataDialog = true },
+
+        DataCard(
+            accountStrings = accountStrings,
+            onClearDictionaryHistory = { showClearRecentsDialog = true },
+            onClearLocalData = { showClearDataDialog = true },
         )
     }
+
     if (showHelpDialog) {
         HelpDialog(strings = strings, onDismiss = { showHelpDialog = false })
     }
@@ -94,22 +150,40 @@ fun AccountScreen(
             },
         )
     }
+    if (showClearRecentsDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearRecentsDialog = false },
+            title = { Text("Clear dictionary history") },
+            text = { Text("Remove recent dictionary searches saved on this device.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch { preferencesStore.clearLibraryRecentSearches() }
+                        showClearRecentsDialog = false
+                    },
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearRecentsDialog = false }) {
+                    Text(accountStrings.cancelLabel)
+                }
+            },
+        )
+    }
 }
 
 @Composable
-private fun AccountCard(
+private fun SettingsCard(
     title: String,
-    description: String,
-    buttonLabel: String,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
+    description: String? = null,
     modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(
             modifier = Modifier
@@ -121,15 +195,159 @@ private fun AccountCard(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
+            description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            content()
+        }
+    }
+}
+
+@Composable
+private fun AppearanceCard(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+) {
+    SettingsCard(
+        title = "Appearance",
+        description = "Choose how the app looks on this device.",
+    ) {
+        ThemeModeOptions(themeMode = themeMode, onThemeModeChange = onThemeModeChange)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ThemeModeOptions(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+) {
+    val options = listOf(
+        ThemeMode.System to "System",
+        ThemeMode.Light to "Light",
+        ThemeMode.Dark to "Dark",
+    )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEach { (mode, label) ->
+            FilterChip(
+                selected = themeMode == mode,
+                onClick = { onThemeModeChange(mode) },
+                label = { Text(label) },
             )
-            Button(
-                onClick = onClick,
-                enabled = enabled,
-            ) {
-                Text(buttonLabel)
+        }
+    }
+}
+
+@Composable
+private fun AudioSafetyCard(
+    enabled: Boolean,
+    thresholdPercent: Int,
+    lowerToPercent: Int,
+    onEnabledChange: (Boolean) -> Unit,
+    onThresholdPercentChange: (Int) -> Unit,
+    onLowerToPercentChange: (Int) -> Unit,
+) {
+    SettingsCard(
+        title = "Audio safety",
+        description = "Show a reminder before playing pronunciation at high volume.",
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(text = "Volume reminder", style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = enabled,
+                onCheckedChange = onEnabledChange,
+            )
+        }
+        if (enabled) {
+            VolumeSliderRow(
+                title = "Reminder threshold",
+                value = thresholdPercent,
+                onValueChange = onThresholdPercentChange,
+                valueRange = 50..100,
+            )
+            VolumeSliderRow(
+                title = "Lower to",
+                value = lowerToPercent,
+                onValueChange = onLowerToPercentChange,
+                valueRange = 0..60,
+            )
+        }
+    }
+}
+
+@Composable
+private fun VolumeSliderRow(
+    title: String,
+    value: Int,
+    valueRange: IntRange,
+    onValueChange: (Int) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text(text = title, style = MaterialTheme.typography.bodySmall)
+            Text(text = "$value%", style = MaterialTheme.typography.bodySmall)
+        }
+        val steps = (valueRange.last - valueRange.first - 1).coerceAtLeast(0)
+        Slider(
+            value = value.coerceIn(valueRange.first, valueRange.last).toFloat(),
+            onValueChange = { onValueChange(it.toInt()) },
+            valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
+            steps = steps,
+        )
+    }
+}
+
+@Composable
+private fun GuidanceCard(onShowOnboarding: () -> Unit) {
+    SettingsCard(
+        title = "Getting started",
+        description = "Review the quick guide for first-time users.",
+    ) {
+        Button(onClick = onShowOnboarding) {
+            Text("Open guide")
+        }
+    }
+}
+
+@Composable
+private fun LanguageCard(
+    languageOverride: String?,
+    showMenu: Boolean,
+    onToggleMenu: (Boolean) -> Unit,
+    onLanguageChange: (String?) -> Unit,
+) {
+    val currentChoice = languageChoices.firstOrNull { it.tag == languageOverride } ?: languageChoices.first()
+    SettingsCard(
+        title = "Language",
+        description = "Overrides in-app content language.",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Current: ${currentChoice.label}", style = MaterialTheme.typography.bodyMedium)
+            Box {
+                Button(onClick = { onToggleMenu(true) }) {
+                    Text("Change")
+                }
+                DropdownMenu(expanded = showMenu, onDismissRequest = { onToggleMenu(false) }) {
+                    languageChoices.forEach { choice ->
+                        DropdownMenuItem(
+                            text = { Text(choice.label) },
+                            onClick = {
+                                onToggleMenu(false)
+                                onLanguageChange(choice.tag)
+                            },
+                        )
+                    }
+                }
             }
         }
     }
@@ -144,9 +362,7 @@ private fun SupportCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(
             modifier = Modifier
@@ -173,64 +389,29 @@ private fun SupportCard(
 }
 
 @Composable
-private fun ConsentDialog(
-    title: String,
-    bulletPoints: List<String>,
-    confirmLabel: String,
-    checkboxLabel: String,
-    cancelLabel: String,
-    closeLabel: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
+private fun DataCard(
+    accountStrings: AccountStrings,
+    onClearDictionaryHistory: () -> Unit,
+    onClearLocalData: () -> Unit,
 ) {
-    var accepted by rememberSaveable { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                bulletPoints.forEach { entry ->
-                    Row(verticalAlignment = Alignment.Top) {
-                        Text(text = "•", modifier = Modifier.padding(end = 8.dp))
-                        Text(
-                            text = entry,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                        checked = accepted,
-                        onCheckedChange = { accepted = it },
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = checkboxLabel, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm()
-                    accepted = false
-                },
-                enabled = accepted,
-            ) {
-                Text(confirmLabel)
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
-                    accepted = false
-                    onDismiss()
-                },
-            ) {
-                Text(cancelLabel)
-            }
-        },
-    )
+    SettingsCard(
+        title = "Data",
+        description = "Manage what is stored on this device.",
+    ) {
+        Button(onClick = onClearDictionaryHistory) {
+            Text("Clear dictionary history")
+        }
+        Button(onClick = onClearLocalData) {
+            Text(accountStrings.clearDataButton)
+        }
+    }
 }
+
+private data class LanguageChoice(val tag: String?, val label: String)
+
+private val languageChoices = listOf(
+    LanguageChoice(null, "System"),
+    LanguageChoice("en", "English"),
+    LanguageChoice("es", "Español"),
+    LanguageChoice("ja", "日本語"),
+)
