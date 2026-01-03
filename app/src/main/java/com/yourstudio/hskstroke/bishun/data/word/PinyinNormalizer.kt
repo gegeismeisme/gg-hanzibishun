@@ -32,6 +32,25 @@ internal fun normalizePinyin(raw: String): NormalizedPinyin {
     )
 }
 
+internal fun normalizePinyinQueryCandidates(raw: String): List<NormalizedPinyin> {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return emptyList()
+
+    val candidates = mutableListOf<NormalizedPinyin>()
+    val primary = normalizePinyin(trimmed)
+    if (primary.plainCompact.isNotBlank()) candidates.add(primary)
+
+    val hasToneDigits = trimmed.any { it in '1'..'5' }
+    val hasWhitespace = trimmed.any { it.isWhitespace() }
+    if (hasToneDigits && !hasWhitespace) {
+        val spaced = trimmed.replace(Regex("([1-5])"), "$1 ")
+        val spacedNormalized = normalizePinyin(spaced)
+        if (spacedNormalized.plainCompact.isNotBlank()) candidates.add(spacedNormalized)
+    }
+
+    return candidates.distinct()
+}
+
 private fun normalizePinyinSyllable(raw: String): Pair<String, String> {
     var tone = 0
     val builder = StringBuilder()

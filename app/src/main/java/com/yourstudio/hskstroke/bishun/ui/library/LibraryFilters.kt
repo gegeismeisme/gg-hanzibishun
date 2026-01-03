@@ -2,6 +2,7 @@ package com.yourstudio.hskstroke.bishun.ui.library
 
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
 import com.yourstudio.hskstroke.bishun.data.word.normalizePinyin
+import com.yourstudio.hskstroke.bishun.data.word.normalizePinyinQueryCandidates
 
 internal fun matchesLibraryFilterQuery(word: String, entry: WordEntry?, rawQuery: String): Boolean {
     val query = rawQuery.trim()
@@ -12,21 +13,7 @@ internal fun matchesLibraryFilterQuery(word: String, entry: WordEntry?, rawQuery
     if (pinyin.isBlank()) return false
 
     val normalizedPinyin = normalizePinyin(pinyin)
-
-    val normalizedQueries = buildList {
-        val primary = normalizePinyin(query)
-        if (primary.plainCompact.isNotBlank()) add(primary)
-
-        val hasToneDigits = query.any { it in '1'..'5' }
-        val hasWhitespace = query.any { it.isWhitespace() }
-        if (hasToneDigits && !hasWhitespace) {
-            val spaced = query.replace(Regex("([1-5])"), "$1 ")
-            val spacedNormalized = normalizePinyin(spaced)
-            if (spacedNormalized.plainCompact.isNotBlank() && spacedNormalized != primary) {
-                add(spacedNormalized)
-            }
-        }
-    }
+    val normalizedQueries = normalizePinyinQueryCandidates(query)
 
     return normalizedQueries.any { normalizedQuery ->
         if (normalizedQuery.hasTone) {

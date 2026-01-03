@@ -79,26 +79,63 @@ class WordRepository(
         return databaseMutex.withLock {
             database?.let { return it }
             val targetFile = ensureDatabaseFile()
-            val opened = SQLiteDatabase.openDatabase(
-                targetFile.absolutePath,
-                null,
-                SQLiteDatabase.OPEN_READONLY,
-            )
+            val opened = runCatching {
+                SQLiteDatabase.openDatabase(
+                    targetFile.absolutePath,
+                    null,
+                    SQLiteDatabase.OPEN_READONLY,
+                )
+            }.getOrElse { firstError ->
+                runCatching {
+                    targetFile.delete()
+                    val refreshed = ensureDatabaseFile(forceRefresh = true)
+                    SQLiteDatabase.openDatabase(
+                        refreshed.absolutePath,
+                        null,
+                        SQLiteDatabase.OPEN_READONLY,
+                    )
+                }.getOrElse { secondError ->
+                    secondError.addSuppressed(firstError)
+                    throw secondError
+                }
+            }
             database = opened
             opened
         }
     }
 
-    private fun ensureDatabaseFile(): File {
+    private fun ensureDatabaseFile(forceRefresh: Boolean = false): File {
         val dbFile = context.getDatabasePath(DB_FILE_NAME)
-        if (dbFile.exists()) return dbFile
+        val appLastUpdateTime = getAppLastUpdateTime()
+        val needsRefresh = forceRefresh ||
+            !dbFile.exists() ||
+            dbFile.length() == 0L ||
+            (appLastUpdateTime > 0L && dbFile.lastModified() < appLastUpdateTime)
+        if (!needsRefresh) return dbFile
+
         dbFile.parentFile?.mkdirs()
+        val tempFile = File(dbFile.absolutePath + ".tmp")
+        if (tempFile.exists()) tempFile.delete()
+
         context.assets.open(DB_ASSET_PATH).use { input ->
-            dbFile.outputStream().use { output ->
+            tempFile.outputStream().use { output ->
                 input.copyTo(output)
             }
         }
+
+        if (dbFile.exists()) dbFile.delete()
+        if (!tempFile.renameTo(dbFile)) {
+            tempFile.copyTo(dbFile, overwrite = true)
+            tempFile.delete()
+        }
         return dbFile
+    }
+
+    @Suppress("DEPRECATION")
+    private fun getAppLastUpdateTime(): Long {
+        return runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+        }.getOrDefault(0L)
     }
 
     private fun searchByWord(
@@ -156,43 +193,50 @@ class WordRepository(
         query: String,
         limit: Int,
     ): List<WordEntry> {
-        val normalized = normalizePinyin(query)
-        val compactQuery = if (normalized.hasTone) normalized.toneCompact else normalized.plainCompact
-        if (compactQuery.isBlank()) return emptyList()
-        val column = if (normalized.hasTone) "pinyin_tone_compact" else "pinyin_plain_compact"
-
         val results = LinkedHashMap<String, WordEntry>()
-        db.rawQuery(
-            """
-                SELECT word, oldword, strokes, pinyin, radicals, explanation, more
-                FROM words
-                WHERE $column LIKE ?
-                ORDER BY length(word), word
-                LIMIT ?
-            """.trimIndent(),
-            arrayOf("$compactQuery%", limit.toString()),
-        ).use { cursor ->
-            while (cursor.moveToNext() && results.size < limit) {
-                val entry = cursor.toWordEntry()
-                results.putIfAbsent(entry.word, entry)
+        val candidates = normalizePinyinQueryCandidates(query)
+            .mapNotNull { normalized ->
+                val compactQuery = if (normalized.hasTone) normalized.toneCompact else normalized.plainCompact
+                val column = if (normalized.hasTone) "pinyin_tone_compact" else "pinyin_plain_compact"
+                compactQuery.takeIf { it.isNotBlank() }?.let { column to it }
             }
-        }
-        if (results.size < limit) {
+            .distinct()
+        if (candidates.isEmpty()) return emptyList()
+
+        candidates.forEach { (column, compactQuery) ->
             db.rawQuery(
                 """
                     SELECT word, oldword, strokes, pinyin, radicals, explanation, more
                     FROM words
                     WHERE $column LIKE ?
-                    ORDER BY instr($column, ?), length(word), word
+                    ORDER BY length(word), word
                     LIMIT ?
                 """.trimIndent(),
-                arrayOf("%$compactQuery%", compactQuery, limit.toString()),
+                arrayOf("$compactQuery%", limit.toString()),
             ).use { cursor ->
                 while (cursor.moveToNext() && results.size < limit) {
                     val entry = cursor.toWordEntry()
                     results.putIfAbsent(entry.word, entry)
                 }
             }
+            if (results.size < limit) {
+                db.rawQuery(
+                    """
+                        SELECT word, oldword, strokes, pinyin, radicals, explanation, more
+                        FROM words
+                        WHERE $column LIKE ?
+                        ORDER BY instr($column, ?), length(word), word
+                        LIMIT ?
+                    """.trimIndent(),
+                    arrayOf("%$compactQuery%", compactQuery, limit.toString()),
+                ).use { cursor ->
+                    while (cursor.moveToNext() && results.size < limit) {
+                        val entry = cursor.toWordEntry()
+                        results.putIfAbsent(entry.word, entry)
+                    }
+                }
+            }
+            if (results.size >= limit) return@forEach
         }
         return results.values.take(limit)
     }

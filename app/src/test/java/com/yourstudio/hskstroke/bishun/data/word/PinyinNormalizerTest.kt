@@ -54,4 +54,17 @@ class PinyinNormalizerTest {
         assertEquals("", normalized.toneCompact)
         assertFalse(normalized.hasTone)
     }
+
+    @Test
+    fun normalizePinyinQueryCandidates_handlesUnspacedToneDigits() {
+        val candidates = normalizePinyinQueryCandidates("ni3hao3")
+        assertTrue(candidates.any { it.toneCompact == "ni3hao3" })
+    }
+
+    @Test
+    fun normalizePinyinQueryCandidates_doesNotDuplicateSpacedInput() {
+        val candidates = normalizePinyinQueryCandidates("ni3 hao3")
+        assertEquals(1, candidates.size)
+        assertEquals("ni3hao3", candidates.single().toneCompact)
+    }
 }
