@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
@@ -61,12 +60,10 @@ fun PracticeSummaryBadge(
     locale: Locale,
     modifier: Modifier = Modifier,
 ) {
-    val containerColor = Color(0xFFE5F4EA)
-    val contentColor = Color(0xFF1E4620)
     Surface(
-        color = containerColor,
-        contentColor = contentColor,
-        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = MaterialTheme.shapes.large,
         modifier = modifier,
     ) {
         if (courseSession == null) {

@@ -61,6 +61,7 @@ fun CharacterRoute(
     val practiceState by viewModel.practiceState.collectAsState()
     val demoState by viewModel.demoState.collectAsState()
     val wordEntry by viewModel.wordEntry.collectAsState()
+    val wordInfoUiState by viewModel.wordInfoUiState.collectAsState()
     val hskEntry by viewModel.hskEntry.collectAsState()
     val courseSession by viewModel.courseSession.collectAsState()
     val boardSettings by viewModel.boardSettings.collectAsState()
@@ -79,6 +80,7 @@ fun CharacterRoute(
         renderSnapshot = renderSnapshot,
         demoState = demoState,
         wordEntry = wordEntry,
+        wordInfoUiState = wordInfoUiState,
         hskEntry = hskEntry,
         courseSession = courseSession,
         boardSettings = boardSettings,
@@ -90,6 +92,7 @@ fun CharacterRoute(
         onStopDemo = viewModel::stopDemo,
         onStartPractice = viewModel::startPractice,
         onRequestHint = viewModel::requestHint,
+        onRequestWordInfo = viewModel::requestWordInfo,
         onStrokeStart = viewModel::onPracticeStrokeStart,
         onStrokeMove = viewModel::onPracticeStrokeMove,
         onStrokeEnd = viewModel::onPracticeStrokeEnd,
@@ -114,6 +117,7 @@ fun CharacterScreen(
     renderSnapshot: RenderStateSnapshot?,
     demoState: DemoState,
     wordEntry: WordEntry?,
+    wordInfoUiState: WordInfoUiState,
     hskEntry: HskEntry?,
     courseSession: CourseSession?,
     boardSettings: BoardSettings,
@@ -127,6 +131,7 @@ fun CharacterScreen(
     onStopDemo: () -> Unit,
     onStartPractice: () -> Unit,
     onRequestHint: () -> Unit,
+    onRequestWordInfo: (String) -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
@@ -196,6 +201,8 @@ fun CharacterScreen(
                     boardSettings = boardSettings,
                     isDemoPlaying = demoState.isPlaying || calligraphyDemoState.isPlaying,
                     wordEntry = wordEntry,
+                    wordInfoUiState = wordInfoUiState,
+                    onRequestWordInfo = onRequestWordInfo,
                     hskEntry = hskEntry,
                     showTemplate = showTemplate,
                     boardStrings = strings.boardControls,
@@ -214,8 +221,8 @@ fun CharacterScreen(
                     onRequestHint = onRequestHint,
                     onStrokeStart = onStrokeStart,
                     onStrokeMove = onStrokeMove,
-                onStrokeEnd = onStrokeEnd,
-                onGridModeChange = onGridModeChange,
+                    onStrokeEnd = onStrokeEnd,
+                    onGridModeChange = onGridModeChange,
                     onStrokeColorChange = onStrokeColorChange,
                     onCourseNext = onCourseNext,
                     onCoursePrev = onCoursePrev,

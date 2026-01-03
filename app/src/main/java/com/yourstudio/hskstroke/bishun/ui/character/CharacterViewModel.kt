@@ -67,6 +67,8 @@ class CharacterViewModel(
     val demoState: StateFlow<DemoState> = _demoState.asStateFlow()
     private val _wordEntry = MutableStateFlow<WordEntry?>(null)
     val wordEntry: StateFlow<WordEntry?> = _wordEntry.asStateFlow()
+    private val _wordInfoUiState = MutableStateFlow<WordInfoUiState>(WordInfoUiState.Idle)
+    val wordInfoUiState: StateFlow<WordInfoUiState> = _wordInfoUiState.asStateFlow()
     private val _hskEntry = MutableStateFlow<HskEntry?>(null)
     val hskEntry: StateFlow<HskEntry?> = _hskEntry.asStateFlow()
     private val _hskProgress = MutableStateFlow(HskProgressSummary())
@@ -305,7 +307,8 @@ class CharacterViewModel(
                     setupRenderState(it)
                     cancelCompletionReset()
                     resetPracticeState(it)
-                    loadWordInfo(it.symbol)
+                    _wordEntry.value = null
+                    _wordInfoUiState.value = WordInfoUiState.Idle
                     loadHskInfo(it.symbol)
                     alignCourseSession(it.symbol)
                 },
@@ -313,6 +316,7 @@ class CharacterViewModel(
                     val message = it.message ?: "加载失败，请稍后再试"
                     _uiState.value = CharacterUiState.Error(message)
                     _wordEntry.value = null
+                    _wordInfoUiState.value = WordInfoUiState.Idle
                     _hskEntry.value = null
                 },
             )
@@ -346,11 +350,33 @@ class CharacterViewModel(
         userStrokeIds.clear()
     }
 
-    private fun loadWordInfo(symbol: String) {
+    fun requestWordInfo(symbol: String? = currentDefinition?.symbol) {
+        val normalized = symbol?.trim().takeIf { !it.isNullOrEmpty() } ?: return
+        val currentEntry = _wordEntry.value
+        val currentState = _wordInfoUiState.value
+        if (currentEntry?.word == normalized && currentState is WordInfoUiState.Loaded) return
+        if (currentState is WordInfoUiState.Loading) return
+
+        _wordInfoUiState.value = WordInfoUiState.Loading
         viewModelScope.launch {
-            runCatching { wordRepository.getWord(symbol) }
-                .onSuccess { _wordEntry.value = it }
-                .onFailure { _wordEntry.value = null }
+            runCatching { wordRepository.getWord(normalized) }
+                .onSuccess { entry ->
+                    if (currentDefinition?.symbol != normalized) return@launch
+                    if (entry == null) {
+                        _wordEntry.value = null
+                        _wordInfoUiState.value = WordInfoUiState.NotFound
+                    } else {
+                        _wordEntry.value = entry
+                        _wordInfoUiState.value = WordInfoUiState.Loaded
+                    }
+                }
+                .onFailure { throwable ->
+                    if (currentDefinition?.symbol != normalized) return@launch
+                    _wordEntry.value = null
+                    _wordInfoUiState.value = WordInfoUiState.Error(
+                        throwable.message ?: "Unable to load dictionary entry.",
+                    )
+                }
         }
     }
 

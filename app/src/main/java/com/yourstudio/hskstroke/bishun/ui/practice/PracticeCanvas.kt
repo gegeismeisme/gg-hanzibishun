@@ -13,10 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,7 +36,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
 import com.yourstudio.hskstroke.bishun.hanzi.core.Positioner
 import com.yourstudio.hskstroke.bishun.hanzi.geometry.Geometry
 import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
@@ -49,10 +45,7 @@ import com.yourstudio.hskstroke.bishun.hanzi.render.CharacterRenderState
 import com.yourstudio.hskstroke.bishun.hanzi.render.ColorRgba
 import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
 import com.yourstudio.hskstroke.bishun.hanzi.render.UserStrokeRenderState
-import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
-import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
-import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import kotlinx.coroutines.awaitCancellation
 
 @Composable
@@ -60,46 +53,26 @@ fun CharacterCanvas(
     definition: CharacterDefinition,
     renderSnapshot: RenderStateSnapshot?,
     practiceState: PracticeState,
-    courseSession: CourseSession?,
-    isDemoPlaying: Boolean,
     gridMode: PracticeGrid,
     userStrokeColor: Color,
     showTemplate: Boolean,
     calligraphyDemoProgress: List<Float>,
-    hskEntry: HskEntry?,
-    showHskHint: Boolean,
-    showHskIcon: Boolean,
-    onHskInfoClick: () -> Unit,
-    boardStrings: PracticeBoardStrings,
-    currentColorOption: StrokeColorOption,
-    onGridModeChange: (PracticeGrid) -> Unit,
-    onStrokeColorChange: (StrokeColorOption) -> Unit,
-    onTemplateToggle: (Boolean) -> Unit,
     onStrokeStart: (Point, Point) -> Unit,
     onStrokeMove: (Point, Point) -> Unit,
     onStrokeEnd: () -> Unit,
-    onStartPractice: () -> Unit,
-    onRequestHint: () -> Unit,
-    onCourseNext: () -> Unit,
-    onCoursePrev: () -> Unit,
-    onCourseSkip: () -> Unit,
-    onCourseRestart: () -> Unit,
-    onCourseExit: () -> Unit,
-    onWordInfoClick: () -> Unit,
-    wordInfoAvailable: Boolean,
-    onPlayPronunciation: () -> Unit,
-    pronunciationAvailable: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val outlineColor = Color(0xFFD6D6D6)
-    val teachingStrokeColor = Color(0xFF0F0F0F)
-    val canvasBackground = Color.White
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val teachingStrokeColor = MaterialTheme.colorScheme.onSurface
+    val canvasBackground = MaterialTheme.colorScheme.surface
+    val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f)
+    val templateColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f)
     val radicalStrokeColor = MaterialTheme.colorScheme.primary
     val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(MaterialTheme.shapes.extraLarge)
             .background(canvasBackground)
             .onSizeChanged { canvasSizeState.value = it },
         contentAlignment = Alignment.Center,
@@ -130,7 +103,7 @@ fun CharacterCanvas(
                 color = outlineColor,
                 style = Stroke(width = 1.dp.toPx()),
             )
-            drawPracticeGrid(gridMode)
+            drawPracticeGrid(gridMode, gridColor)
             if (showTemplate) {
                 drawTemplateStrokes(
                     definition = definition,
@@ -138,6 +111,7 @@ fun CharacterCanvas(
                     completedStrokes = practiceState.completedStrokes,
                     completedFillColor = userStrokeColor,
                     demoProgress = calligraphyDemoProgress,
+                    templateColor = templateColor,
                 )
             }
             val snapshot = renderSnapshot
@@ -183,77 +157,6 @@ fun CharacterCanvas(
                 }
             }
         }
-        PracticeBoardControls(
-            practiceState = practiceState,
-            isDemoPlaying = isDemoPlaying,
-            courseSession = courseSession,
-            gridMode = gridMode,
-            currentColorOption = currentColorOption,
-            showTemplate = showTemplate,
-            showHskIcon = showHskIcon,
-            hskEntry = hskEntry,
-            onStartPractice = onStartPractice,
-            onRequestHint = onRequestHint,
-            onCoursePrev = onCoursePrev,
-            onCourseNext = onCourseNext,
-            onGridModeChange = onGridModeChange,
-            onStrokeColorChange = onStrokeColorChange,
-            onTemplateToggle = onTemplateToggle,
-            onHskInfoClick = onHskInfoClick,
-            onShowWordInfo = onWordInfoClick,
-            wordInfoEnabled = wordInfoAvailable,
-            onPlayPronunciation = onPlayPronunciation,
-            pronunciationEnabled = pronunciationAvailable,
-            boardStrings = boardStrings,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(12.dp),
-        )
-        if (showHskHint) {
-            HskBadge(
-                entry = hskEntry,
-                fallbackSymbol = definition.symbol,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 12.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun HskBadge(
-    entry: HskEntry?,
-    fallbackSymbol: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        color = Color(0xFF1E1E1E).copy(alpha = 0.8f),
-        contentColor = Color.White,
-        shape = RoundedCornerShape(20.dp),
-        modifier = modifier,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            val title = entry?.let { "HSK ${it.level}" } ?: "HSK"
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-            )
-            Text(
-                text = entry?.examples
-                    ?.split(' ', '，', '。', '；')
-                    ?.firstOrNull { it.isNotBlank() }
-                    ?: entry?.symbol
-                    ?: "$fallbackSymbol · reference coming soon",
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
 
@@ -284,8 +187,7 @@ private fun Modifier.practicePointerInput(
     }
 }
 
-private fun DrawScope.drawPracticeGrid(mode: PracticeGrid) {
-    val color = Color(0xFFE2D6CB)
+private fun DrawScope.drawPracticeGrid(mode: PracticeGrid, color: Color) {
     val inset = 4.dp.toPx()
     when (mode) {
         PracticeGrid.NONE -> return
@@ -300,8 +202,8 @@ private fun DrawScope.drawTemplateStrokes(
     completedStrokes: Set<Int>,
     completedFillColor: Color,
     demoProgress: List<Float>,
+    templateColor: Color,
 ) {
-    val templateColor = Color(0x33AA6A39)
     val strokeStyle = Stroke(
         width = 12.dp.toPx(),
         cap = androidx.compose.ui.graphics.StrokeCap.Round,

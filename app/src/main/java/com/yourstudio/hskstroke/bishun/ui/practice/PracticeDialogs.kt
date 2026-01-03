@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,12 +29,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
+import com.yourstudio.hskstroke.bishun.ui.character.WordInfoUiState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WordInfoBottomSheet(
-    entry: WordEntry,
+    symbol: String,
+    entry: WordEntry?,
+    wordInfoUiState: WordInfoUiState,
+    onRetry: () -> Unit,
     onDismiss: () -> Unit,
     ttsController: TextToSpeechController,
 ) {
@@ -70,17 +75,18 @@ fun WordInfoBottomSheet(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = entry.word,
+                        text = entry?.word ?: symbol,
                         style = MaterialTheme.typography.headlineSmall,
                     )
                     Text(
-                        text = entry.pinyin.ifBlank { "Pinyin..." },
+                        text = entry?.pinyin?.ifBlank { "Pinyin..." } ?: "Pinyin...",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(
-                    onClick = { ttsController.speak(entry.word) },
+                    onClick = { ttsController.speak(entry?.word ?: symbol) },
+                    enabled = ttsController.isAvailable.value,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
@@ -89,25 +95,71 @@ fun WordInfoBottomSheet(
                     )
                 }
             }
-            Column(
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 360.dp)
-                    .verticalScroll(scrollState),
-            ) {
-                WordInfoStat("Radical", entry.radicals)
-                WordInfoStat("Strokes", entry.strokes)
-                WordInfoStat("Variant", entry.oldword)
-                Text(
-                    text = "Meaning",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = entry.explanation.normalizeWhitespace().ifBlank { entry.more.normalizeWhitespace().ifBlank { "Meaning unavailable." } },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            when (wordInfoUiState) {
+                WordInfoUiState.Loading,
+                WordInfoUiState.Idle -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(strokeWidth = 2.dp)
+                        Text(
+                            text = "Loading dictionary entry…",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+
+                is WordInfoUiState.Error -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = wordInfoUiState.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        TextButton(onClick = onRetry) {
+                            Text("Retry")
+                        }
+                    }
+                }
+
+                WordInfoUiState.NotFound -> {
+                    Text(
+                        text = "No dictionary entry available.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                WordInfoUiState.Loaded -> {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(scrollState),
+                    ) {
+                        WordInfoStat("Radical", entry?.radicals.orEmpty())
+                        WordInfoStat("Strokes", entry?.strokes.orEmpty())
+                        WordInfoStat("Variant", entry?.oldword.orEmpty())
+                        Text(
+                            text = "Meaning",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        val content = entry?.explanation
+                            ?.normalizeWhitespace()
+                            .orEmpty()
+                            .ifBlank {
+                                entry?.more?.normalizeWhitespace().orEmpty()
+                            }
+                            .ifBlank { "Meaning unavailable." }
+                        Text(
+                            text = content,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = closeSheet) {

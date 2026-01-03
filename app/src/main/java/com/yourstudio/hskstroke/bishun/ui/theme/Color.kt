@@ -2,10 +2,19 @@ package com.yourstudio.hskstroke.bishun.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val AccentRedLight = Color(0xFFE34D4D)
+val AccentRedDark = Color(0xFFFF5A5F)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val BackgroundLight = Color(0xFFF5F5F7)
+val SurfaceLight = Color(0xFFFFFFFF)
+val SurfaceVariantLight = Color(0xFFEDEDEF)
+val OutlineLight = Color(0xFFD7D7DB)
+val OnSurfaceLight = Color(0xFF1C1C1E)
+val OnSurfaceVariantLight = Color(0xFF5C5C60)
+
+val BackgroundDark = Color(0xFF0F0F12)
+val SurfaceDark = Color(0xFF1C1C1E)
+val SurfaceVariantDark = Color(0xFF2C2C2E)
+val OutlineDark = Color(0xFF3A3A3C)
+val OnSurfaceDark = Color(0xFFE5E5EA)
+val OnSurfaceVariantDark = Color(0xFFB0B0B6)
