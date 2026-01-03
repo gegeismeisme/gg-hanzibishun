@@ -80,6 +80,14 @@ fun CharacterRoute(
             Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
         }
     }
+    LaunchedEffect(
+        userPreferences.dailySymbol,
+        userPreferences.dailyEpochDay,
+        userPreferences.dailyPinyin,
+        userPreferences.dailyExplanationSummary,
+    ) {
+        viewModel.ensureDailyPracticeDetailsLoaded()
+    }
     CharacterScreen(
         modifier = modifier,
         query = query,
@@ -96,6 +104,10 @@ fun CharacterRoute(
         boardSettings = boardSettings,
         dailySymbol = userPreferences.dailySymbol,
         dailyEpochDay = userPreferences.dailyEpochDay,
+        dailyPinyin = userPreferences.dailyPinyin,
+        dailyExplanationSummary = userPreferences.dailyExplanationSummary,
+        dailyPracticeCompletedSymbol = userPreferences.dailyPracticeCompletedSymbol,
+        dailyPracticeCompletedEpochDay = userPreferences.dailyPracticeCompletedEpochDay,
         onQueryChange = viewModel::updateQuery,
         onSubmit = viewModel::submitQuery,
         onClearQuery = viewModel::clearQuery,
@@ -142,6 +154,10 @@ fun CharacterScreen(
     boardSettings: BoardSettings,
     dailySymbol: String?,
     dailyEpochDay: Long?,
+    dailyPinyin: String?,
+    dailyExplanationSummary: String?,
+    dailyPracticeCompletedSymbol: String?,
+    dailyPracticeCompletedEpochDay: Long?,
     languageOverride: String?,
     onLoadCharacter: (String) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -224,10 +240,59 @@ fun CharacterScreen(
                     suggestedDailySymbol
                 }
             }
+            val resolvedDailyPinyin = remember(
+                resolvedDailySymbol,
+                dailySymbol,
+                dailyEpochDay,
+                todayEpochDay,
+                dailyPinyin,
+            ) {
+                val storedSymbol = dailySymbol?.trim()?.takeIf { it.isNotBlank() }
+                val resolvedSymbol = resolvedDailySymbol?.trim()?.takeIf { it.isNotBlank() }
+                val pinyin = dailyPinyin?.trim()?.takeIf { it.isNotBlank() }
+                if (dailyEpochDay == todayEpochDay && storedSymbol != null && storedSymbol == resolvedSymbol) {
+                    pinyin
+                } else {
+                    null
+                }
+            }
+            val resolvedDailyExplanationSummary = remember(
+                resolvedDailySymbol,
+                dailySymbol,
+                dailyEpochDay,
+                todayEpochDay,
+                dailyExplanationSummary,
+            ) {
+                val storedSymbol = dailySymbol?.trim()?.takeIf { it.isNotBlank() }
+                val resolvedSymbol = resolvedDailySymbol?.trim()?.takeIf { it.isNotBlank() }
+                val summary = dailyExplanationSummary?.trim()?.takeIf { it.isNotBlank() }
+                if (dailyEpochDay == todayEpochDay && storedSymbol != null && storedSymbol == resolvedSymbol) {
+                    summary
+                } else {
+                    null
+                }
+            }
+            val dailyCompletedToday = remember(
+                resolvedDailySymbol,
+                dailyPracticeCompletedSymbol,
+                dailyPracticeCompletedEpochDay,
+                todayEpochDay,
+            ) {
+                val completedSymbol = dailyPracticeCompletedSymbol?.trim().takeIf { !it.isNullOrBlank() }
+                val resolvedSymbol = resolvedDailySymbol?.trim().takeIf { !it.isNullOrBlank() }
+                completedSymbol != null &&
+                    resolvedSymbol != null &&
+                    dailyPracticeCompletedEpochDay == todayEpochDay &&
+                    completedSymbol == resolvedSymbol
+            }
             DailyPracticeBadge(
                 title = strings.progress.dailyTitle,
                 practiceLabel = strings.progress.dailyPracticeLabel,
+                completedLabel = strings.progress.dailyCompletedLabel,
                 symbol = resolvedDailySymbol,
+                pinyin = resolvedDailyPinyin,
+                explanationSummary = resolvedDailyExplanationSummary,
+                completedToday = dailyCompletedToday,
                 onPractice = onStartDailyPractice,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -292,7 +357,11 @@ fun CharacterScreen(
 private fun DailyPracticeBadge(
     title: String,
     practiceLabel: String,
+    completedLabel: String,
     symbol: String?,
+    pinyin: String?,
+    explanationSummary: String?,
+    completedToday: Boolean,
     onPractice: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -302,36 +371,69 @@ private fun DailyPracticeBadge(
         tonalElevation = 2.dp,
         modifier = modifier,
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = symbol ?: "—",
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                TextButton(onClick = onPractice, enabled = enabled) {
+                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(practiceLabel)
+                }
+            }
+            if (completedToday) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = symbol ?: "—",
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    text = completedLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
-            TextButton(onClick = onPractice, enabled = enabled) {
-                Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(practiceLabel)
+            if (!pinyin.isNullOrBlank() || !explanationSummary.isNullOrBlank()) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (!pinyin.isNullOrBlank()) {
+                        Text(
+                            text = pinyin,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (!explanationSummary.isNullOrBlank()) {
+                        Text(
+                            text = explanationSummary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
     }

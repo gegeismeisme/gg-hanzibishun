@@ -30,6 +30,7 @@ import com.yourstudio.hskstroke.bishun.ui.practice.BoardSettings
 import com.yourstudio.hskstroke.bishun.ui.practice.PracticeGrid
 import com.yourstudio.hskstroke.bishun.ui.practice.StrokeColorOption
 import com.yourstudio.hskstroke.bishun.widget.DailyHanziWidgetUpdater
+import com.yourstudio.hskstroke.bishun.data.word.buildExplanationSummary
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -100,6 +101,8 @@ class CharacterViewModel(
     private var loadCharacterToken: Long = 0
     private var pendingAutoStartPracticeToken: Long? = null
     private var pendingAutoStartPracticeSymbol: String? = null
+    private var dailyDetailsJob: Job? = null
+    private var dailyDetailsRequest: Pair<String, Long>? = null
     private var completionResetJob: Job? = null
     private var activeUserStroke: UserStroke? = null
     private val userStrokeIds = mutableListOf<Int>()
@@ -169,6 +172,36 @@ class CharacterViewModel(
             persistDailyPractice(resolvedSymbol, todayEpochDay)
         }
         startPracticeForSymbol(resolvedSymbol)
+    }
+
+    fun ensureDailyPracticeDetailsLoaded() {
+        val zone = ZoneId.systemDefault()
+        val todayEpochDay = LocalDate.now(zone).toEpochDay()
+        val prefs = _userPreferences.value
+        val symbol = prefs.dailySymbol
+            ?.trim()
+            ?.takeIf { it.isNotBlank() && prefs.dailyEpochDay == todayEpochDay }
+            ?: return
+
+        val hasDetails = !prefs.dailyPinyin.isNullOrBlank() || !prefs.dailyExplanationSummary.isNullOrBlank()
+        if (hasDetails) return
+
+        val requestKey = symbol to todayEpochDay
+        if (dailyDetailsJob?.isActive == true && dailyDetailsRequest == requestKey) return
+        dailyDetailsRequest = requestKey
+
+        dailyDetailsJob = viewModelScope.launch {
+            val entry = runCatching { wordRepository.getWord(symbol) }.getOrNull()
+            val pinyin = entry?.pinyin?.trim()?.takeIf { it.isNotBlank() }
+            val explanationSummary = entry?.explanation?.let { buildExplanationSummary(it) }
+            userPreferencesStore.setDailyPracticeDetails(
+                symbol = symbol,
+                epochDay = todayEpochDay,
+                pinyin = pinyin,
+                explanationSummary = explanationSummary,
+            )
+            runCatching { DailyHanziWidgetUpdater.updateAll(appContext) }
+        }
     }
 
     fun startPracticeQueue(symbols: List<String>) {
@@ -746,6 +779,9 @@ class CharacterViewModel(
                         completed = true,
                     ),
                 )
+                val todayEpochDay = LocalDate.now(ZoneId.systemDefault()).toEpochDay()
+                userPreferencesStore.recordPracticeCompletion(definition.symbol, todayEpochDay)
+                runCatching { DailyHanziWidgetUpdater.updateAll(appContext) }
             }
             state.run(QuizActions.highlightCompleteChar(definition, null, 600))
             advanceCourseAfterCompletion()

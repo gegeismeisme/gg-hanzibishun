@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.yourstudio.hskstroke.bishun.data.history.updatePracticeStreak
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -24,6 +25,12 @@ data class UserPreferences(
     val courseSymbol: String? = null,
     val dailySymbol: String? = null,
     val dailyEpochDay: Long? = null,
+    val dailyPinyin: String? = null,
+    val dailyExplanationSummary: String? = null,
+    val dailyPracticeCompletedSymbol: String? = null,
+    val dailyPracticeCompletedEpochDay: Long? = null,
+    val practiceStreakDays: Int = 0,
+    val practiceStreakLastEpochDay: Long? = null,
     val languageOverride: String? = null,
     val libraryRecentSearches: List<String> = emptyList(),
     val libraryPinnedSearches: List<String> = emptyList(),
@@ -46,6 +53,12 @@ class UserPreferencesStore(private val context: Context) {
             courseSymbol = prefs[KEY_COURSE_SYMBOL],
             dailySymbol = prefs[KEY_DAILY_SYMBOL],
             dailyEpochDay = prefs[KEY_DAILY_EPOCH_DAY],
+            dailyPinyin = prefs[KEY_DAILY_PINYIN],
+            dailyExplanationSummary = prefs[KEY_DAILY_EXPLANATION_SUMMARY],
+            dailyPracticeCompletedSymbol = prefs[KEY_DAILY_PRACTICE_COMPLETED_SYMBOL],
+            dailyPracticeCompletedEpochDay = prefs[KEY_DAILY_PRACTICE_COMPLETED_EPOCH_DAY],
+            practiceStreakDays = prefs[KEY_PRACTICE_STREAK_DAYS] ?: 0,
+            practiceStreakLastEpochDay = prefs[KEY_PRACTICE_STREAK_LAST_EPOCH_DAY],
             languageOverride = prefs[KEY_LANGUAGE_OVERRIDE],
             libraryRecentSearches = decodeStringList(prefs[KEY_LIBRARY_RECENTS]),
             libraryPinnedSearches = decodeStringList(prefs[KEY_LIBRARY_PINNED_RECENTS]),
@@ -120,6 +133,58 @@ class UserPreferencesStore(private val context: Context) {
                 prefs.remove(KEY_DAILY_SYMBOL)
             } else {
                 prefs[KEY_DAILY_SYMBOL] = symbol
+            }
+            prefs.remove(KEY_DAILY_PINYIN)
+            prefs.remove(KEY_DAILY_EXPLANATION_SUMMARY)
+        }
+    }
+
+    suspend fun setDailyPracticeDetails(
+        symbol: String,
+        epochDay: Long,
+        pinyin: String?,
+        explanationSummary: String?,
+    ) {
+        val normalizedSymbol = symbol.trim()
+        if (normalizedSymbol.isBlank()) return
+
+        context.userPreferencesDataStore.edit { prefs ->
+            if (prefs[KEY_DAILY_SYMBOL] != normalizedSymbol) return@edit
+            if (prefs[KEY_DAILY_EPOCH_DAY] != epochDay) return@edit
+
+            val normalizedPinyin = pinyin?.trim().takeIf { !it.isNullOrBlank() }
+            val normalizedSummary = explanationSummary?.trim().takeIf { !it.isNullOrBlank() }
+
+            if (normalizedPinyin == null) {
+                prefs.remove(KEY_DAILY_PINYIN)
+            } else {
+                prefs[KEY_DAILY_PINYIN] = normalizedPinyin
+            }
+
+            if (normalizedSummary == null) {
+                prefs.remove(KEY_DAILY_EXPLANATION_SUMMARY)
+            } else {
+                prefs[KEY_DAILY_EXPLANATION_SUMMARY] = normalizedSummary
+            }
+        }
+    }
+
+    suspend fun recordPracticeCompletion(symbol: String, epochDay: Long) {
+        val normalizedSymbol = symbol.trim()
+        if (normalizedSymbol.isBlank()) return
+
+        context.userPreferencesDataStore.edit { prefs ->
+            val currentDays = prefs[KEY_PRACTICE_STREAK_DAYS] ?: 0
+            val lastEpochDay = prefs[KEY_PRACTICE_STREAK_LAST_EPOCH_DAY]
+            val update = updatePracticeStreak(currentDays, lastEpochDay, epochDay)
+            prefs[KEY_PRACTICE_STREAK_DAYS] = update.days
+            prefs[KEY_PRACTICE_STREAK_LAST_EPOCH_DAY] = update.lastEpochDay
+
+            val dailyEpochDay = prefs[KEY_DAILY_EPOCH_DAY]
+            val dailySymbol = prefs[KEY_DAILY_SYMBOL]
+            if (dailyEpochDay == epochDay && dailySymbol == normalizedSymbol) {
+                prefs[KEY_DAILY_PRACTICE_COMPLETED_EPOCH_DAY] = epochDay
+                prefs[KEY_DAILY_PRACTICE_COMPLETED_SYMBOL] = normalizedSymbol
             }
         }
     }
@@ -202,6 +267,12 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_COURSE_SYMBOL = stringPreferencesKey("course_symbol")
         private val KEY_DAILY_SYMBOL = stringPreferencesKey("daily_symbol")
         private val KEY_DAILY_EPOCH_DAY = longPreferencesKey("daily_epoch_day")
+        private val KEY_DAILY_PINYIN = stringPreferencesKey("daily_pinyin")
+        private val KEY_DAILY_EXPLANATION_SUMMARY = stringPreferencesKey("daily_explanation_summary")
+        private val KEY_DAILY_PRACTICE_COMPLETED_SYMBOL = stringPreferencesKey("daily_practice_completed_symbol")
+        private val KEY_DAILY_PRACTICE_COMPLETED_EPOCH_DAY = longPreferencesKey("daily_practice_completed_epoch_day")
+        private val KEY_PRACTICE_STREAK_DAYS = intPreferencesKey("practice_streak_days")
+        private val KEY_PRACTICE_STREAK_LAST_EPOCH_DAY = longPreferencesKey("practice_streak_last_epoch_day")
         private val KEY_LANGUAGE_OVERRIDE = stringPreferencesKey("language_override")
         private val KEY_LIBRARY_RECENTS = stringPreferencesKey("library_recent_searches")
         private val KEY_LIBRARY_PINNED_RECENTS = stringPreferencesKey("library_pinned_recent_searches")

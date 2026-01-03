@@ -47,6 +47,7 @@ import com.yourstudio.hskstroke.bishun.ui.character.ProgressStrings
 import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import com.yourstudio.hskstroke.bishun.ui.character.pickDailySymbol
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
+import com.yourstudio.hskstroke.bishun.data.history.effectivePracticeStreakDays
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -99,6 +100,10 @@ fun ProgressScreen(
                 practiceHistory = practiceHistory,
                 dailySymbol = userPreferences.dailySymbol,
                 dailyEpochDay = userPreferences.dailyEpochDay,
+                dailyPracticeCompletedSymbol = userPreferences.dailyPracticeCompletedSymbol,
+                dailyPracticeCompletedEpochDay = userPreferences.dailyPracticeCompletedEpochDay,
+                practiceStreakDays = userPreferences.practiceStreakDays,
+                practiceStreakLastEpochDay = userPreferences.practiceStreakLastEpochDay,
                 onJumpToChar = onJumpToCharacter,
                 onNavigateToCourses = onNavigateToCourses,
             )
@@ -113,6 +118,10 @@ private fun HskProgressView(
     practiceHistory: List<PracticeHistoryEntry>,
     dailySymbol: String?,
     dailyEpochDay: Long?,
+    dailyPracticeCompletedSymbol: String?,
+    dailyPracticeCompletedEpochDay: Long?,
+    practiceStreakDays: Int,
+    practiceStreakLastEpochDay: Long?,
     onJumpToChar: (String) -> Unit,
     onNavigateToCourses: () -> Unit,
 ) {
@@ -133,17 +142,18 @@ private fun HskProgressView(
                 suggestedDailySymbol
             }
         }
-        val dailyCompletedToday = remember(resolvedDailySymbol, practiceHistory, todayEpochDay, zone) {
-            if (resolvedDailySymbol.isNullOrBlank()) {
-                false
-            } else {
-                val today = LocalDate.ofEpochDay(todayEpochDay)
-                practiceHistory.any { entry ->
-                    entry.symbol == resolvedDailySymbol &&
-                        entry.completed &&
-                        Instant.ofEpochMilli(entry.timestamp).atZone(zone).toLocalDate() == today
-                }
-            }
+        val dailyCompletedToday = remember(
+            resolvedDailySymbol,
+            dailyPracticeCompletedSymbol,
+            dailyPracticeCompletedEpochDay,
+            todayEpochDay,
+        ) {
+            val completedSymbol = dailyPracticeCompletedSymbol?.trim().takeIf { !it.isNullOrBlank() }
+            val resolvedSymbol = resolvedDailySymbol?.trim().takeIf { !it.isNullOrBlank() }
+            completedSymbol != null &&
+                resolvedSymbol != null &&
+                dailyPracticeCompletedEpochDay == todayEpochDay &&
+                completedSymbol == resolvedSymbol
         }
         DailyPracticeCard(
             strings = progressStrings,
@@ -153,7 +163,12 @@ private fun HskProgressView(
                 resolvedDailySymbol?.let(onJumpToChar)
             },
         )
-        val overview = remember(summary, practiceHistory) { buildProgressOverview(summary, practiceHistory) }
+        val effectiveStreakDays = remember(practiceStreakDays, practiceStreakLastEpochDay, todayEpochDay) {
+            effectivePracticeStreakDays(practiceStreakDays, practiceStreakLastEpochDay, todayEpochDay)
+        }
+        val overview = remember(summary, practiceHistory, effectiveStreakDays) {
+            buildProgressOverview(summary, practiceHistory, effectiveStreakDays)
+        }
         ProgressOverviewCard(overview = overview, strings = strings)
         LevelBreakdownList(
             strings = strings,
@@ -520,30 +535,12 @@ private data class DailyPracticeCount(val label: String, val count: Int, val isT
 private fun buildProgressOverview(
     summary: HskProgressSummary,
     history: List<PracticeHistoryEntry>,
+    streakDays: Int,
 ): ProgressOverview {
     val zoneId = ZoneId.systemDefault()
     val today = LocalDate.now(zoneId)
     val dayFormatter = DateTimeFormatter.ofPattern("EE", Locale.getDefault())
     val grouped = history.groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zoneId).toLocalDate() }
-    val sortedDays = grouped.keys.sortedDescending()
-    var streak = 0
-    var previousDay: LocalDate? = null
-    loop@ for (day in sortedDays) {
-        if (previousDay == null) {
-            streak = 1
-            previousDay = day
-            continue@loop
-        }
-        val diff = ChronoUnit.DAYS.between(day, previousDay)
-        when {
-            diff == 0L -> continue@loop
-            diff == 1L -> {
-                streak++
-                previousDay = day
-            }
-            else -> break@loop
-        }
-    }
     val weeklyCounts = (6 downTo 0).map { offset ->
         val day = today.minusDays(offset.toLong())
         DailyPracticeCount(
@@ -555,7 +552,7 @@ private fun buildProgressOverview(
     return ProgressOverview(
         totalLearned = summary.totalCompleted,
         totalCharacters = summary.totalCharacters.takeIf { it > 0 } ?: summary.totalCompleted,
-        streakDays = streak,
+        streakDays = streakDays,
         lastPracticeTimestamp = history.maxOfOrNull { it.timestamp },
         weeklyCounts = weeklyCounts,
     )

@@ -24,6 +24,9 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.yourstudio.hskstroke.bishun.data.history.effectivePracticeStreakDays
+import com.yourstudio.hskstroke.bishun.data.word.WordRepository
+import com.yourstudio.hskstroke.bishun.data.word.buildExplanationSummary
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
 import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequests
 import kotlinx.coroutines.flow.first
@@ -32,11 +35,37 @@ import java.time.ZoneId
 
 class DailyHanziWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val preferences = UserPreferencesStore(context.applicationContext).data.first()
+        val preferencesStore = UserPreferencesStore(context.applicationContext)
+        val preferences = preferencesStore.data.first()
         val zone = ZoneId.systemDefault()
         val todayEpochDay = LocalDate.now(zone).toEpochDay()
         val symbol = preferences.dailySymbol?.trim()
             ?.takeIf { it.isNotBlank() && preferences.dailyEpochDay == todayEpochDay }
+        val dailyCompletedToday = symbol != null &&
+            preferences.dailyPracticeCompletedEpochDay == todayEpochDay &&
+            preferences.dailyPracticeCompletedSymbol == symbol
+        val streakDays = effectivePracticeStreakDays(
+            storedDays = preferences.practiceStreakDays,
+            lastEpochDay = preferences.practiceStreakLastEpochDay,
+            todayEpochDay = todayEpochDay,
+        )
+        var pinyin = preferences.dailyPinyin?.trim().takeIf { !it.isNullOrBlank() && symbol != null }
+        var explanationSummary = preferences.dailyExplanationSummary?.trim().takeIf { !it.isNullOrBlank() && symbol != null }
+        if (symbol != null && pinyin == null && explanationSummary == null) {
+            val entry = runCatching { WordRepository(context.applicationContext).getWord(symbol) }.getOrNull()
+            val fetchedPinyin = entry?.pinyin?.trim()?.takeIf { it.isNotBlank() }
+            val fetchedSummary = entry?.explanation?.let { buildExplanationSummary(it) }
+            if (fetchedPinyin != null || fetchedSummary != null) {
+                preferencesStore.setDailyPracticeDetails(
+                    symbol = symbol,
+                    epochDay = todayEpochDay,
+                    pinyin = fetchedPinyin,
+                    explanationSummary = fetchedSummary,
+                )
+                pinyin = fetchedPinyin
+                explanationSummary = fetchedSummary
+            }
+        }
         val practiceIntent = symbol?.let { AppLaunchRequests.practiceIntent(context, it) }
             ?: AppLaunchRequests.openAppIntent(context)
         val dictionaryIntent = symbol?.let { AppLaunchRequests.dictionaryIntent(context, it) }
@@ -45,6 +74,10 @@ class DailyHanziWidget : GlanceAppWidget() {
         provideContent {
             DailyHanziWidgetContent(
                 symbol = symbol,
+                pinyin = pinyin,
+                explanationSummary = explanationSummary,
+                completedToday = dailyCompletedToday,
+                streakDays = streakDays,
                 practiceIntent = practiceIntent,
                 dictionaryIntent = dictionaryIntent,
             )
@@ -55,6 +88,10 @@ class DailyHanziWidget : GlanceAppWidget() {
 @Composable
 private fun DailyHanziWidgetContent(
     symbol: String?,
+    pinyin: String?,
+    explanationSummary: String?,
+    completedToday: Boolean,
+    streakDays: Int,
     practiceIntent: Intent,
     dictionaryIntent: Intent,
 ) {
@@ -66,12 +103,27 @@ private fun DailyHanziWidgetContent(
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
     ) {
         Text(text = "今日一字", style = TextStyle(fontSize = 12.sp))
+        if (streakDays > 0) {
+            Text(text = "连续 $streakDays 天", style = TextStyle(fontSize = 10.sp))
+        }
         Spacer(modifier = GlanceModifier.height(8.dp))
         Text(
             text = symbol ?: "—",
             modifier = GlanceModifier.clickable(actionStartActivity(practiceIntent)),
             style = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.Bold),
         )
+        if (!pinyin.isNullOrBlank()) {
+            Spacer(modifier = GlanceModifier.height(4.dp))
+            Text(text = pinyin, style = TextStyle(fontSize = 12.sp))
+        }
+        if (!explanationSummary.isNullOrBlank()) {
+            Spacer(modifier = GlanceModifier.height(2.dp))
+            Text(text = explanationSummary, style = TextStyle(fontSize = 11.sp))
+        }
+        if (completedToday) {
+            Spacer(modifier = GlanceModifier.height(4.dp))
+            Text(text = "今日已完成", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium))
+        }
         Spacer(modifier = GlanceModifier.height(12.dp))
         Row(
             verticalAlignment = Alignment.Vertical.CenterVertically,
