@@ -19,7 +19,9 @@ data class LibraryUiState(
     val selectedWord: String? = null,
     val isLoading: Boolean = false,
     val error: LibraryError? = null,
-    val recentSearches: List<String> = emptyList(),
+    val recentWords: List<String> = emptyList(),
+    val pinnedRecentWords: List<String> = emptyList(),
+    val favorites: List<String> = emptyList(),
 )
 
 class LibraryViewModel(
@@ -31,7 +33,7 @@ class LibraryViewModel(
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
     init {
-        observeRecentSearches()
+        observeLibraryData()
     }
 
     fun updateQuery(input: String) {
@@ -46,6 +48,20 @@ class LibraryViewModel(
 
     fun clearHistory() {
         persistRecentSearches(emptyList())
+        persistPinnedRecentWords(emptyList())
+    }
+
+    fun clearFavorites() {
+        persistFavorites(emptyList())
+    }
+
+    fun toggleFavorite(word: String) {
+        val normalized = normalizeSavedWord(word)
+        if (normalized.isEmpty()) return
+        val current = _uiState.value.favorites.toMutableList()
+        val removed = current.remove(normalized)
+        if (!removed) current.add(0, normalized)
+        persistFavorites(current.distinct().take(FAVORITES_LIMIT))
     }
 
     fun submitQuery() {
@@ -63,12 +79,13 @@ class LibraryViewModel(
             runCatching { wordRepository.searchWords(symbol) }
                 .onSuccess { results ->
                     _uiState.value = if (results.isNotEmpty()) {
-                        val updatedRecents = addRecent(symbol)
+                        val selected = results.first().word
+                        val updatedRecents = addRecentWord(selected)
                         persistRecentSearches(updatedRecents)
                         _uiState.value.copy(
                             isLoading = false,
                             results = results,
-                            selectedWord = results.first().word,
+                            selectedWord = selected,
                             error = null,
                         )
                     } else {
@@ -101,22 +118,46 @@ class LibraryViewModel(
     }
 
     fun selectWord(word: String) {
-        val normalized = word.trim()
+        val normalized = normalizeSavedWord(word)
         if (normalized.isEmpty()) return
         if (_uiState.value.selectedWord != normalized) {
             _uiState.value = _uiState.value.copy(selectedWord = normalized)
+            persistRecentSearches(addRecentWord(normalized))
         }
     }
 
-    private fun addRecent(symbol: String): List<String> {
-        val current = _uiState.value.recentSearches.toMutableList()
-        current.remove(symbol)
-        current.add(0, symbol)
-        return current.take(RECENT_LIMIT)
+    fun togglePinnedRecent(word: String) {
+        val normalized = normalizeSavedWord(word)
+        if (normalized.isEmpty()) return
+        val current = _uiState.value.pinnedRecentWords.toMutableList()
+        val wasPinned = current.remove(normalized)
+        if (!wasPinned) {
+            current.add(0, normalized)
+        }
+        val updatedPinned = current.distinct().take(PINNED_LIMIT)
+        persistPinnedRecentWords(updatedPinned)
+        val updatedRecent = ensureRecentContains(normalized)
+        persistRecentSearches(trimRecentWords(updatedRecent, updatedPinned))
+    }
+
+    fun removeRecentWord(word: String) {
+        val normalized = normalizeSavedWord(word)
+        if (normalized.isEmpty()) return
+        val updatedRecent = _uiState.value.recentWords.filterNot { it == normalized }
+        val updatedPinned = _uiState.value.pinnedRecentWords.filterNot { it == normalized }
+        persistPinnedRecentWords(updatedPinned)
+        persistRecentSearches(trimRecentWords(updatedRecent, updatedPinned))
+    }
+
+    private fun addRecentWord(word: String): List<String> {
+        val current = _uiState.value.recentWords.toMutableList()
+        current.remove(word)
+        current.add(0, word)
+        return trimRecentWords(current, _uiState.value.pinnedRecentWords)
     }
 
     private fun persistRecentSearches(entries: List<String>) {
-        _uiState.value = _uiState.value.copy(recentSearches = entries)
+        _uiState.value = _uiState.value.copy(recentWords = entries)
         viewModelScope.launch {
             if (entries.isEmpty()) {
                 userPreferencesStore.clearLibraryRecentSearches()
@@ -126,20 +167,91 @@ class LibraryViewModel(
         }
     }
 
-    private fun observeRecentSearches() {
+    private fun persistPinnedRecentWords(entries: List<String>) {
+        _uiState.value = _uiState.value.copy(pinnedRecentWords = entries)
+        viewModelScope.launch {
+            if (entries.isEmpty()) {
+                userPreferencesStore.clearLibraryPinnedSearches()
+            } else {
+                userPreferencesStore.setLibraryPinnedSearches(entries)
+            }
+        }
+    }
+
+    private fun persistFavorites(entries: List<String>) {
+        _uiState.value = _uiState.value.copy(favorites = entries)
+        viewModelScope.launch {
+            if (entries.isEmpty()) {
+                userPreferencesStore.clearLibraryFavorites()
+            } else {
+                userPreferencesStore.setLibraryFavorites(entries)
+            }
+        }
+    }
+
+    private fun observeLibraryData() {
         viewModelScope.launch {
             userPreferencesStore.data
-                .map { it.libraryRecentSearches }
+                .map { Triple(it.libraryRecentSearches, it.libraryPinnedSearches, it.libraryFavorites) }
                 .distinctUntilChanged()
-                .collect { recents ->
-                    _uiState.value = _uiState.value.copy(recentSearches = recents)
+                .collect { (recents, pinned, favorites) ->
+                    _uiState.value = _uiState.value.copy(
+                        recentWords = recents,
+                        pinnedRecentWords = pinned,
+                        favorites = favorites,
+                    )
                 }
         }
+    }
+
+    private fun normalizeSavedWord(raw: String): String {
+        return raw.trim().take(MAX_QUERY_LENGTH)
+    }
+
+    private fun ensureRecentContains(word: String): List<String> {
+        val current = _uiState.value.recentWords.toMutableList()
+        if (!current.contains(word)) {
+            current.add(0, word)
+        }
+        return current
+    }
+
+    private fun trimRecentWords(words: List<String>, pinnedWords: List<String>): List<String> {
+        val pinnedUnique = pinnedWords
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .take(RECENT_LIMIT)
+            .toList()
+        val pinnedSet = pinnedUnique.toSet()
+        val normalized = words
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .toList()
+        val withPinned = normalized + pinnedUnique.filterNot { it in normalized }
+        val allowedUnpinned = (RECENT_LIMIT - pinnedUnique.size).coerceAtLeast(0)
+
+        val result = ArrayList<String>(RECENT_LIMIT)
+        var unpinnedCount = 0
+        withPinned.forEach { item ->
+            if (item in pinnedSet) {
+                result.add(item)
+            } else if (unpinnedCount < allowedUnpinned) {
+                result.add(item)
+                unpinnedCount += 1
+            }
+        }
+        return result
     }
 
     companion object {
         private const val MAX_QUERY_LENGTH = 32
         private const val RECENT_LIMIT = 50
+        private const val PINNED_LIMIT = 20
+        private const val FAVORITES_LIMIT = 200
 
         fun factory(context: android.content.Context): ViewModelProvider.Factory {
             val appContext = context.applicationContext

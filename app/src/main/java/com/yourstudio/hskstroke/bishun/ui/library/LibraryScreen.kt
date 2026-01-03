@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -13,16 +14,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,54 +63,159 @@ fun LibraryScreen(
     val libraryStrings = strings.library
     val locale = strings.locale
 
-    var showRecentDialog by rememberSaveable { mutableStateOf(false) }
-    val contentScrollState = rememberScrollState()
-    val overflowRecents = remember(uiState.recentSearches) {
-        uiState.recentSearches.drop(RECENT_INLINE_LIMIT)
+    var selectedTabKey by rememberSaveable { mutableStateOf(LibraryTab.Search.name) }
+    val selectedTab = remember(selectedTabKey) { LibraryTab.valueOf(selectedTabKey) }
+    val tabs = remember(libraryStrings) {
+        listOf(
+            LibraryTab.Search to libraryStrings.tabSearchLabel,
+            LibraryTab.Favorites to libraryStrings.tabFavoritesLabel,
+            LibraryTab.History to libraryStrings.tabHistoryLabel,
+        )
     }
     Column(
-        modifier = modifier
-            .padding(horizontal = 20.dp, vertical = 24.dp)
+        modifier = modifier.fillMaxSize(),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = libraryStrings.title,
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                text = libraryStrings.description,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            TabRow(
+                selectedTabIndex = selectedTab.ordinal,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                tabs.forEach { (tab, label) ->
+                    Tab(
+                        selected = selectedTab == tab,
+                        onClick = { selectedTabKey = tab.name },
+                        text = { Text(label) },
+                    )
+                }
+            }
+        }
+
+        when (selectedTab) {
+            LibraryTab.Search -> {
+                LibrarySearchTab(
+                    uiState = uiState,
+                    strings = libraryStrings,
+                    locale = locale,
+                    onQueryChange = viewModel::updateQuery,
+                    onSearch = viewModel::submitQuery,
+                    onClearResult = viewModel::clearResult,
+                    onSelectRecent = viewModel::loadCharacter,
+                    onClearHistory = viewModel::clearHistory,
+                    onShowHistory = { selectedTabKey = LibraryTab.History.name },
+                    onSelectWord = viewModel::selectWord,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onPracticeSymbol = onLoadInPractice,
+                )
+            }
+
+            LibraryTab.Favorites -> {
+                FavoritesTab(
+                    favorites = uiState.favorites,
+                    strings = libraryStrings,
+                    onOpen = {
+                        viewModel.loadCharacter(it)
+                        selectedTabKey = LibraryTab.Search.name
+                    },
+                    onRemove = viewModel::toggleFavorite,
+                    onClearAll = viewModel::clearFavorites,
+                )
+            }
+
+            LibraryTab.History -> {
+                HistoryTab(
+                    recentWords = uiState.recentWords,
+                    pinnedWords = uiState.pinnedRecentWords,
+                    favorites = uiState.favorites,
+                    strings = libraryStrings,
+                    onOpen = {
+                        viewModel.loadCharacter(it)
+                        selectedTabKey = LibraryTab.Search.name
+                    },
+                    onTogglePinned = viewModel::togglePinnedRecent,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onRemove = viewModel::removeRecentWord,
+                    onClearAll = viewModel::clearHistory,
+                )
+            }
+        }
+    }
+}
+
+private enum class LibraryTab {
+    Search,
+    Favorites,
+    History,
+}
+
+private enum class SavedSortMode {
+    Recent,
+    Name,
+}
+
+@Composable
+private fun LibrarySearchTab(
+    uiState: LibraryUiState,
+    strings: LibraryStrings,
+    locale: Locale,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onClearResult: () -> Unit,
+    onSelectRecent: (String) -> Unit,
+    onClearHistory: () -> Unit,
+    onShowHistory: () -> Unit,
+    onSelectWord: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
+    onPracticeSymbol: (String) -> Unit,
+) {
+    val contentScrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp)
             .verticalScroll(contentScrollState),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text(
-            text = libraryStrings.title,
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Text(
-            text = libraryStrings.description,
-            style = MaterialTheme.typography.bodyMedium,
-        )
         OutlinedTextField(
             value = uiState.query,
-            onValueChange = viewModel::updateQuery,
-            label = { Text(libraryStrings.inputLabel) },
+            onValueChange = onQueryChange,
+            label = { Text(strings.inputLabel) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            supportingText = { Text(libraryStrings.supportingText) },
+            supportingText = { Text(strings.supportingText) },
         )
         RowActions(
-            strings = libraryStrings,
+            strings = strings,
             isLoading = uiState.isLoading,
             hasResult = uiState.results.isNotEmpty(),
-            onSearch = viewModel::submitQuery,
-            onClear = viewModel::clearResult,
+            onSearch = onSearch,
+            onClear = onClearResult,
         )
-        if (uiState.recentSearches.isNotEmpty()) {
+        if (uiState.recentWords.isNotEmpty()) {
             RecentSearchesRow(
-                strings = libraryStrings,
-                recent = uiState.recentSearches,
-                onSelect = viewModel::loadCharacter,
-                onClear = viewModel::clearHistory,
-                onShowOverflow = { showRecentDialog = true },
+                strings = strings,
+                recent = uiState.recentWords,
+                onSelect = onSelectRecent,
+                onClear = onClearHistory,
+                onShowOverflow = onShowHistory,
             )
         }
         uiState.error?.let { error ->
             val message = when (error) {
-                LibraryError.EmptyQuery -> libraryStrings.errorEmpty
-                LibraryError.NotFound -> libraryStrings.errorNotFound
-                LibraryError.ReadFailure -> libraryStrings.errorRead
+                LibraryError.EmptyQuery -> strings.errorEmpty
+                LibraryError.NotFound -> strings.errorNotFound
+                LibraryError.ReadFailure -> strings.errorRead
             }
             Text(
                 text = message,
@@ -116,30 +230,255 @@ fun LibraryScreen(
         selectedEntry?.let { entry ->
             if (uiState.results.size > 1) {
                 SearchResultsRow(
+                    strings = strings,
                     results = uiState.results,
                     selectedWord = entry.word,
-                    onSelect = viewModel::selectWord,
+                    onSelect = onSelectWord,
                 )
             }
             WordEntryCard(
-                strings = libraryStrings,
+                strings = strings,
                 locale = locale,
                 entry = entry,
-                onPracticeSymbol = onLoadInPractice,
+                isFavorite = uiState.favorites.contains(entry.word),
+                onToggleFavorite = { onToggleFavorite(entry.word) },
+                onPracticeSymbol = onPracticeSymbol,
             )
         }
-        HelpCard(strings = libraryStrings)
+        HelpCard(strings = strings)
+        Spacer(modifier = Modifier.heightIn(min = 0.dp, max = 12.dp))
     }
-    if (showRecentDialog) {
-        val entries = overflowRecents.take(RECENT_DIALOG_LIMIT)
-        RecentSearchesDialog(
-            strings = libraryStrings,
-            entries = entries,
-            onSelect = {
-                viewModel.loadCharacter(it)
-                showRecentDialog = false
+}
+
+@Composable
+private fun FavoritesTab(
+    favorites: List<String>,
+    strings: LibraryStrings,
+    onOpen: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    var showClearDialog by rememberSaveable { mutableStateOf(false) }
+    var sortModeKey by rememberSaveable { mutableStateOf(SavedSortMode.Recent.name) }
+    val sortMode = remember(sortModeKey) { SavedSortMode.valueOf(sortModeKey) }
+    val sortedFavorites = remember(favorites, sortMode) {
+        when (sortMode) {
+            SavedSortMode.Recent -> favorites
+            SavedSortMode.Name -> favorites.sorted()
+        }
+    }
+
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            title = { Text(strings.favoritesClearDialogTitle) },
+            text = { Text(strings.favoritesClearDialogBody) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearDialog = false
+                        onClearAll()
+                    },
+                ) { Text(strings.favoritesClearConfirmLabel) }
             },
-            onDismiss = { showRecentDialog = false },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) { Text(strings.favoritesClearCancelLabel) }
+            },
+        )
+    }
+
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = strings.favoritesHeader,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            OutlinedButton(
+                onClick = { showClearDialog = true },
+                enabled = favorites.isNotEmpty(),
+            ) { Text(strings.favoritesClearLabel) }
+        }
+
+        SortModeRow(
+            strings = strings,
+            selected = sortMode,
+            onSelect = { sortModeKey = it.name },
+        )
+
+        if (sortedFavorites.isEmpty()) {
+            Text(strings.favoritesEmpty, style = MaterialTheme.typography.bodyMedium)
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                sortedFavorites.forEach { word ->
+                    FavoriteRow(
+                        word = word,
+                        strings = strings,
+                        onOpen = { onOpen(word) },
+                        onRemove = { onRemove(word) },
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.heightIn(min = 0.dp, max = 24.dp))
+    }
+}
+
+@Composable
+private fun HistoryTab(
+    recentWords: List<String>,
+    pinnedWords: List<String>,
+    favorites: List<String>,
+    strings: LibraryStrings,
+    onOpen: (String) -> Unit,
+    onTogglePinned: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    var showClearDialog by rememberSaveable { mutableStateOf(false) }
+    var sortModeKey by rememberSaveable { mutableStateOf(SavedSortMode.Recent.name) }
+    val sortMode = remember(sortModeKey) { SavedSortMode.valueOf(sortModeKey) }
+    val pinnedSet = remember(pinnedWords) { pinnedWords.toSet() }
+    val visiblePinned = remember(pinnedWords, sortMode) {
+        when (sortMode) {
+            SavedSortMode.Recent -> pinnedWords
+            SavedSortMode.Name -> pinnedWords.sorted()
+        }
+    }
+    val visibleRecent = remember(recentWords, pinnedSet, sortMode) {
+        val rest = recentWords.filterNot { it in pinnedSet }
+        when (sortMode) {
+            SavedSortMode.Recent -> rest
+            SavedSortMode.Name -> rest.sorted()
+        }
+    }
+
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            title = { Text(strings.historyClearDialogTitle) },
+            text = { Text(strings.historyClearDialogBody) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearDialog = false
+                        onClearAll()
+                    },
+                ) { Text(strings.historyClearConfirmLabel) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) { Text(strings.historyClearCancelLabel) }
+            },
+        )
+    }
+
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = strings.historyHeader,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            OutlinedButton(
+                onClick = { showClearDialog = true },
+                enabled = recentWords.isNotEmpty() || pinnedWords.isNotEmpty(),
+            ) { Text(strings.historyClearLabel) }
+        }
+
+        SortModeRow(
+            strings = strings,
+            selected = sortMode,
+            onSelect = { sortModeKey = it.name },
+        )
+
+        if (visiblePinned.isNotEmpty()) {
+            Text(
+                text = strings.historyPinnedHeader,
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                visiblePinned.forEach { word ->
+                    HistoryRow(
+                        word = word,
+                        strings = strings,
+                        isPinned = true,
+                        isFavorite = favorites.contains(word),
+                        onOpen = { onOpen(word) },
+                        onTogglePinned = { onTogglePinned(word) },
+                        onToggleFavorite = { onToggleFavorite(word) },
+                        onRemove = { onRemove(word) },
+                    )
+                }
+            }
+        }
+
+        if (visibleRecent.isNotEmpty()) {
+            Text(
+                text = strings.recentHeader,
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                visibleRecent.forEach { word ->
+                    HistoryRow(
+                        word = word,
+                        strings = strings,
+                        isPinned = false,
+                        isFavorite = favorites.contains(word),
+                        onOpen = { onOpen(word) },
+                        onTogglePinned = { onTogglePinned(word) },
+                        onToggleFavorite = { onToggleFavorite(word) },
+                        onRemove = { onRemove(word) },
+                    )
+                }
+            }
+        }
+
+        if (visiblePinned.isEmpty() && visibleRecent.isEmpty()) {
+            Text(strings.historyEmpty, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        Spacer(modifier = Modifier.heightIn(min = 0.dp, max = 24.dp))
+    }
+}
+
+@Composable
+private fun SortModeRow(
+    strings: LibraryStrings,
+    selected: SavedSortMode,
+    onSelect: (SavedSortMode) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        FilterChip(
+            selected = selected == SavedSortMode.Recent,
+            onClick = { onSelect(SavedSortMode.Recent) },
+            label = { Text(strings.sortRecentLabel) },
+        )
+        FilterChip(
+            selected = selected == SavedSortMode.Name,
+            onClick = { onSelect(SavedSortMode.Name) },
+            label = { Text(strings.sortNameLabel) },
         )
     }
 }
@@ -193,13 +532,14 @@ private fun RecentSearchesRow(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SearchResultsRow(
+    strings: LibraryStrings,
     results: List<WordEntry>,
     selectedWord: String,
     onSelect: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Results",
+            text = strings.resultsHeader,
             style = MaterialTheme.typography.labelLarge,
         )
         FlowRow(
@@ -258,6 +598,8 @@ private fun WordEntryCard(
     strings: LibraryStrings,
     locale: Locale,
     entry: WordEntry,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onPracticeSymbol: (String) -> Unit,
 ) {
     Card(
@@ -270,10 +612,19 @@ private fun WordEntryCard(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = entry.word,
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = entry.word,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                )
+                TextButton(onClick = onToggleFavorite) {
+                    Text(if (isFavorite) strings.favoritesSavedLabel else strings.favoritesSaveLabel)
+                }
+            }
             val fallback = strings.valueNotAvailable
             val unknown = strings.valueUnknown
             Text(
@@ -314,7 +665,7 @@ private fun WordEntryCard(
                 }
             } else {
                 Text(
-                    text = "Practice characters",
+                    text = strings.practiceCharactersLabel,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -333,49 +684,7 @@ private fun WordEntryCard(
         }
     }
 }
-
-@Composable
-private fun RecentSearchesDialog(
-    strings: LibraryStrings,
-    entries: List<String>,
-    onSelect: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(strings.recentOverflowDialogTitle) },
-        text = {
-            val scrollState = rememberScrollState()
-            Column(
-                modifier = Modifier
-                    .heightIn(max = 360.dp)
-                    .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (entries.isEmpty()) {
-                    Text(strings.errorEmpty, style = MaterialTheme.typography.bodySmall)
-                } else {
-                    entries.forEach { symbol ->
-                        TextButton(
-                            onClick = { onSelect(symbol) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(symbol, style = MaterialTheme.typography.titleMedium)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(strings.recentOverflowClose)
-            }
-        },
-    )
-}
-
 private const val RECENT_INLINE_LIMIT = 3
-private const val RECENT_DIALOG_LIMIT = 50
 
 @Composable
 private fun HelpCard(strings: LibraryStrings) {
@@ -397,6 +706,116 @@ private fun HelpCard(strings: LibraryStrings) {
                 text = strings.helpBody,
                 style = MaterialTheme.typography.bodyMedium,
             )
+        }
+    }
+}
+
+@Composable
+private fun FavoriteRow(
+    word: String,
+    strings: LibraryStrings,
+    onOpen: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    var expanded by rememberSaveable(word) { mutableStateOf(false) }
+    Card(
+        onClick = onOpen,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = word,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = { expanded = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = strings.moreActionsLabel,
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(strings.favoritesRemoveLabel) },
+                    onClick = {
+                        expanded = false
+                        onRemove()
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryRow(
+    word: String,
+    strings: LibraryStrings,
+    isPinned: Boolean,
+    isFavorite: Boolean,
+    onOpen: () -> Unit,
+    onTogglePinned: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    var expanded by rememberSaveable(word) { mutableStateOf(false) }
+    Card(
+        onClick = onOpen,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = word,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = { expanded = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = strings.moreActionsLabel,
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(if (isPinned) strings.historyUnpinLabel else strings.historyPinLabel) },
+                    onClick = {
+                        expanded = false
+                        onTogglePinned()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(if (isFavorite) strings.favoritesRemoveLabel else strings.favoritesAddLabel) },
+                    onClick = {
+                        expanded = false
+                        onToggleFavorite()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(strings.historyRemoveLabel) },
+                    onClick = {
+                        expanded = false
+                        onRemove()
+                    },
+                )
+            }
         }
     }
 }

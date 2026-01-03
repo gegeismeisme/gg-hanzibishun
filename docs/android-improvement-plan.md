@@ -10,7 +10,7 @@
 ## 当前状态（代码已在做的事）
 
 - 已切换为底部 4 Tab 信息架构：`Home / Learn / Dict / Me`，其中 `Learn` 合并课程与进度（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/navigation/BishunApp.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/ui/learn/LearnScreen.kt`）。
-- 已把「词典词条」改为按需加载：进入练习页不再强制解析 `word.json`，仅在用户打开词典弹层时请求并显示 Loading/Retry（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/character/CharacterViewModel.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/ui/practice/PracticeDialogs.kt`）。
+- 已把字典改为预置 SQLite（`word.db`）+ 按需查询：进入练习页不再触发全量解析，仅在用户打开词典/发音时读取，并显示 Loading/Retry（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/character/CharacterViewModel.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/ui/practice/PracticeDialogs.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/data/word/WordRepository.kt`）。
 - 已增强 TTS 初始化与可用性判断：只在引擎/语言可用时允许播放，并自动选择可用的中文 Locale（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/practice/PracticeTextToSpeech.kt`）。
 - 已新增「设置中心（Me）」：外观（主题模式）、音量安全、语言切换、帮助/隐私、数据清理等集中管理（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/account/AccountScreen.kt`）。
 - 已加入首次引导与可重复查看：首次启动进入引导页，可在设置页再次打开（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/onboarding/OnboardingScreen.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/MainActivity.kt`）。
@@ -19,17 +19,17 @@
 
 - 导航结构：Compose 底部导航，4 个主入口：Home / Learn / 字典 / 我的（课程与进度合并到 Learn）。见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/navigation/BishunApp.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/ui/learn/LearnScreen.kt`。
 - 练习（笔顺/描红/判定）：共享的 `CharacterViewModel` 负责加载字形、渲染快照、练习状态、课程会话、历史等。见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/character/CharacterViewModel.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/ui/character/CharacterScreen.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/ui/practice/PracticeScreen.kt`。
-- 字典：`LibraryViewModel` + `WordRepository`，查找本地 `assets/word/word.json`。见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/library/LibraryViewModel.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/data/word/WordRepository.kt`。
+- 字典：`LibraryViewModel` + `WordRepository`，查询预置 `assets/word/word.db`（由 `tools/dictionary/word.json` 生成，脚本：`tools/dictionary/build_word_db.py`；校验：`tools/dictionary/verify_word_db.py`，或 `./gradlew updateWordDb`）。见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/library/LibraryViewModel.kt`、`app/src/main/java/com/yourstudio/hskstroke/bishun/data/word/WordRepository.kt`。
 - 发音：使用 Android `TextToSpeech`，根据引擎可用性与 Locale 支持情况进行初始化与降级。见 `app/src/main/java/com/yourstudio/hskstroke/bishun/ui/practice/PracticeTextToSpeech.kt`。
 - 离线资产体量（需重点关注体验/包体/性能）：
-  - `app/src/main/assets/word/word.json` ≈ 27MB，约 1.6 万条词条（含释义文本）。
+  - `app/src/main/assets/word/word.db` ≈ 36MB（预置索引，运行时不再全量解析 JSON）。
   - `app/src/main/assets/characters/` ≈ 62MB（约 9577 个 JSON 文件），且存在 `all.json` ≈ 32MB（目前代码未引用）。
 
 ## 2. 关键风险点（优先级从高到低）
 
 ### P0：字典数据加载的性能与内存风险
 
-- 现状：`WordRepository` 首次查询会把 `word.json` 整体读入内存并构建 Map（`JSONArray` + 全量 `WordEntry`）。虽然在 IO 线程执行，但仍然存在 **内存占用高、首次等待长、GC 压力大** 的风险；目前已改为「按需触发」（不再影响首轮进入练习页），但首次打开字典弹层仍可能等待明显。
+- 现状：已迁移为 SQLite 预置库，避免运行时全量解析 `word.json`；仍需关注“首次复制 DB 到本地”的耗时（应在 IO 线程进行），并保证 UI 有 Loading/失败提示与重试能力。
 - 目标：字典查询做到「**秒开/可渐进**」，不因词库体量导致卡顿/崩溃/无响应。
 
 ### P0：核心逻辑集中在单个 ViewModel，后续迭代成本高

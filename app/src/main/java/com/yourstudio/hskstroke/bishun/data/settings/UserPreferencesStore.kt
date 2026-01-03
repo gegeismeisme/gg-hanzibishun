@@ -23,6 +23,8 @@ data class UserPreferences(
     val courseSymbol: String? = null,
     val languageOverride: String? = null,
     val libraryRecentSearches: List<String> = emptyList(),
+    val libraryPinnedSearches: List<String> = emptyList(),
+    val libraryFavorites: List<String> = emptyList(),
 )
 
 class UserPreferencesStore(private val context: Context) {
@@ -40,7 +42,9 @@ class UserPreferencesStore(private val context: Context) {
             courseLevel = prefs[KEY_COURSE_LEVEL],
             courseSymbol = prefs[KEY_COURSE_SYMBOL],
             languageOverride = prefs[KEY_LANGUAGE_OVERRIDE],
-            libraryRecentSearches = decodeRecentSearches(prefs[KEY_LIBRARY_RECENTS]),
+            libraryRecentSearches = decodeStringList(prefs[KEY_LIBRARY_RECENTS]),
+            libraryPinnedSearches = decodeStringList(prefs[KEY_LIBRARY_PINNED_RECENTS]),
+            libraryFavorites = decodeStringList(prefs[KEY_LIBRARY_FAVORITES]),
         )
     }
 
@@ -119,7 +123,7 @@ class UserPreferencesStore(private val context: Context) {
             if (entries.isEmpty()) {
                 prefs.remove(KEY_LIBRARY_RECENTS)
             } else {
-                prefs[KEY_LIBRARY_RECENTS] = encodeRecentSearches(entries)
+                prefs[KEY_LIBRARY_RECENTS] = encodeStringList(entries)
             }
         }
     }
@@ -127,6 +131,38 @@ class UserPreferencesStore(private val context: Context) {
     suspend fun clearLibraryRecentSearches() {
         context.userPreferencesDataStore.edit { prefs ->
             prefs.remove(KEY_LIBRARY_RECENTS)
+        }
+    }
+
+    suspend fun setLibraryPinnedSearches(entries: List<String>) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (entries.isEmpty()) {
+                prefs.remove(KEY_LIBRARY_PINNED_RECENTS)
+            } else {
+                prefs[KEY_LIBRARY_PINNED_RECENTS] = encodeStringList(entries)
+            }
+        }
+    }
+
+    suspend fun clearLibraryPinnedSearches() {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs.remove(KEY_LIBRARY_PINNED_RECENTS)
+        }
+    }
+
+    suspend fun setLibraryFavorites(entries: List<String>) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (entries.isEmpty()) {
+                prefs.remove(KEY_LIBRARY_FAVORITES)
+            } else {
+                prefs[KEY_LIBRARY_FAVORITES] = encodeStringList(entries)
+            }
+        }
+    }
+
+    suspend fun clearLibraryFavorites() {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs.remove(KEY_LIBRARY_FAVORITES)
         }
     }
 
@@ -150,15 +186,17 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_COURSE_SYMBOL = stringPreferencesKey("course_symbol")
         private val KEY_LANGUAGE_OVERRIDE = stringPreferencesKey("language_override")
         private val KEY_LIBRARY_RECENTS = stringPreferencesKey("library_recent_searches")
-        private const val RECENTS_DELIMITER = "\u0001"
+        private val KEY_LIBRARY_PINNED_RECENTS = stringPreferencesKey("library_pinned_recent_searches")
+        private val KEY_LIBRARY_FAVORITES = stringPreferencesKey("library_favorites")
+        private const val LIST_DELIMITER = "\u0001"
 
-        private fun decodeRecentSearches(raw: String?): List<String> {
+        private fun decodeStringList(raw: String?): List<String> {
             if (raw.isNullOrBlank()) return emptyList()
-            return raw.split(RECENTS_DELIMITER).filter { it.isNotBlank() }
+            return raw.split(LIST_DELIMITER).filter { it.isNotBlank() }
         }
 
-        private fun encodeRecentSearches(entries: List<String>): String {
-            return entries.joinToString(separator = RECENTS_DELIMITER)
+        private fun encodeStringList(entries: List<String>): String {
+            return entries.joinToString(separator = LIST_DELIMITER)
         }
     }
 }

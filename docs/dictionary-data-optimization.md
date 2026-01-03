@@ -1,6 +1,6 @@
 # 字典数据结构优化方案（word.json → 可查询索引）
 
-> 背景：`app/src/main/assets/word/word.json` 体量约 27MB。当前实现会在首次查询时解析全量 JSON 并构建内存 Map，虽然已改为“按需触发”，但首次打开字典仍可能出现等待与内存压力。后续若要做更强的检索（多结果/拼音/模糊/收藏），更适合迁移到可索引的数据结构。
+> 背景：早期字典数据为 `word.json`（约 27MB），运行时全量解析会带来等待与内存压力。现在已迁移为预置 SQLite：App 读取 `app/src/main/assets/word/word.db`，而 JSON 作为生成源保留在 `tools/dictionary/word.json`。
 
 ## 目标
 
@@ -11,24 +11,22 @@
 
 ## 方案 A（推荐）：预置 SQLite/Room（可加 FTS）
 
-### 数据库结构（建议）
+### 数据库结构（当前实现）
 
 - 表 `words`
-  - `word TEXT PRIMARY KEY`
-  - `pinyin TEXT`
-  - `pinyin_plain TEXT`（去音调、ü→v，如 `yong`）
-  - `pinyin_tone TEXT`（声调数字，如 `yong3`，多音节用空格或连写）
-  - `radicals TEXT`
-  - `strokes INT`（可保留字符串字段兼容原数据）
   - `oldword TEXT`
+  - `strokes TEXT`
+  - `pinyin TEXT`（保留原始带音调拼音）
+  - `radicals TEXT`
   - `explanation TEXT`
   - `more TEXT`
+  - `pinyin_plain_compact TEXT`（去音调、ü→v、去空格，如 `yong`）
+  - `pinyin_tone_compact TEXT`（声调数字、去空格，如 `yong3`）
 - 索引
-  - `CREATE INDEX idx_word ON words(word);`
-  - `CREATE INDEX idx_pinyin_plain ON words(pinyin_plain);`
-  - `CREATE INDEX idx_pinyin_tone ON words(pinyin_tone);`
+  - `CREATE INDEX idx_pinyin_plain_compact ON words(pinyin_plain_compact);`
+  - `CREATE INDEX idx_pinyin_tone_compact ON words(pinyin_tone_compact);`
 - 可选：FTS5
-  - `words_fts(word, pinyin_plain, pinyin_tone, explanation)`，用于包含检索与排序（注意中文分词策略与体积权衡）。
+  - `words_fts(word, pinyin_plain_compact, pinyin_tone_compact, explanation)`，用于包含检索与排序（注意中文分词策略与体积权衡）。
 
 ### App 端接入方式
 
@@ -41,12 +39,15 @@
 
 ### 数据生成（必须做成脚本）
 
-- 输入：`word.json`
-- 输出：`word.db`（放入 `app/src/main/assets/word/`）
+- 输入：`tools/dictionary/word.json`
+- 输出：`app/src/main/assets/word/word.db`
+- 生成命令：
+  - `python tools/dictionary/build_word_db.py`
+  - 或 `./gradlew buildWordDb`
 - 产物校验：
-  - 词条数一致（JSON vs DB）
-  - 随机抽样 100 条字段一致
-  - `pinyin_plain/pinyin_tone` 生成符合预期（样例断言）
+  - `python tools/dictionary/verify_word_db.py`（校验行数、抽样字段一致、拼音索引一致）
+  - 或 `./gradlew verifyWordDb`
+  - 一键更新：`./gradlew updateWordDb`
 - 建议技术栈：Python（sqlite3）或 Node（better-sqlite3）。
 
 ### 验收
@@ -69,6 +70,5 @@
 ## 推荐落地路线（与当前代码兼容）
 
 1) **短期（已完成/在做）**：按需加载 + UI 结果列表/拼音检索（不影响首屏）。
-2) **中期（下一大版本）**：引入预置 SQLite（不改 UI），把 `WordRepository` 换成 DB 查询实现；保留旧 JSON 实现作为 fallback（可开关）。
-3) **长期**：加入 FTS/更复杂排序，支持收藏/生词本与跨版本数据迁移。
-
+2) **中期（已完成）**：引入预置 SQLite（不改 UI），`WordRepository` 使用 DB 查询实现（见 `app/src/main/java/com/yourstudio/hskstroke/bishun/data/word/WordRepository.kt`）。
+3) **长期**：加入 FTS/更复杂排序，支持收藏/生词本与跨版本数据迁移（必要时引入 Room/迁移策略）。
