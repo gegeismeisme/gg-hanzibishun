@@ -10,6 +10,9 @@ import com.yourstudio.hskstroke.bishun.data.daily.DailyPracticeUseCase
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
 import com.yourstudio.hskstroke.bishun.data.word.WordRepository
 import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
+import com.yourstudio.hskstroke.bishun.data.hsk.HskCourseCatalogBuilder
+import com.yourstudio.hskstroke.bishun.data.hsk.HskProgressCalculator
+import com.yourstudio.hskstroke.bishun.data.hsk.HskProgressSummary
 import com.yourstudio.hskstroke.bishun.data.hsk.HskRepository
 import com.yourstudio.hskstroke.bishun.data.hsk.HskProgressStore
 import com.yourstudio.hskstroke.bishun.data.history.PracticeHistoryEntry
@@ -530,14 +533,7 @@ class CharacterViewModel(
 
         val entries = runCatching { hskRepository.allEntries().toList() }
             .getOrElse { emptyList() }
-
-        val catalog = entries
-            .groupBy { it.level }
-            .mapValues { (_, items) ->
-                items
-                    .sortedBy { it.writingLevel ?: Int.MAX_VALUE }
-                    .map { it.symbol }
-            }
+        val catalog = HskCourseCatalogBuilder.build(entries)
 
         courseEntries = catalog
         _courseCatalog.value = catalog
@@ -545,14 +541,7 @@ class CharacterViewModel(
     }
 
     private fun updateHskProgress(completed: Set<String>, catalog: Map<Int, List<String>>) {
-        val perLevel = mutableMapOf<Int, HskLevelSummary>()
-        val nextTargets = mutableMapOf<Int, String?>()
-        catalog.forEach { (level, symbols) ->
-            val done = symbols.count { completed.contains(it) }
-            perLevel[level] = HskLevelSummary(done, symbols.size)
-            nextTargets[level] = symbols.firstOrNull { !completed.contains(it) }
-        }
-        val summary = HskProgressSummary(perLevel, nextTargets)
+        val summary = HskProgressCalculator.calculateSummary(completed, catalog)
         _hskProgress.value = summary
         maybeRefreshDailyPractice(summary)
     }
@@ -892,40 +881,3 @@ class CharacterViewModel(
     }
 }
 
-data class HskLevelSummary(
-    val completed: Int = 0,
-    val total: Int = 0,
-) {
-    val remaining: Int get() = (total - completed).coerceAtLeast(0)
-}
-
-data class HskProgressSummary(
-    val perLevel: Map<Int, HskLevelSummary> = emptyMap(),
-    val nextTargets: Map<Int, String?> = emptyMap(),
-) {
-    val totalCompleted: Int get() = perLevel.values.sumOf { it.completed }
-    val totalCharacters: Int get() = perLevel.values.sumOf { it.total }
-}
-
-data class CourseSession(
-    val level: Int,
-    val symbols: List<String>,
-    val index: Int,
-) {
-    val progressText: String get() = "${(index + 1).coerceAtLeast(1)}/${symbols.size}"
-    val currentSymbol: String? get() = symbols.getOrNull(index)
-    val hasPrevious: Boolean get() = index > 0
-    val hasNext: Boolean get() = index < symbols.lastIndex
-}
-
-data class PracticeQueueSession(
-    val symbols: List<String>,
-    val index: Int,
-) {
-    val progressText: String get() = "${(index + 1).coerceAtLeast(1)}/${symbols.size}"
-    val currentSymbol: String? get() = symbols.getOrNull(index)
-    val hasPrevious: Boolean get() = index > 0
-    val hasNext: Boolean get() = index < symbols.lastIndex
-}
-
-data class CourseEvent(val message: String)

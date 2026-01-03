@@ -17,13 +17,20 @@ object AppLaunchRequests {
     private const val ACTION_DICTIONARY = "dictionary"
 
     fun parse(intent: Intent?): AppLaunchRequest? {
-        val action = intent?.getStringExtra(EXTRA_ACTION)?.trim().orEmpty()
-        val value = intent?.getStringExtra(EXTRA_VALUE)?.trim().orEmpty()
-        if (action.isBlank() || value.isBlank()) return null
+        return parse(
+            action = intent?.getStringExtra(EXTRA_ACTION),
+            value = intent?.getStringExtra(EXTRA_VALUE),
+        )
+    }
 
-        return when (action) {
-            ACTION_PRACTICE -> AppLaunchRequest.PracticeSymbol(value)
-            ACTION_DICTIONARY -> AppLaunchRequest.DictionaryQuery(value)
+    fun parse(action: String?, value: String?): AppLaunchRequest? {
+        val normalizedAction = action?.trim().orEmpty()
+        val normalizedValue = value?.trim().orEmpty()
+        if (normalizedAction.isBlank() || normalizedValue.isBlank()) return null
+
+        return when (normalizedAction) {
+            ACTION_PRACTICE -> AppLaunchRequest.PracticeSymbol(normalizedValue)
+            ACTION_DICTIONARY -> AppLaunchRequest.DictionaryQuery(normalizedValue)
             else -> null
         }
     }
@@ -50,4 +57,3 @@ object AppLaunchRequests {
         }
     }
 }
-

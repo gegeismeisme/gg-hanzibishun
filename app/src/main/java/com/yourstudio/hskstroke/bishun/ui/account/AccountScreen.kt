@@ -378,7 +378,7 @@ private fun DailyReminderCard(
 
     SettingsCard(
         title = "每日提醒",
-        description = "每天在指定时间提醒你练习今日一字。",
+        description = "每天在指定时间提醒你练习今日一字（Android 13+ 需允许通知权限）。",
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(

@@ -42,10 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
+import com.yourstudio.hskstroke.bishun.data.hsk.HskLevelSummary
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
 import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
 import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
-import com.yourstudio.hskstroke.bishun.ui.character.HskLevelSummary
 import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 

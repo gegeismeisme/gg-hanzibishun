@@ -2,6 +2,8 @@ package com.yourstudio.hskstroke.bishun.data.daily
 
 import android.content.Context
 import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
+import com.yourstudio.hskstroke.bishun.data.hsk.HskCourseCatalogBuilder
+import com.yourstudio.hskstroke.bishun.data.hsk.HskProgressCalculator
 import com.yourstudio.hskstroke.bishun.data.hsk.HskProgressStore
 import com.yourstudio.hskstroke.bishun.data.hsk.HskRepository
 
@@ -16,32 +18,12 @@ object DailyPracticeGenerator {
     }
 
     fun suggestSymbol(entries: Collection<HskEntry>, completed: Set<String>): String? {
-        if (entries.isEmpty()) return null
+        val catalog = HskCourseCatalogBuilder.build(entries)
+        if (catalog.isEmpty()) return null
 
-        val completedSet = completed
-            .asSequence()
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .toHashSet()
-
-        val entriesByLevel = entries
-            .asSequence()
-            .mapNotNull { entry ->
-                val symbol = entry.symbol.trim()
-                if (symbol.isEmpty()) return@mapNotNull null
-                entry.copy(symbol = symbol)
-            }
-            .groupBy { it.level }
-
-        entriesByLevel.keys.sorted().forEach { level ->
-            val symbols = entriesByLevel[level].orEmpty()
-                .sortedBy { it.writingLevel ?: Int.MAX_VALUE }
-                .map { it.symbol }
-            val nextTarget = symbols.firstOrNull { !completedSet.contains(it) }
-            if (!nextTarget.isNullOrBlank()) return nextTarget
+        val summary = HskProgressCalculator.calculateSummary(completed, catalog)
+        return summary.nextTargets.keys.sorted().firstNotNullOfOrNull { level ->
+            summary.nextTargets[level]?.trim()?.takeIf { it.isNotBlank() }
         }
-
-        return null
     }
 }
-
