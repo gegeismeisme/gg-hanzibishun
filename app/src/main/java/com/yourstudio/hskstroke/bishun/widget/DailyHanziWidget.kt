@@ -24,6 +24,7 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.yourstudio.hskstroke.bishun.data.daily.DailyPracticeGenerator
 import com.yourstudio.hskstroke.bishun.data.history.effectivePracticeStreakDays
 import com.yourstudio.hskstroke.bishun.data.word.WordRepository
 import com.yourstudio.hskstroke.bishun.data.word.buildExplanationSummary
@@ -35,12 +36,25 @@ import java.time.ZoneId
 
 class DailyHanziWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val preferencesStore = UserPreferencesStore(context.applicationContext)
-        val preferences = preferencesStore.data.first()
+        val applicationContext = context.applicationContext
+        val preferencesStore = UserPreferencesStore(applicationContext)
         val zone = ZoneId.systemDefault()
         val todayEpochDay = LocalDate.now(zone).toEpochDay()
-        val symbol = preferences.dailySymbol?.trim()
+        val preferences = preferencesStore.data.first()
+
+        var symbol = preferences.dailySymbol?.trim()
             ?.takeIf { it.isNotBlank() && preferences.dailyEpochDay == todayEpochDay }
+
+        if (symbol == null) {
+            val suggestedSymbol = DailyPracticeGenerator.suggestSymbol(applicationContext)
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+            if (suggestedSymbol != null) {
+                preferencesStore.setDailyPractice(suggestedSymbol, todayEpochDay)
+                symbol = suggestedSymbol
+            }
+        }
+
         val dailyCompletedToday = symbol != null &&
             preferences.dailyPracticeCompletedEpochDay == todayEpochDay &&
             preferences.dailyPracticeCompletedSymbol == symbol
@@ -49,10 +63,22 @@ class DailyHanziWidget : GlanceAppWidget() {
             lastEpochDay = preferences.practiceStreakLastEpochDay,
             todayEpochDay = todayEpochDay,
         )
-        var pinyin = preferences.dailyPinyin?.trim().takeIf { !it.isNullOrBlank() && symbol != null }
-        var explanationSummary = preferences.dailyExplanationSummary?.trim().takeIf { !it.isNullOrBlank() && symbol != null }
+        val cachedDailySymbol = preferences.dailySymbol?.trim().takeIf { !it.isNullOrBlank() }
+        val hasValidDailyDetails = symbol != null &&
+            cachedDailySymbol == symbol &&
+            preferences.dailyEpochDay == todayEpochDay
+        var pinyin = if (hasValidDailyDetails) {
+            preferences.dailyPinyin?.trim().takeIf { !it.isNullOrBlank() }
+        } else {
+            null
+        }
+        var explanationSummary = if (hasValidDailyDetails) {
+            preferences.dailyExplanationSummary?.trim().takeIf { !it.isNullOrBlank() }
+        } else {
+            null
+        }
         if (symbol != null && pinyin == null && explanationSummary == null) {
-            val entry = runCatching { WordRepository(context.applicationContext).getWord(symbol) }.getOrNull()
+            val entry = runCatching { WordRepository(applicationContext).getWord(symbol) }.getOrNull()
             val fetchedPinyin = entry?.pinyin?.trim()?.takeIf { it.isNotBlank() }
             val fetchedSummary = entry?.explanation?.let { buildExplanationSummary(it) }
             if (fetchedPinyin != null || fetchedSummary != null) {
