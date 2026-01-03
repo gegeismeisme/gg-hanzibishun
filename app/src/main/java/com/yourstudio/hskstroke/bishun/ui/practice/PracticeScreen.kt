@@ -32,8 +32,10 @@ import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
 import com.yourstudio.hskstroke.bishun.hanzi.model.Point
 import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
 import com.yourstudio.hskstroke.bishun.ui.audio.VolumeSafetyDialog
+import com.yourstudio.hskstroke.bishun.ui.character.AccountStrings
 import com.yourstudio.hskstroke.bishun.ui.character.CourseSession
 import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
+import com.yourstudio.hskstroke.bishun.ui.character.LibraryStrings
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeQueueSession
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
@@ -56,6 +58,8 @@ fun PracticeContent(
     onRequestWordInfo: (String) -> Unit,
     hskEntry: HskEntry?,
     showTemplate: Boolean,
+    libraryStrings: LibraryStrings,
+    accountStrings: AccountStrings,
     boardStrings: PracticeBoardStrings,
     onTemplateToggle: (Boolean) -> Unit,
     calligraphyDemoState: CalligraphyDemoState,
@@ -122,7 +126,7 @@ fun PracticeContent(
             .fillMaxWidth()
             .fillMaxSize(),
     ) {
-        val summary = practiceState.toSummary()
+        val summary = practiceState.toSummary(boardStrings, locale)
         val activeSequenceSymbol = practiceQueueSession?.currentSymbol ?: courseSession?.currentSymbol
         val activeSequenceProgress = practiceQueueSession?.progressText ?: courseSession?.progressText
         val activeHasPrev = practiceQueueSession?.hasPrevious ?: courseSession?.hasPrevious ?: false
@@ -242,6 +246,9 @@ fun PracticeContent(
             symbol = definition.symbol,
             entry = wordEntry,
             wordInfoUiState = wordInfoUiState,
+            strings = libraryStrings,
+            accountStrings = accountStrings,
+            boardStrings = boardStrings,
             onRetry = { onRequestWordInfo(definition.symbol) },
             onDismiss = { showWordInfo = false },
             onPlayPronunciation = { requestSpeakSafely(wordEntry?.word ?: definition.symbol) },

@@ -45,6 +45,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,6 +53,7 @@ import com.yourstudio.hskstroke.bishun.data.word.WordEntry
 import com.yourstudio.hskstroke.bishun.ui.character.LibraryStrings
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.library.LibraryError
+import com.yourstudio.hskstroke.bishun.ui.testing.TestTags
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -963,7 +965,10 @@ private fun WordEntryCard(
             }
             if (practiceTargets.size <= 1) {
                 val symbol = practiceTargets.firstOrNull() ?: entry.word.take(1)
-                Button(onClick = { onPracticeSymbol(symbol) }) {
+                Button(
+                    onClick = { onPracticeSymbol(symbol) },
+                    modifier = Modifier.testTag(TestTags.LIBRARY_PRACTICE_BUTTON),
+                ) {
                     Text(strings.practiceButtonLabel)
                 }
             } else {

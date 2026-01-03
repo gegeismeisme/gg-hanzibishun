@@ -13,7 +13,7 @@
 
 ## 进度概览
 
-- **待完成（P0/P1，建议收费前完成）：4 项**
+- **待完成（P0/P1，建议收费前完成）：0 项**
 - **可选增强（P2/长期）：3+ 项**
 
 ## 已完成（关键项）
@@ -31,10 +31,10 @@
 
 ## 待完成（P0/P1：建议收费前完成）
 
-- [ ] 工程化：拆分 `CharacterViewModel`（已抽出 HSK 目录/进度计算与 Daily UseCase；已抽离练习渲染 `PracticeRenderController` 与词条加载 `WordInfoController`；下一步继续拆分练习状态机/课程/队列逻辑）
-- [ ] 测试：补齐关键路径测试（已补单测：HSK 目录/进度计算、提醒时间计算、LaunchRequest 解析；已补 Compose/UI smoke：底部导航 + Home 二级 Tab；下一步补查词→练习/今日一字→练习/Widget Intent 端到端）
-- [ ] 文案与多语言一致性：清理/统一对外展示文本（已清理新增提醒文案；已将底部 Tab 与 Onboarding 文案纳入 `LocalizedStrings`；下一步把 Toast/Error 等 ViewModel 文案改为可本地化的 key/枚举）
-- [ ] 资产/包体策略：已移除未使用的 `app/src/main/assets/characters/all.json`；已补策略评估与路线图（`docs/characters-asset-strategy.md`），仍需决定 Zip/SQLite 方案并落地双轨 fallback
+- [x] 工程化：继续拆分 `CharacterViewModel`（补齐练习状态机/课程/队列逻辑拆分：`PracticeInteractionController` / `CourseSessionController`）
+- [x] 测试：补齐关键路径测试（补查词→练习/今日一字→练习/Widget Intent 端到端：`LaunchFlowsComposeTest`；并补 Zip Pack 数据源 smoke：`CharacterPackedZipDataSourceTest`）
+- [x] 文案与多语言一致性：把 Toast/Error/练习状态等由硬编码字符串改为可本地化状态/事件，并补齐 `LocalizedStrings`（EN/ES/JA）
+- [x] 资产/包体策略：落地 Zip Pack 双轨 fallback（新增 `CharacterPackedZipDataSource`，优先读 `characters/characters.pack.zip`，失败回退到原 `assets/characters/*.json`；附打包脚本 `tools/characters/build_characters_pack_zip.py`）
 
 ## 可选增强（P2/长期）
 

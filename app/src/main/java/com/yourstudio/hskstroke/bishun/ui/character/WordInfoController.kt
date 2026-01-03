@@ -51,14 +51,11 @@ internal class WordInfoController(
                         _uiState.value = WordInfoUiState.Loaded
                     }
                 }
-                .onFailure { throwable ->
+                .onFailure {
                     if (currentSymbol()?.trim() != normalized) return@launch
                     _wordEntry.value = null
-                    _uiState.value = WordInfoUiState.Error(
-                        throwable.message ?: "Unable to load dictionary entry.",
-                    )
+                    _uiState.value = WordInfoUiState.Error(WordInfoError.LoadFailed)
                 }
         }
     }
 }
-

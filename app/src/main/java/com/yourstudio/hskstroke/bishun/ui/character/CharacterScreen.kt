@@ -85,10 +85,15 @@ fun CharacterRoute(
     val practiceQueueSession by viewModel.practiceQueueSession.collectAsState()
     val boardSettings by viewModel.boardSettings.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
+    val strings = rememberLocalizedStrings(userPreferences.languageOverride)
     val context = LocalContext.current
-    LaunchedEffect(Unit) {
+    LaunchedEffect(strings) {
         viewModel.courseEvents.collect { event ->
-            Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                event.resolveMessage(strings.courses, strings.locale),
+                Toast.LENGTH_SHORT,
+            ).show()
         }
     }
     LaunchedEffect(
@@ -342,7 +347,10 @@ fun CharacterScreen(
                     when (uiState) {
                         CharacterUiState.Loading -> Text(strings.loadingLabel)
                         is CharacterUiState.Error -> PracticeErrorBanner(
-                            message = uiState.message,
+                            message = when (uiState.error) {
+                                CharacterLoadError.NotFound -> strings.library.errorNotFound
+                                CharacterLoadError.LoadFailed -> strings.library.errorRead
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         )
 
@@ -359,6 +367,8 @@ fun CharacterScreen(
                             onRequestWordInfo = onRequestWordInfo,
                             hskEntry = hskEntry,
                             showTemplate = showTemplate,
+                            libraryStrings = strings.library,
+                            accountStrings = strings.account,
                             boardStrings = strings.boardControls,
                             onTemplateToggle = { enabled ->
                                 onTemplateToggleSetting(enabled)

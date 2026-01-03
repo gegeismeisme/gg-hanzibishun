@@ -49,6 +49,11 @@ data class CoursesStrings(
     val lockedBrowseLabel: String,
     val lockedGreatJobLabel: String,
     val iconStartDescriptionFormat: String,
+    val toastSkippedLabel: String,
+    val toastMarkedLearnedFormat: String,
+    val toastCourseCompleteFormat: String,
+    val toastAutoAdvancedFormat: String,
+    val toastNextUpFormat: String,
 )
 
 data class AccountStrings(
@@ -143,6 +148,13 @@ data class PracticeBoardStrings(
     val pronunciationLabel: String,
     val dictionaryLabel: String,
     val hskLabel: String,
+    val statusReadyLabel: String,
+    val statusStrokeProgressFormat: String,
+    val statusStartFromStrokeFormat: String,
+    val statusTryAgainFormat: String,
+    val statusGreatContinueLabel: String,
+    val statusBackwardsAcceptedLabel: String,
+    val statusPracticeCompleteLabel: String,
 )
 
 private val defaultPracticeBoardStrings = PracticeBoardStrings(
@@ -154,6 +166,13 @@ private val defaultPracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "Play pronunciation",
     dictionaryLabel = "Show dictionary entry",
     hskLabel = "HSK info",
+    statusReadyLabel = "Ready to start",
+    statusStrokeProgressFormat = "Stroke %1\$d/%2\$d",
+    statusStartFromStrokeFormat = "Start from stroke %1\$d",
+    statusTryAgainFormat = "Try again (mistakes %1\$d)",
+    statusGreatContinueLabel = "Great! Continue to the next stroke",
+    statusBackwardsAcceptedLabel = "Stroke direction reversed but accepted",
+    statusPracticeCompleteLabel = "Practice complete",
 )
 
 private val spanishPracticeBoardStrings = PracticeBoardStrings(
@@ -165,6 +184,13 @@ private val spanishPracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "Reproducir pronunciaci\u00f3n",
     dictionaryLabel = "Mostrar definici\u00f3n",
     hskLabel = "Informaci\u00f3n HSK",
+    statusReadyLabel = "Listo para empezar",
+    statusStrokeProgressFormat = "Trazo %1\$d/%2\$d",
+    statusStartFromStrokeFormat = "Empieza desde el trazo %1\$d",
+    statusTryAgainFormat = "Intenta de nuevo (errores %1\$d)",
+    statusGreatContinueLabel = "\u00a1Bien! Contin\u00faa con el siguiente trazo",
+    statusBackwardsAcceptedLabel = "Direcci\u00f3n del trazo invertida, pero aceptada",
+    statusPracticeCompleteLabel = "Pr\u00e1ctica completada",
 )
 
 private val japanesePracticeBoardStrings = PracticeBoardStrings(
@@ -176,6 +202,13 @@ private val japanesePracticeBoardStrings = PracticeBoardStrings(
     pronunciationLabel = "\u767a\u97f3\u3092\u518d\u751f",
     dictionaryLabel = "\u8f9e\u66f8\u3092\u898b\u308b",
     hskLabel = "HSK\u60c5\u5831",
+    statusReadyLabel = "\u6e96\u5099\u5b8c\u4e86",
+    statusStrokeProgressFormat = "\u753b %1\$d/%2\$d",
+    statusStartFromStrokeFormat = "%1\$d \u753b\u76ee\u304b\u3089\u958b\u59cb",
+    statusTryAgainFormat = "\u3082\u3046\u4e00\u5ea6\uff08\u30df\u30b9 %1\$d \u56de\uff09",
+    statusGreatContinueLabel = "\u3044\u3044\u3067\u3059\u306d\u3002\u6b21\u306e\u753b\u3078\u9032\u307f\u307e\u3057\u3087\u3046",
+    statusBackwardsAcceptedLabel = "\u9006\u65b9\u5411\u3067\u3057\u305f\u304c\u8a31\u5bb9\u3057\u307e\u3057\u305f",
+    statusPracticeCompleteLabel = "\u7df4\u7fd2\u5b8c\u4e86",
 )
 
 private val japaneseProgressStrings = ProgressStrings(
@@ -413,6 +446,11 @@ private val defaultCoursesStrings = CoursesStrings(
     lockedBrowseLabel = "Browse courses",
     lockedGreatJobLabel = "Great job!",
     iconStartDescriptionFormat = "Start HSK %1\$d",
+    toastSkippedLabel = "Skipped character",
+    toastMarkedLearnedFormat = "Marked %1\$s as learned",
+    toastCourseCompleteFormat = "HSK %1\$d complete!",
+    toastAutoAdvancedFormat = "Auto-advanced to %1\$s",
+    toastNextUpFormat = "Next up: %1\$s",
 )
 
 private val defaultAccountStrings = AccountStrings(
@@ -721,6 +759,11 @@ private val spanishCoursesStrings = CoursesStrings(
     lockedBrowseLabel = "Ver cursos",
     lockedGreatJobLabel = "¡Buen trabajo!",
     iconStartDescriptionFormat = "Iniciar HSK %1\$d",
+    toastSkippedLabel = "Carácter omitido",
+    toastMarkedLearnedFormat = "Marcaste %1\$s como aprendido",
+    toastCourseCompleteFormat = "HSK %1\$d completado",
+    toastAutoAdvancedFormat = "Avance automático a %1\$s",
+    toastNextUpFormat = "Siguiente: %1\$s",
 )
 
 private val spanishAccountStrings = AccountStrings(
@@ -827,6 +870,11 @@ private val japaneseCoursesStrings = CoursesStrings(
     lockedBrowseLabel = "コースを見る",
     lockedGreatJobLabel = "お疲れさま！",
     iconStartDescriptionFormat = "HSK %1\$d を開始",
+    toastSkippedLabel = "スキップしました",
+    toastMarkedLearnedFormat = "%1\$s を習得済みにしました",
+    toastCourseCompleteFormat = "HSK %1\$d 完了！",
+    toastAutoAdvancedFormat = "%1\$s に自動で進みました",
+    toastNextUpFormat = "次：%1\$s",
 )
 
 private val japaneseAccountStrings = AccountStrings(

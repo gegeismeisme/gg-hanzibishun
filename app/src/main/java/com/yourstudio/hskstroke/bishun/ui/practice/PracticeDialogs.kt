@@ -29,6 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.yourstudio.hskstroke.bishun.data.hsk.HskEntry
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
+import com.yourstudio.hskstroke.bishun.ui.character.AccountStrings
+import com.yourstudio.hskstroke.bishun.ui.character.LibraryStrings
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
+import com.yourstudio.hskstroke.bishun.ui.character.WordInfoError
 import com.yourstudio.hskstroke.bishun.ui.character.WordInfoUiState
 import kotlinx.coroutines.launch
 
@@ -38,6 +42,9 @@ fun WordInfoBottomSheet(
     symbol: String,
     entry: WordEntry?,
     wordInfoUiState: WordInfoUiState,
+    strings: LibraryStrings,
+    accountStrings: AccountStrings,
+    boardStrings: PracticeBoardStrings,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
     onPlayPronunciation: () -> Unit,
@@ -80,8 +87,9 @@ fun WordInfoBottomSheet(
                         text = entry?.word ?: symbol,
                         style = MaterialTheme.typography.headlineSmall,
                     )
+                    val pinyinText = entry?.pinyin?.trim().takeIf { !it.isNullOrBlank() } ?: strings.valueNotAvailable
                     Text(
-                        text = entry?.pinyin?.ifBlank { "Pinyin..." } ?: "Pinyin...",
+                        text = pinyinText,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -92,7 +100,7 @@ fun WordInfoBottomSheet(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = "Play pronunciation",
+                        contentDescription = boardStrings.pronunciationLabel,
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = speakingAlpha),
                     )
                 }
@@ -106,28 +114,31 @@ fun WordInfoBottomSheet(
                     ) {
                         CircularProgressIndicator(strokeWidth = 2.dp)
                         Text(
-                            text = "Loading dictionary entry…",
+                            text = strings.lookupLoadingLabel,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 }
 
                 is WordInfoUiState.Error -> {
+                    val message = when (wordInfoUiState.error) {
+                        WordInfoError.LoadFailed -> strings.errorRead
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = wordInfoUiState.message,
+                            text = message,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
                         TextButton(onClick = onRetry) {
-                            Text("Retry")
+                            Text(strings.lookupLabel)
                         }
                     }
                 }
 
                 WordInfoUiState.NotFound -> {
                     Text(
-                        text = "No dictionary entry available.",
+                        text = strings.errorNotFound,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -155,7 +166,7 @@ fun WordInfoBottomSheet(
                             .ifBlank {
                                 entry?.more?.normalizeWhitespace().orEmpty()
                             }
-                            .ifBlank { "Meaning unavailable." }
+                            .ifBlank { strings.definitionFallback }
                         Text(
                             text = content,
                             style = MaterialTheme.typography.bodyMedium,
@@ -165,7 +176,7 @@ fun WordInfoBottomSheet(
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = closeSheet) {
-                    Text("Close")
+                    Text(accountStrings.closeLabel)
                 }
             }
         }

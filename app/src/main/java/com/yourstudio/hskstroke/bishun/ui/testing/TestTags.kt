@@ -21,5 +21,6 @@ object TestTags {
     const val HOME_DAILY_PRACTICE_BUTTON = "home_daily_practice_button"
     const val HOME_PRACTICE_CONTENT = "home_practice_content"
     const val HOME_QUERY_FIELD = "home_query_field"
-}
 
+    const val LIBRARY_PRACTICE_BUTTON = "library_practice_button"
+}

@@ -31,6 +31,11 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     private var launchRequest by mutableStateOf<AppLaunchRequest?>(null)
 
+    fun dispatchLaunchIntent(intent: Intent) {
+        setIntent(intent)
+        launchRequest = AppLaunchRequests.parse(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -83,7 +88,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent)
-        launchRequest = AppLaunchRequests.parse(intent)
+        dispatchLaunchIntent(intent)
     }
 }

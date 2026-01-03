@@ -19,24 +19,15 @@ import com.yourstudio.hskstroke.bishun.data.history.PracticeHistoryEntry
 import com.yourstudio.hskstroke.bishun.data.history.PracticeHistoryStore
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
-import com.yourstudio.hskstroke.bishun.hanzi.core.HanziCounter
 import com.yourstudio.hskstroke.bishun.hanzi.model.CharacterDefinition
 import com.yourstudio.hskstroke.bishun.hanzi.model.Point
-import com.yourstudio.hskstroke.bishun.hanzi.model.UserStroke
 import com.yourstudio.hskstroke.bishun.hanzi.render.RenderState
-import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateOptions
 import com.yourstudio.hskstroke.bishun.hanzi.render.RenderStateSnapshot
-import com.yourstudio.hskstroke.bishun.hanzi.render.actions.CharacterActions
-import com.yourstudio.hskstroke.bishun.hanzi.render.actions.CharacterLayer
-import com.yourstudio.hskstroke.bishun.hanzi.render.actions.QuizActions
-import com.yourstudio.hskstroke.bishun.hanzi.quiz.StrokeMatcher
 import com.yourstudio.hskstroke.bishun.ui.practice.BoardSettings
 import com.yourstudio.hskstroke.bishun.ui.practice.PracticeGrid
 import com.yourstudio.hskstroke.bishun.ui.practice.StrokeColorOption
 import com.yourstudio.hskstroke.bishun.widget.DailyHanziWidgetUpdater
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -44,10 +35,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.math.min
 
 class CharacterViewModel(
     private val appContext: Context,
@@ -106,6 +95,26 @@ class CharacterViewModel(
     private val _userPreferences = MutableStateFlow(UserPreferences())
     val userPreferences: StateFlow<UserPreferences> = _userPreferences.asStateFlow()
 
+    private val courseSessionController = CourseSessionController(
+        scope = viewModelScope,
+        userPreferencesStore = userPreferencesStore,
+        hskProgressStore = hskProgressStore,
+        courseSession = _courseSession,
+        practiceQueueSession = _practiceQueueSession,
+        courseEvents = _courseEvents,
+        loadCharacter = ::loadCharacter,
+    )
+
+    private val practiceController = PracticeInteractionController(
+        scope = viewModelScope,
+        practiceState = _practiceState,
+        demoState = _demoState,
+        definitionProvider = { currentDefinition },
+        renderStateProvider = { renderState },
+        renderSnapshotProvider = { _renderSnapshot.value },
+        onPracticeCompleted = ::handlePracticeCompleted,
+    )
+
     private var currentDefinition: CharacterDefinition? = null
     private var loadCharacterJob: Job? = null
     private var loadCharacterToken: Long = 0
@@ -113,9 +122,6 @@ class CharacterViewModel(
     private var pendingAutoStartPracticeSymbol: String? = null
     private var dailyDetailsJob: Job? = null
     private var dailyDetailsRequest: Pair<String, Long>? = null
-    private var completionResetJob: Job? = null
-    private var activeUserStroke: UserStroke? = null
-    private val userStrokeIds = mutableListOf<Int>()
     private var courseEntries: Map<Int, List<String>> = emptyMap()
 
     init {
@@ -214,201 +220,75 @@ class CharacterViewModel(
     }
 
     fun startPracticeQueue(symbols: List<String>) {
-        val queue = symbols.asSequence()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .map(::firstCodePoint)
-            .distinct()
-            .toList()
-        if (queue.isEmpty()) return
-
-        _practiceQueueSession.value = PracticeQueueSession(symbols = queue, index = 0)
-        loadCharacter(queue.first())
+        courseSessionController.startPracticeQueue(symbols)
     }
 
     fun goToNextPracticeQueueCharacter() {
-        navigatePracticeQueue(1)
+        courseSessionController.goToNextPracticeQueueCharacter()
     }
 
     fun goToPreviousPracticeQueueCharacter() {
-        navigatePracticeQueue(-1)
+        courseSessionController.goToPreviousPracticeQueueCharacter()
     }
 
     fun restartPracticeQueue() {
-        val session = _practiceQueueSession.value ?: return
-        if (session.symbols.isEmpty()) return
-        _practiceQueueSession.value = session.copy(index = 0)
-        loadCharacter(session.symbols.first())
+        courseSessionController.restartPracticeQueue()
     }
 
     fun exitPracticeQueue() {
-        _practiceQueueSession.value = null
+        courseSessionController.exitPracticeQueue()
     }
 
     fun startCourse(level: Int, symbol: String) {
-        val symbols = courseEntries[level] ?: return
-        if (symbols.isEmpty()) return
-        val targetSymbol = symbol.takeIf { symbols.contains(it) } ?: symbols.first()
-        val index = symbols.indexOf(targetSymbol).takeIf { it >= 0 } ?: 0
-        _courseSession.value = CourseSession(level = level, symbols = symbols, index = index)
-        viewModelScope.launch { userPreferencesStore.saveCourseSession(level, targetSymbol) }
-        if (currentDefinition?.symbol != targetSymbol) {
-            loadCharacter(targetSymbol)
-        }
+        courseSessionController.startCourse(level, symbol, currentDefinition?.symbol)
     }
 
     fun goToNextCourseCharacter() {
-        navigateCourse(1)
+        courseSessionController.goToNextCourseCharacter()
     }
 
     fun goToPreviousCourseCharacter() {
-        navigateCourse(-1)
+        courseSessionController.goToPreviousCourseCharacter()
     }
 
     fun skipCourseCharacter() {
-        navigateCourse(1)
-        viewModelScope.launch { _courseEvents.emit(CourseEvent("Skipped character")) }
+        courseSessionController.skipCourseCharacter()
     }
 
     fun restartCourseLevel() {
-        val session = _courseSession.value ?: return
-        if (session.symbols.isEmpty()) return
-        _courseSession.value = session.copy(index = 0)
-        val symbol = session.symbols.first()
-        viewModelScope.launch { userPreferencesStore.saveCourseSession(session.level, symbol) }
-        loadCharacter(symbol)
+        courseSessionController.restartCourseLevel()
     }
 
     fun markCourseCharacterLearned(symbol: String) {
-        viewModelScope.launch {
-            hskProgressStore.add(symbol)
-            _courseEvents.emit(CourseEvent("Marked $symbol as learned"))
-        }
+        courseSessionController.markCourseCharacterLearned(symbol)
     }
 
     fun playDemo(loop: Boolean = false) {
-        val definition = currentDefinition ?: return
-        val state = renderState ?: return
-        if (_demoState.value.isPlaying) return
-        _demoState.value = DemoState(isPlaying = true, loop = loop)
-        viewModelScope.launch {
-            if (_practiceState.value.isActive || _practiceState.value.completedStrokes.isNotEmpty()) {
-                cancelCompletionReset()
-                clearUserStrokes()
-                resetPracticeState(definition)
-            }
-            do {
-                state.run(CharacterActions.hideCharacter(CharacterLayer.MAIN, definition, DEMO_FADE_DURATION))
-                state.run(CharacterActions.prepareLayerForAnimation(CharacterLayer.MAIN, definition))
-                for (stroke in definition.strokes) {
-                    if (!_demoState.value.isPlaying) {
-                        _demoState.value = DemoState()
-                        return@launch
-                    }
-                    state.run(
-                        CharacterActions.showStroke(
-                            CharacterLayer.MAIN,
-                            stroke.strokeNum,
-                            DEFAULT_ANIMATION_DURATION,
-                        ),
-                    )
-                    delay(DELAY_BETWEEN_STROKES)
-                }
-                state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, DEMO_REVEAL_DURATION))
-                if (_demoState.value.loop) {
-                    delay(DEMO_LOOP_PAUSE)
-                }
-            } while (_demoState.value.loop && _demoState.value.isPlaying)
-            _demoState.value = DemoState()
-        }
+        practiceController.playDemo(loop)
     }
 
     fun stopDemo() {
-        _demoState.value = DemoState()
+        practiceController.stopDemo()
     }
 
     fun resetCharacter() {
-        val definition = currentDefinition ?: return
-        val state = renderState ?: return
-        viewModelScope.launch {
-            state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, 200))
-            cancelCompletionReset()
-            resetPracticeState(definition)
-        }
+        practiceController.resetCharacter()
     }
 
     fun startPractice() {
-        val definition = currentDefinition ?: return
-        val state = renderState ?: return
-        cancelCompletionReset()
-        viewModelScope.launch {
-            stopDemo()
-            state.run(CharacterActions.showCharacter(CharacterLayer.MAIN, definition, PRACTICE_FADE_DURATION))
-            clearUserStrokes()
-            state.run(QuizActions.startQuiz(definition, PRACTICE_FADE_DURATION, 0))
-            _practiceState.value = PracticeState(
-                isActive = true,
-                totalStrokes = definition.strokeCount,
-                statusMessage = "Start from stroke 1",
-                mistakeSinceHint = 0,
-                completedStrokes = emptySet(),
-            )
-        }
+        practiceController.startPractice()
     }
 
     fun onPracticeStrokeStart(charPoint: Point, externalPoint: Point) {
-        val state = renderState ?: return
-        if (!_practiceState.value.isActive) return
-        val strokeId = HanziCounter.next()
-        val userStroke = UserStroke(strokeId, charPoint, externalPoint)
-        activeUserStroke = userStroke
-        userStrokeIds.add(strokeId)
-        viewModelScope.launch {
-            state.run(QuizActions.startUserStroke(strokeId, charPoint))
-        }
+        practiceController.onPracticeStrokeStart(charPoint, externalPoint)
     }
 
     fun onPracticeStrokeMove(charPoint: Point, externalPoint: Point) {
-        val state = renderState ?: return
-        val stroke = activeUserStroke ?: return
-        stroke.append(charPoint, externalPoint)
-        viewModelScope.launch {
-            state.run(QuizActions.updateUserStroke(stroke.id, stroke.points))
-        }
+        practiceController.onPracticeStrokeMove(charPoint, externalPoint)
     }
 
     fun onPracticeStrokeEnd() {
-        val definition = currentDefinition ?: return
-        val state = renderState ?: return
-        val practice = _practiceState.value
-        val stroke = activeUserStroke ?: return
-        activeUserStroke = null
-        val fadeDuration = _renderSnapshot.value?.options?.drawingFadeDuration ?: PRACTICE_FADE_DURATION
-        viewModelScope.launch {
-            state.run(QuizActions.hideUserStroke(stroke.id, fadeDuration))
-        }
-        if (!practice.isActive || stroke.points.size < 2) {
-            return
-        }
-        viewModelScope.launch {
-            val snapshot = _renderSnapshot.value
-            val options = StrokeMatcher.Options(
-                leniency = PRACTICE_LENIENCY,
-                isOutlineVisible = snapshot?.character?.outline?.opacity ?: 0f > 0f,
-                averageDistanceThreshold = PRACTICE_DISTANCE_THRESHOLD,
-            )
-            val result = StrokeMatcher.matches(
-                stroke,
-                definition,
-                practice.currentStrokeIndex,
-                options,
-            )
-            if (result.isMatch) {
-                handleCorrectStroke(result.isStrokeBackwards)
-            } else {
-                handleMistake()
-            }
-        }
+        practiceController.onPracticeStrokeEnd()
     }
 
     private fun loadCharacter(input: String) {
@@ -427,12 +307,10 @@ class CharacterViewModel(
                     _uiState.value = CharacterUiState.Success(it)
                     currentDefinition = it
                     setupRenderState(it)
-                    cancelCompletionReset()
-                    resetPracticeState(it)
+                    practiceController.onDefinitionLoaded(it)
                     wordInfoController.reset()
                     loadHskInfo(it.symbol)
-                    alignCourseSession(it.symbol)
-                    alignPracticeQueueSession(it.symbol)
+                    courseSessionController.alignSessions(it.symbol)
                     if (pendingAutoStartPracticeToken == token && pendingAutoStartPracticeSymbol == it.symbol) {
                         pendingAutoStartPracticeToken = null
                         pendingAutoStartPracticeSymbol = null
@@ -440,8 +318,11 @@ class CharacterViewModel(
                     }
                 },
                 onFailure = {
-                    val message = it.message ?: "加载失败，请稍后再试"
-                    _uiState.value = CharacterUiState.Error(message)
+                    val error = when (it) {
+                        is java.io.IOException -> CharacterLoadError.NotFound
+                        else -> CharacterLoadError.LoadFailed
+                    }
+                    _uiState.value = CharacterUiState.Error(error)
                     wordInfoController.reset()
                     _hskEntry.value = null
                     if (pendingAutoStartPracticeToken == token) {
@@ -455,21 +336,6 @@ class CharacterViewModel(
 
     private fun setupRenderState(definition: CharacterDefinition) {
         renderController.setup(definition)
-    }
-
-    private fun resetPracticeState(definition: CharacterDefinition) {
-        _practiceState.value = PracticeState(
-            isActive = false,
-            isComplete = false,
-            totalStrokes = definition.strokeCount,
-            currentStrokeIndex = 0,
-            totalMistakes = 0,
-            statusMessage = "",
-            mistakeSinceHint = 0,
-            completedStrokes = emptySet(),
-        )
-        activeUserStroke = null
-        userStrokeIds.clear()
     }
 
     fun requestWordInfo(symbol: String? = currentDefinition?.symbol) {
@@ -499,6 +365,11 @@ class CharacterViewModel(
             if (_courseCatalog.value.isEmpty()) {
                 _courseCatalog.value = courseEntries
             }
+            courseSessionController.updateCatalog(courseEntries)
+            courseSessionController.restoreCourseSession(
+                level = _userPreferences.value.courseLevel,
+                symbol = _userPreferences.value.courseSymbol,
+            )
             return courseEntries
         }
 
@@ -508,6 +379,11 @@ class CharacterViewModel(
 
         courseEntries = catalog
         _courseCatalog.value = catalog
+        courseSessionController.updateCatalog(catalog)
+        courseSessionController.restoreCourseSession(
+            level = _userPreferences.value.courseLevel,
+            symbol = _userPreferences.value.courseSymbol,
+        )
         return catalog
     }
 
@@ -558,61 +434,13 @@ class CharacterViewModel(
                     strokeColor = StrokeColorOption.entries.getOrElse(prefs.strokeColor) { StrokeColorOption.PURPLE },
                     showTemplate = prefs.showTemplate,
                 )
-                if (prefs.courseLevel != null && prefs.courseSymbol != null) {
-                    val symbols = courseEntries[prefs.courseLevel]
-                    if (symbols != null && symbols.contains(prefs.courseSymbol)) {
-                        _courseSession.value = CourseSession(
-                            level = prefs.courseLevel,
-                            symbols = symbols,
-                            index = symbols.indexOf(prefs.courseSymbol),
-                        )
-                    }
+                if (prefs.courseLevel == null || prefs.courseSymbol == null) {
+                    _courseSession.value = null
+                } else {
+                    _courseSession.value = null
+                    courseSessionController.restoreCourseSession(prefs.courseLevel, prefs.courseSymbol)
                 }
             }
-        }
-    }
-
-    private fun navigateCourse(delta: Int) {
-        val session = _courseSession.value ?: return
-        val newIndex = (session.index + delta).coerceIn(0, session.symbols.size - 1)
-        if (newIndex == session.index) return
-        val nextSymbol = session.symbols[newIndex]
-        _courseSession.value = session.copy(index = newIndex)
-        viewModelScope.launch {
-            userPreferencesStore.saveCourseSession(session.level, nextSymbol)
-            _courseEvents.emit(CourseEvent("Next up: $nextSymbol"))
-        }
-        loadCharacter(nextSymbol)
-    }
-
-    private fun alignCourseSession(symbol: String) {
-        val session = _courseSession.value ?: return
-        val index = session.symbols.indexOf(symbol)
-        if (index == -1) {
-            _courseSession.value = null
-            viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
-        } else if (index != session.index) {
-            _courseSession.value = session.copy(index = index)
-            viewModelScope.launch { userPreferencesStore.saveCourseSession(session.level, symbol) }
-        }
-    }
-
-    private fun navigatePracticeQueue(delta: Int) {
-        val session = _practiceQueueSession.value ?: return
-        val newIndex = (session.index + delta).coerceIn(0, session.symbols.size - 1)
-        if (newIndex == session.index) return
-        val nextSymbol = session.symbols[newIndex]
-        _practiceQueueSession.value = session.copy(index = newIndex)
-        loadCharacter(nextSymbol)
-    }
-
-    private fun alignPracticeQueueSession(symbol: String) {
-        val session = _practiceQueueSession.value ?: return
-        val index = session.symbols.indexOf(symbol)
-        if (index == -1) {
-            _practiceQueueSession.value = null
-        } else if (index != session.index) {
-            _practiceQueueSession.value = session.copy(index = index)
         }
     }
 
@@ -657,8 +485,7 @@ class CharacterViewModel(
     }
 
     fun clearCourseSession() {
-        _courseSession.value = null
-        viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
+        courseSessionController.clearCourseSession()
     }
 
     private fun firstCodePoint(input: String): String {
@@ -666,142 +493,27 @@ class CharacterViewModel(
         return String(Character.toChars(codePoint))
     }
 
-    private suspend fun clearUserStrokes() {
-        val ids = userStrokeIds.toList()
-        if (ids.isNotEmpty()) {
-            renderState?.run(QuizActions.removeAllUserStrokes(ids))
-        }
-        userStrokeIds.clear()
-        activeUserStroke = null
-    }
-
-    private fun cancelCompletionReset() {
-        completionResetJob?.cancel()
-        completionResetJob = null
-    }
-
-    private fun scheduleCompletionReset(symbol: String) {
-        completionResetJob?.cancel()
-        completionResetJob = viewModelScope.launch {
-            try {
-                delay(PRACTICE_COMPLETION_RESET_DELAY)
-                if (currentDefinition?.symbol != symbol) return@launch
-                clearUserStrokes()
-                val definition = currentDefinition ?: return@launch
-                renderState?.run(
-                    CharacterActions.showCharacter(
-                        CharacterLayer.MAIN,
-                        definition,
-                        PRACTICE_FADE_DURATION,
-                    ),
-                )
-                resetPracticeState(definition)
-            } finally {
-                completionResetJob = null
-            }
-        }
-    }
-
-    private suspend fun handleCorrectStroke(isBackwards: Boolean) {
-        val definition = currentDefinition ?: return
-        val state = renderState ?: return
-        val practice = _practiceState.value
-        val strokeIndex = practice.currentStrokeIndex
-        state.run(
-            CharacterActions.showStroke(
-                CharacterLayer.MAIN,
-                strokeIndex,
-                PRACTICE_ANIMATION_DURATION,
-            ),
-        )
-        val nextIndex = strokeIndex + 1
-        val complete = nextIndex >= definition.strokeCount
-        val message = when {
-            complete -> "Practice complete!"
-            isBackwards -> "Stroke direction reversed but accepted"
-            else -> "Great! Continue to the next stroke"
-        }
-        _practiceState.value = practice.copy(
-            currentStrokeIndex = min(nextIndex, definition.strokeCount - 1),
-            isComplete = complete,
-            isActive = !complete,
-            statusMessage = message,
-            mistakeSinceHint = 0,
-            completedStrokes = practice.completedStrokes + strokeIndex,
-        )
-        if (complete) {
-            viewModelScope.launch {
-                hskProgressStore.add(definition.symbol)
-                practiceHistoryStore.record(
-                    PracticeHistoryEntry(
-                        symbol = definition.symbol,
-                        timestamp = System.currentTimeMillis(),
-                        totalStrokes = definition.strokeCount,
-                        mistakes = practice.totalMistakes,
-                        completed = true,
-                    ),
-                )
-                val todayEpochDay = LocalDate.now(ZoneId.systemDefault()).toEpochDay()
-                userPreferencesStore.recordPracticeCompletion(definition.symbol, todayEpochDay)
-                runCatching { DailyHanziWidgetUpdater.updateAll(appContext) }
-            }
-            state.run(QuizActions.highlightCompleteChar(definition, null, 600))
-            advanceCourseAfterCompletion()
-            scheduleCompletionReset(definition.symbol)
-        }
-    }
-
-    private fun advanceCourseAfterCompletion() {
-        val session = _courseSession.value ?: return
-        val symbol = currentDefinition?.symbol ?: return
-        if (session.symbols.getOrNull(session.index) != symbol) return
-        if (session.index >= session.symbols.lastIndex) {
-            _courseSession.value = null
-            viewModelScope.launch { userPreferencesStore.saveCourseSession(null, null) }
-            viewModelScope.launch {
-                _courseEvents.emit(CourseEvent("HSK ${session.level} complete!"))
-            }
-            return
-        }
-        val nextIndex = session.index + 1
-        val nextSymbol = session.symbols[nextIndex]
-        _courseSession.value = session.copy(index = nextIndex)
-        viewModelScope.launch { userPreferencesStore.saveCourseSession(session.level, nextSymbol) }
+    private fun handlePracticeCompleted(completion: PracticeInteractionController.PracticeCompletion) {
         viewModelScope.launch {
-            _courseEvents.emit(CourseEvent("Auto-advanced to $nextSymbol"))
+            hskProgressStore.add(completion.symbol)
+            practiceHistoryStore.record(
+                PracticeHistoryEntry(
+                    symbol = completion.symbol,
+                    timestamp = System.currentTimeMillis(),
+                    totalStrokes = completion.totalStrokes,
+                    mistakes = completion.mistakes,
+                    completed = true,
+                ),
+            )
+            val todayEpochDay = LocalDate.now(ZoneId.systemDefault()).toEpochDay()
+            userPreferencesStore.recordPracticeCompletion(completion.symbol, todayEpochDay)
+            runCatching { DailyHanziWidgetUpdater.updateAll(appContext) }
         }
-        loadCharacter(nextSymbol)
-    }
-
-    private fun handleMistake() {
-        val practice = _practiceState.value
-        val updatedMistakes = practice.totalMistakes + 1
-        val mistakesSinceHint = practice.mistakeSinceHint + 1
-        val showHint = mistakesSinceHint >= HINT_THRESHOLD
-        _practiceState.value = practice.copy(
-            totalMistakes = updatedMistakes,
-            statusMessage = "Try again (mistakes $updatedMistakes)",
-            mistakeSinceHint = if (showHint) 0 else mistakesSinceHint,
-        )
-        if (showHint) {
-            triggerHint()
-        }
+        courseSessionController.advanceAfterPracticeCompletion(completion.symbol)
     }
 
     fun requestHint() {
-        if (!_practiceState.value.isActive) return
-        triggerHint()
-    }
-
-    private fun triggerHint() {
-        val definition = currentDefinition ?: return
-        val state = renderState ?: return
-        val practice = _practiceState.value
-        val stroke = definition.strokes.getOrNull(practice.currentStrokeIndex) ?: return
-        viewModelScope.launch {
-            state.run(CharacterActions.highlightStroke(stroke, null, PRACTICE_HINT_SPEED))
-        }
-        _practiceState.value = practice.copy(mistakeSinceHint = 0)
+        practiceController.requestHint()
     }
 
     override fun onCleared() {
@@ -812,19 +524,6 @@ class CharacterViewModel(
 
     companion object {
         private const val DEFAULT_CHAR = "\u6c38"
-        private const val MAX_QUERY_LENGTH = 2
-        private const val DEFAULT_ANIMATION_DURATION = 600L
-        private const val DELAY_BETWEEN_STROKES = 150L
-        private const val PRACTICE_ANIMATION_DURATION = 400L
-        private const val PRACTICE_FADE_DURATION = 150L
-        private const val PRACTICE_LENIENCY = 1.0
-        private const val PRACTICE_DISTANCE_THRESHOLD = 350.0
-        private const val HINT_THRESHOLD = 3
-        private const val PRACTICE_HINT_SPEED = 3.0
-        private const val PRACTICE_COMPLETION_RESET_DELAY = 3_000L
-        private const val DEMO_FADE_DURATION = 250L
-        private const val DEMO_REVEAL_DURATION = 120L
-        private const val DEMO_LOOP_PAUSE = 600L
 
         fun factory(appContext: Context): ViewModelProvider.Factory {
             val applicationContext = appContext.applicationContext

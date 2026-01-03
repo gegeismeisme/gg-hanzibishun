@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.yourstudio.hskstroke.bishun.ui.character.CoursesStrings
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeState
 import com.yourstudio.hskstroke.bishun.ui.character.PracticeBoardStrings
+import com.yourstudio.hskstroke.bishun.ui.character.PracticeStatus
 import com.yourstudio.hskstroke.bishun.ui.character.components.IconActionButton
 import java.util.Locale
 import kotlin.math.max
@@ -31,7 +32,10 @@ data class PracticeSummaryUi(
     val statusText: String,
 )
 
-fun PracticeState.toSummary(): PracticeSummaryUi {
+fun PracticeState.toSummary(
+    boardStrings: PracticeBoardStrings,
+    locale: Locale,
+): PracticeSummaryUi {
     val normalizedTotal = max(1, totalStrokes)
     val completedCount = when {
         isComplete -> normalizedTotal
@@ -39,12 +43,30 @@ fun PracticeState.toSummary(): PracticeSummaryUi {
         else -> min(currentStrokeIndex, normalizedTotal)
     }
     val defaultStatus = when {
-        isComplete -> "Practice complete"
-        isActive -> "Stroke ${completedCount + 1}/$normalizedTotal"
-        else -> "Ready to start"
+        isComplete -> boardStrings.statusPracticeCompleteLabel
+        isActive -> String.format(locale, boardStrings.statusStrokeProgressFormat, completedCount + 1, normalizedTotal)
+        else -> boardStrings.statusReadyLabel
     }
-    val status = statusMessage.ifBlank { defaultStatus }
-    return PracticeSummaryUi(progressText = "$completedCount/$normalizedTotal", statusText = status)
+    val resolvedStatus = when (val state = status) {
+        PracticeStatus.None -> defaultStatus
+        is PracticeStatus.StartFromStroke -> String.format(
+            locale,
+            boardStrings.statusStartFromStrokeFormat,
+            state.strokeNumber,
+        )
+        is PracticeStatus.TryAgain -> String.format(
+            locale,
+            boardStrings.statusTryAgainFormat,
+            state.mistakes,
+        )
+        PracticeStatus.GreatContinue -> boardStrings.statusGreatContinueLabel
+        PracticeStatus.BackwardsAccepted -> boardStrings.statusBackwardsAcceptedLabel
+        PracticeStatus.Complete -> boardStrings.statusPracticeCompleteLabel
+    }
+    return PracticeSummaryUi(
+        progressText = "$completedCount/$normalizedTotal",
+        statusText = resolvedStatus,
+    )
 }
 
 @Composable

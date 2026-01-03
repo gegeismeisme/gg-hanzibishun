@@ -6,7 +6,7 @@ data class PracticeState(
     val currentStrokeIndex: Int = 0,
     val totalStrokes: Int = 0,
     val totalMistakes: Int = 0,
-    val statusMessage: String = "",
+    val status: PracticeStatus = PracticeStatus.None,
     val mistakeSinceHint: Int = 0,
     val completedStrokes: Set<Int> = emptySet(),
 )

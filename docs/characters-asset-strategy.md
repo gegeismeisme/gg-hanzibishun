@@ -75,3 +75,8 @@
 - “首次加载一个字（默认 `永`）”耗时下降或至少不回退
 - 内存峰值不明显上升（避免大 json 全量解析）
 
+## 当前落地状态（Zip Pack 双轨）
+
+- 已实现 Zip Pack 双轨加载：新增 `CharacterPackedZipDataSource`，并在 `DefaultCharacterDataRepository` 中优先读取 `characters/characters.pack.zip`（复制到 `filesDir` 后用 `ZipFile` 读取），失败回退到原 `assets/characters/*.json`。
+- 已补打包脚本：`tools/characters/build_characters_pack_zip.py`（默认输出到 `app/src/main/assets/characters/characters.pack.zip`）。
+- 已补关键路径测试：`CharacterPackedZipDataSourceTest` 生成本地 zip 并验证常用字（`永`）可被稳定解析。
