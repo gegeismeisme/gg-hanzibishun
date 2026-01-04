@@ -45,10 +45,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
 import com.yourstudio.hskstroke.bishun.data.word.WordEntry
 import com.yourstudio.hskstroke.bishun.ui.character.LibraryStrings
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
@@ -69,6 +72,10 @@ fun LibraryScreen(
     val strings = rememberLocalizedStrings(languageOverride)
     val libraryStrings = strings.library
     val locale = strings.locale
+    val context = LocalContext.current
+    val preferencesStore = remember { UserPreferencesStore(context.applicationContext) }
+    val userPreferences by preferencesStore.data.collectAsState(initial = UserPreferences())
+    val isPro = userPreferences.isPro
 
     var selectedTabKey by rememberSaveable { mutableStateOf(LibraryTab.Search.name) }
     val selectedTab = remember(selectedTabKey) { LibraryTab.valueOf(selectedTabKey) }
@@ -96,6 +103,25 @@ fun LibraryScreen(
             } else {
                 practiceDialogWord = word
             }
+        }
+    }
+    val requestPracticeSelection: (List<String>) -> Unit = { words ->
+        val targets = words.asSequence()
+            .flatMap { it.asSequence() }
+            .filter { it in '\u4e00'..'\u9fff' }
+            .map { it.toString() }
+            .distinct()
+            .toList()
+        when (targets.size) {
+            0 -> {
+                val fallback = words.firstOrNull()?.trim()?.take(1).orEmpty()
+                if (fallback.isNotBlank()) {
+                    onLoadInPractice(fallback)
+                }
+            }
+
+            1 -> onLoadInPractice(targets.first())
+            else -> onLoadPracticeQueue(targets)
         }
     }
     Column(
@@ -152,7 +178,9 @@ fun LibraryScreen(
                     details = uiState.wordDetails,
                     strings = libraryStrings,
                     locale = locale,
+                    isPro = isPro,
                     onPractice = requestPractice,
+                    onPracticeSelected = requestPracticeSelection,
                     onOpen = {
                         viewModel.loadCharacter(it)
                         selectedTabKey = LibraryTab.Search.name
@@ -171,7 +199,9 @@ fun LibraryScreen(
                     details = uiState.wordDetails,
                     strings = libraryStrings,
                     locale = locale,
+                    isPro = isPro,
                     onPractice = requestPractice,
+                    onPracticeSelected = requestPracticeSelection,
                     onOpen = {
                         viewModel.loadCharacter(it)
                         selectedTabKey = LibraryTab.Search.name
@@ -342,13 +372,16 @@ private fun LibrarySearchTab(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FavoritesTab(
     favorites: List<String>,
     details: Map<String, WordEntry>,
     strings: LibraryStrings,
     locale: Locale,
+    isPro: Boolean,
     onPractice: (String) -> Unit,
+    onPracticeSelected: (List<String>) -> Unit,
     onOpen: (String) -> Unit,
     onRemove: (String) -> Unit,
     onRemoveSelected: (Collection<String>) -> Unit,
@@ -451,7 +484,11 @@ private fun FavoritesTab(
 
         if (isSelecting) {
             val allSelected = filteredFavorites.isNotEmpty() && selectedWords.size == filteredFavorites.size
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            val orderedSelection = remember(filteredFavorites, selectedWords) { filteredFavorites.filter { it in selectedWords } }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 TextButton(
                     onClick = {
                         selectedWords = if (allSelected) {
@@ -462,6 +499,20 @@ private fun FavoritesTab(
                     },
                     enabled = filteredFavorites.isNotEmpty(),
                 ) { Text(if (allSelected) strings.deselectAllLabel else strings.selectAllLabel) }
+                OutlinedButton(
+                    onClick = {
+                        onPracticeSelected(orderedSelection)
+                        selectedWords = emptySet()
+                        isSelecting = false
+                    },
+                    enabled = orderedSelection.isNotEmpty() && isPro,
+                ) {
+                    Text(
+                        text = if (isPro) strings.practiceCharactersLabel else "${strings.practiceCharactersLabel} · Pro",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 OutlinedButton(
                     onClick = {
                         onRemoveSelected(selectedWords)
@@ -514,7 +565,9 @@ private fun HistoryTab(
     details: Map<String, WordEntry>,
     strings: LibraryStrings,
     locale: Locale,
+    isPro: Boolean,
     onPractice: (String) -> Unit,
+    onPracticeSelected: (List<String>) -> Unit,
     onOpen: (String) -> Unit,
     onTogglePinned: (String) -> Unit,
     onToggleFavorite: (String) -> Unit,
@@ -641,6 +694,7 @@ private fun HistoryTab(
             val selectedNotFavorites = remember(selectedWords, favoritesSet) { selectedWords.filterNot { it in favoritesSet }.toSet() }
             val orderedToPin = remember(allVisible, selectedUnpinned) { allVisible.filter { it in selectedUnpinned } }
             val orderedToSave = remember(allVisible, selectedNotFavorites) { allVisible.filter { it in selectedNotFavorites } }
+            val orderedSelection = remember(allVisible, selectedWords) { allVisible.filter { it in selectedWords } }
             val allSelected = allVisible.isNotEmpty() && selectedWords.size == allVisible.size
 
             FlowRow(
@@ -652,6 +706,15 @@ private fun HistoryTab(
                         selectedWords = if (allSelected) emptySet() else allVisible.toSet()
                     },
                     label = { Text(if (allSelected) strings.deselectAllLabel else strings.selectAllLabel) },
+                )
+                AssistChip(
+                    onClick = {
+                        onPracticeSelected(orderedSelection)
+                        selectedWords = emptySet()
+                        isSelecting = false
+                    },
+                    enabled = orderedSelection.isNotEmpty() && isPro,
+                    label = { Text(if (isPro) strings.practiceCharactersLabel else "${strings.practiceCharactersLabel} · Pro") },
                 )
                 AssistChip(
                     onClick = {

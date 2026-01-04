@@ -17,6 +17,8 @@ data class UserPreferences(
     val strokeColor: Int = 0,
     val showTemplate: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.System,
+    val accentColorIndex: Int = 0,
+    val brushWidthIndex: Int = 1,
     val volumeSafetyEnabled: Boolean = true,
     val volumeSafetyThresholdPercent: Int = 80,
     val volumeSafetyLowerToPercent: Int = 30,
@@ -38,6 +40,10 @@ data class UserPreferences(
     val libraryRecentSearches: List<String> = emptyList(),
     val libraryPinnedSearches: List<String> = emptyList(),
     val libraryFavorites: List<String> = emptyList(),
+    val isPro: Boolean = false,
+    val proEntitledProducts: List<String> = emptyList(),
+    val billingLastSuccessfulSyncEpochMs: Long? = null,
+    val billingLastErrorCode: Int? = null,
 )
 
 class UserPreferencesStore(private val context: Context) {
@@ -48,6 +54,8 @@ class UserPreferencesStore(private val context: Context) {
             strokeColor = prefs[KEY_STROKE_COLOR] ?: 0,
             showTemplate = prefs[KEY_SHOW_TEMPLATE] ?: true,
             themeMode = ThemeMode.fromStoredValue(prefs[KEY_THEME_MODE]),
+            accentColorIndex = prefs[KEY_ACCENT_COLOR_INDEX] ?: 0,
+            brushWidthIndex = prefs[KEY_BRUSH_WIDTH_INDEX] ?: DEFAULT_BRUSH_WIDTH_INDEX,
             volumeSafetyEnabled = prefs[KEY_VOLUME_SAFETY_ENABLED] ?: true,
             volumeSafetyThresholdPercent = prefs[KEY_VOLUME_SAFETY_THRESHOLD] ?: 80,
             volumeSafetyLowerToPercent = prefs[KEY_VOLUME_SAFETY_LOWER_TO] ?: 30,
@@ -69,6 +77,10 @@ class UserPreferencesStore(private val context: Context) {
             libraryRecentSearches = decodeStringList(prefs[KEY_LIBRARY_RECENTS]),
             libraryPinnedSearches = decodeStringList(prefs[KEY_LIBRARY_PINNED_RECENTS]),
             libraryFavorites = decodeStringList(prefs[KEY_LIBRARY_FAVORITES]),
+            isPro = prefs[KEY_PRO_ENTITLED] ?: false,
+            proEntitledProducts = decodeStringList(prefs[KEY_PRO_PRODUCTS]),
+            billingLastSuccessfulSyncEpochMs = prefs[KEY_BILLING_LAST_SUCCESSFUL_SYNC_EPOCH_MS],
+            billingLastErrorCode = prefs[KEY_BILLING_LAST_ERROR_CODE],
         )
     }
 
@@ -93,6 +105,18 @@ class UserPreferencesStore(private val context: Context) {
     suspend fun setThemeMode(themeMode: ThemeMode) {
         context.userPreferencesDataStore.edit { prefs ->
             prefs[KEY_THEME_MODE] = themeMode.storedValue
+        }
+    }
+
+    suspend fun setAccentColorIndex(index: Int) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_ACCENT_COLOR_INDEX] = index.coerceAtLeast(0)
+        }
+    }
+
+    suspend fun setBrushWidthIndex(index: Int) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_BRUSH_WIDTH_INDEX] = index.coerceAtLeast(0)
         }
     }
 
@@ -272,6 +296,29 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun updateProEntitlement(entitled: Boolean, products: List<String>, syncedAtEpochMs: Long) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[KEY_PRO_ENTITLED] = entitled
+            if (products.isEmpty()) {
+                prefs.remove(KEY_PRO_PRODUCTS)
+            } else {
+                prefs[KEY_PRO_PRODUCTS] = encodeStringList(products)
+            }
+            prefs[KEY_BILLING_LAST_SUCCESSFUL_SYNC_EPOCH_MS] = syncedAtEpochMs
+            prefs.remove(KEY_BILLING_LAST_ERROR_CODE)
+        }
+    }
+
+    suspend fun setBillingLastErrorCode(responseCode: Int?) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (responseCode == null) {
+                prefs.remove(KEY_BILLING_LAST_ERROR_CODE)
+            } else {
+                prefs[KEY_BILLING_LAST_ERROR_CODE] = responseCode
+            }
+        }
+    }
+
     suspend fun clearAll() {
         context.userPreferencesDataStore.edit { prefs ->
             prefs.clear()
@@ -284,6 +331,8 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_STROKE_COLOR = intPreferencesKey("stroke_color_index")
         private val KEY_SHOW_TEMPLATE = androidx.datastore.preferences.core.booleanPreferencesKey("show_template")
         private val KEY_THEME_MODE = intPreferencesKey("theme_mode")
+        private val KEY_ACCENT_COLOR_INDEX = intPreferencesKey("accent_color_index")
+        private val KEY_BRUSH_WIDTH_INDEX = intPreferencesKey("brush_width_index")
         private val KEY_VOLUME_SAFETY_ENABLED = androidx.datastore.preferences.core.booleanPreferencesKey("volume_safety_enabled")
         private val KEY_VOLUME_SAFETY_THRESHOLD = intPreferencesKey("volume_safety_threshold_percent")
         private val KEY_VOLUME_SAFETY_LOWER_TO = intPreferencesKey("volume_safety_lower_to_percent")
@@ -306,8 +355,13 @@ class UserPreferencesStore(private val context: Context) {
         private val KEY_LIBRARY_RECENTS = stringPreferencesKey("library_recent_searches")
         private val KEY_LIBRARY_PINNED_RECENTS = stringPreferencesKey("library_pinned_recent_searches")
         private val KEY_LIBRARY_FAVORITES = stringPreferencesKey("library_favorites")
+        private val KEY_PRO_ENTITLED = androidx.datastore.preferences.core.booleanPreferencesKey("pro_entitled")
+        private val KEY_PRO_PRODUCTS = stringPreferencesKey("pro_entitled_products")
+        private val KEY_BILLING_LAST_SUCCESSFUL_SYNC_EPOCH_MS = longPreferencesKey("billing_last_successful_sync_epoch_ms")
+        private val KEY_BILLING_LAST_ERROR_CODE = intPreferencesKey("billing_last_error_code")
         private const val LIST_DELIMITER = "\u0001"
         private const val DEFAULT_DAILY_REMINDER_TIME_MINUTES = 20 * 60
+        private const val DEFAULT_BRUSH_WIDTH_INDEX = 1
 
         private fun decodeStringList(raw: String?): List<String> {
             if (raw.isNullOrBlank()) return emptyList()

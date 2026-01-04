@@ -172,6 +172,10 @@ fun PracticeContent(
         val gridMode = boardSettings.grid
         val strokeColorOption = boardSettings.strokeColor
         val strokeColor = strokeColorOption.color
+        val brushWidthOption = remember(userPreferences.brushWidthIndex, userPreferences.isPro) {
+            val option = BrushWidthOption.fromStoredIndex(userPreferences.brushWidthIndex)
+            if (!option.requiresPro || userPreferences.isPro) option else BrushWidthOption.Regular
+        }
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
@@ -198,6 +202,7 @@ fun PracticeContent(
                                 practiceState = practiceState,
                                 gridMode = gridMode,
                                 userStrokeColor = strokeColor,
+                                userStrokeWidthPx = brushWidthOption.strokeWidthPx,
                                 showTemplate = showTemplate,
                                 calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
                                 onStrokeStart = onStrokeStart,
@@ -251,6 +256,7 @@ fun PracticeContent(
                             practiceState = practiceState,
                             gridMode = gridMode,
                             userStrokeColor = strokeColor,
+                            userStrokeWidthPx = brushWidthOption.strokeWidthPx,
                             showTemplate = showTemplate,
                             calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
                             onStrokeStart = onStrokeStart,

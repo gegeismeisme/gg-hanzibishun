@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import com.yourstudio.hskstroke.bishun.data.settings.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AccentLilacDark,
+    primary = AccentColorOption.Lilac.darkPrimary,
     onPrimary = Color(0xFF121214),
     secondary = OnSurfaceVariantDark,
     background = BackgroundDark,
@@ -25,7 +25,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = AccentLilacLight,
+    primary = AccentColorOption.Lilac.lightPrimary,
     onPrimary = Color(0xFF121214),
     secondary = OnSurfaceVariantLight,
     background = BackgroundLight,
@@ -39,6 +39,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun BishunTheme(
     themeMode: ThemeMode = ThemeMode.System,
+    accentColor: AccentColorOption = AccentColorOption.Lilac,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
@@ -48,7 +49,7 @@ fun BishunTheme(
         ThemeMode.Light -> false
         ThemeMode.Dark -> true
     }
-    val colorScheme = when {
+    val baseScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -56,6 +57,11 @@ fun BishunTheme(
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
+    }
+    val colorScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        baseScheme
+    } else {
+        baseScheme.copy(primary = accentColor.primary(darkTheme))
     }
 
     MaterialTheme(

@@ -14,6 +14,7 @@ Hanzi Dictionary & Strokes (the "App", package name `com.yourstudio.hskstroke.bi
 | Settings | Board options (grid, stroke color, template visibility), language override. | Stored locally via DataStore. |
 | Dictionary history | Recent lookups for quick access. | Stored locally via DataStore; never uploaded. |
 | Reminder settings | Daily reminder toggle, time, and reminder rules (e.g. only when incomplete). | Stored locally via DataStore. |
+| Purchase status | If you choose to buy Pro, the purchase is processed by Google Play. The app stores a local "entitlement" flag and last sync time so Pro works offline. | Local DataStore only. |
 
 We do **not** collect names, contacts, or precise location.
 
@@ -23,6 +24,7 @@ We do **not** collect names, contacts, or precise location.
 - Display learning statistics and practice history on your device.
 - Remember board and demo preferences.
 - Schedule optional daily practice reminders (local notifications) if you enable them.
+- Unlock Pro features if you purchase them, and restore them automatically when you reinstall on the same Google account.
 
 The App does not upload any data. All storage is local-only on your device.
 

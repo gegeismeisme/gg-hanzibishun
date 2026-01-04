@@ -1,6 +1,7 @@
 package com.yourstudio.hskstroke.bishun.ui.account
 
 import android.Manifest
+import android.app.Activity
 import android.app.TimePickerDialog
 import android.content.pm.PackageManager
 import android.os.Build
@@ -15,6 +16,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -43,6 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.yourstudio.hskstroke.bishun.data.billing.BillingRepository
+import com.yourstudio.hskstroke.bishun.data.billing.InAppProduct
 import com.yourstudio.hskstroke.bishun.data.settings.ThemeMode
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferences
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
@@ -51,6 +57,8 @@ import com.yourstudio.hskstroke.bishun.ui.character.LocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.support.HelpDialog
 import com.yourstudio.hskstroke.bishun.ui.support.PrivacyDialog
+import com.yourstudio.hskstroke.bishun.ui.theme.AccentColorOption
+import com.yourstudio.hskstroke.bishun.ui.practice.BrushWidthOption
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -60,6 +68,7 @@ fun AccountScreen(
     onClearLocalData: () -> Unit,
     languageOverride: String?,
     onShowOnboarding: () -> Unit = {},
+    billingRepository: BillingRepository,
 ) {
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showPrivacyDialog by rememberSaveable { mutableStateOf(false) }
@@ -71,8 +80,10 @@ fun AccountScreen(
     val strings = rememberLocalizedStrings(languageOverride)
     val accountStrings = strings.account
     val context = LocalContext.current
+    val activity = context as? Activity
     val preferencesStore = remember { UserPreferencesStore(context.applicationContext) }
     val userPreferences by preferencesStore.data.collectAsState(initial = UserPreferences())
+    val billingUiState by billingRepository.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     val requestNotificationPermission = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -88,10 +99,31 @@ fun AccountScreen(
     ) {
         Text(text = accountStrings.title, style = MaterialTheme.typography.headlineSmall)
 
+        ProUpgradeCard(
+            isPro = userPreferences.isPro,
+            product = billingUiState.proProduct,
+            isConnecting = billingUiState.isConnecting,
+            isReady = billingUiState.isReady,
+            hasPendingPurchase = billingUiState.hasPendingPurchase,
+            lastErrorCode = userPreferences.billingLastErrorCode,
+            onUpgrade = { if (activity != null) billingRepository.launchProPurchase(activity) },
+            upgradeEnabled = activity != null && !userPreferences.isPro && billingUiState.proProduct != null,
+            onRestore = billingRepository::restorePurchases,
+        )
+
         AppearanceCard(
             themeMode = userPreferences.themeMode,
+            accentColorIndex = userPreferences.accentColorIndex,
+            brushWidthIndex = userPreferences.brushWidthIndex,
+            isPro = userPreferences.isPro,
             onThemeModeChange = { mode ->
                 scope.launch { preferencesStore.setThemeMode(mode) }
+            },
+            onAccentColorIndexChange = { index ->
+                scope.launch { preferencesStore.setAccentColorIndex(index) }
+            },
+            onBrushWidthIndexChange = { index ->
+                scope.launch { preferencesStore.setBrushWidthIndex(index) }
             },
         )
 
@@ -249,15 +281,91 @@ private fun SettingsCard(
 }
 
 @Composable
+private fun ProUpgradeCard(
+    isPro: Boolean,
+    product: InAppProduct?,
+    isConnecting: Boolean,
+    isReady: Boolean,
+    hasPendingPurchase: Boolean,
+    lastErrorCode: Int?,
+    onUpgrade: () -> Unit,
+    upgradeEnabled: Boolean,
+    onRestore: () -> Unit,
+) {
+    val price = product?.formattedPrice
+    val status = when {
+        isPro -> "Pro"
+        hasPendingPurchase -> "Pending purchase"
+        isConnecting -> "Connecting…"
+        isReady -> "Free"
+        else -> "Not available"
+    }
+    val description = if (isPro) {
+        "Thanks for supporting the app. Pro stays available offline and restores automatically with Google Play."
+    } else {
+        "Support the app with a one-time purchase. Pro restores automatically with Google Play."
+    }
+
+    SettingsCard(
+        title = "Pro",
+        description = description,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = status, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            if (price != null && !isPro) {
+                Text(text = price, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        if (lastErrorCode != null && !isPro) {
+            Text(
+                text = "Billing status code: $lastErrorCode",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onRestore) { Text("Restore purchases") }
+            Button(onClick = onUpgrade, enabled = upgradeEnabled) { Text(if (price != null) "Buy ($price)" else "Buy") }
+        }
+    }
+}
+
+@Composable
 private fun AppearanceCard(
     themeMode: ThemeMode,
+    accentColorIndex: Int,
+    brushWidthIndex: Int,
+    isPro: Boolean,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onAccentColorIndexChange: (Int) -> Unit,
+    onBrushWidthIndexChange: (Int) -> Unit,
 ) {
     SettingsCard(
         title = "Appearance",
         description = "Choose how the app looks on this device.",
     ) {
         ThemeModeOptions(themeMode = themeMode, onThemeModeChange = onThemeModeChange)
+        Text(text = "Accent color", style = MaterialTheme.typography.bodyMedium)
+        AccentColorOptions(
+            themeMode = themeMode,
+            accentColorIndex = accentColorIndex,
+            isPro = isPro,
+            onAccentColorIndexChange = onAccentColorIndexChange,
+        )
+        Text(text = "Brush thickness", style = MaterialTheme.typography.bodyMedium)
+        BrushWidthOptions(
+            brushWidthIndex = brushWidthIndex,
+            isPro = isPro,
+            onBrushWidthIndexChange = onBrushWidthIndexChange,
+        )
     }
 }
 
@@ -280,6 +388,72 @@ private fun ThemeModeOptions(
             FilterChip(
                 selected = themeMode == mode,
                 onClick = { onThemeModeChange(mode) },
+                label = { Text(label) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AccentColorOptions(
+    themeMode: ThemeMode,
+    accentColorIndex: Int,
+    isPro: Boolean,
+    onAccentColorIndexChange: (Int) -> Unit,
+) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+    }
+    val storedOption = AccentColorOption.fromStoredIndex(accentColorIndex)
+    val effectiveOption = if (!storedOption.requiresPro || isPro) storedOption else AccentColorOption.Lilac
+
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AccentColorOption.entries.forEach { option ->
+            val enabled = isPro || !option.requiresPro
+            val label = if (option.requiresPro) "${option.label} · Pro" else option.label
+            val dotColor = option.primary(darkTheme).let { if (enabled) it else it.copy(alpha = 0.35f) }
+            FilterChip(
+                selected = option == effectiveOption,
+                onClick = { if (enabled) onAccentColorIndexChange(option.ordinal) },
+                enabled = enabled,
+                label = { Text(label) },
+                leadingIcon = {
+                    Canvas(modifier = Modifier.size(12.dp)) {
+                        drawCircle(color = dotColor)
+                    }
+                },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BrushWidthOptions(
+    brushWidthIndex: Int,
+    isPro: Boolean,
+    onBrushWidthIndexChange: (Int) -> Unit,
+) {
+    val storedOption = BrushWidthOption.fromStoredIndex(brushWidthIndex)
+    val effectiveOption = if (!storedOption.requiresPro || isPro) storedOption else BrushWidthOption.Regular
+
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        BrushWidthOption.entries.forEach { option ->
+            val enabled = isPro || !option.requiresPro
+            val label = if (option.requiresPro) "${option.label} · Pro" else option.label
+            FilterChip(
+                selected = option == effectiveOption,
+                onClick = { if (enabled) onBrushWidthIndexChange(option.ordinal) },
+                enabled = enabled,
                 label = { Text(label) },
             )
         }

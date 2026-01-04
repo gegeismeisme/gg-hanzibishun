@@ -16,7 +16,10 @@ updated: 2025-12-25
 
 ## Monetization
 
-- [x] No ads, no in-app purchases (fully free tool)
+- [ ] In-app purchase: Pro lifetime (`hanzi_pro_lifetime`) created in Play Console
+- [ ] Billing flow tested (Internal testing track; purchase + restore + refund)
+- [x] Pro benefits spec documented (`docs/pro-lifetime-offer.md`)
+- [ ] Store listing copy updated for Pro (if enabled)
 
 ## Compliance
 

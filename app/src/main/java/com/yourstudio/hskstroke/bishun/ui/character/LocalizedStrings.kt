@@ -1162,7 +1162,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
                 "Board preferences such as grids, colors, template visibility, and language override.",
                 "Recent dictionary searches stored on-device.",
                 "Daily reminder preferences (enabled/time/rules) stored on-device.",
-                "No advertising, no in-app purchases.",
+                "Optional in-app purchases are handled by Google Play. No ads.",
             ),
         ),
         PolicySectionText(
@@ -1395,7 +1395,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
                 "Preferencias del tablero y ajuste de idioma guardados localmente.",
                 "Búsquedas recientes del diccionario guardadas en el dispositivo.",
                 "Preferencias de recordatorios diarios (activado/hora/reglas) guardadas en el dispositivo.",
-                "Sin anuncios ni compras dentro de la app.",
+                "Compras dentro de la app opcionales gestionadas por Google Play. Sin anuncios.",
             ),
         ),
         PolicySectionText(

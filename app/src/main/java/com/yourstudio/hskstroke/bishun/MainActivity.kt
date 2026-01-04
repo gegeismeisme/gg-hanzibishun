@@ -25,6 +25,7 @@ import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequest
 import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequests
 import com.yourstudio.hskstroke.bishun.ui.onboarding.OnboardingScreen
 import com.yourstudio.hskstroke.bishun.ui.theme.BishunTheme
+import com.yourstudio.hskstroke.bishun.ui.theme.AccentColorOption
 import com.yourstudio.hskstroke.bishun.notifications.DailyReminderScheduler
 import kotlinx.coroutines.launch
 
@@ -47,6 +48,10 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             var forceShowOnboarding by rememberSaveable { mutableStateOf(false) }
             val shouldShowOnboarding = forceShowOnboarding || !userPreferences.onboardingCompleted
+            val accentColor = remember(userPreferences.accentColorIndex, userPreferences.isPro) {
+                val option = AccentColorOption.fromStoredIndex(userPreferences.accentColorIndex)
+                if (!option.requiresPro || userPreferences.isPro) option else AccentColorOption.Lilac
+            }
 
             LaunchedEffect(userPreferences.dailyReminderEnabled, userPreferences.dailyReminderTimeMinutes) {
                 DailyReminderScheduler.scheduleOrCancel(
@@ -56,7 +61,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            BishunTheme(themeMode = userPreferences.themeMode) {
+            BishunTheme(themeMode = userPreferences.themeMode, accentColor = accentColor) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,

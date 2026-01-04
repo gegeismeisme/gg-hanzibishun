@@ -55,6 +55,7 @@ fun CharacterCanvas(
     practiceState: PracticeState,
     gridMode: PracticeGrid,
     userStrokeColor: Color,
+    userStrokeWidthPx: Float = 4f,
     showTemplate: Boolean,
     calligraphyDemoProgress: List<Float>,
     onStrokeStart: (Point, Point) -> Unit,
@@ -152,7 +153,7 @@ fun CharacterCanvas(
                         userStroke = userStroke,
                         positioner = drawPositioner,
                         color = userStrokeColor,
-                        drawingWidth = snapshot.options.drawingWidth,
+                        drawingWidth = userStrokeWidthPx,
                     )
                 }
             }

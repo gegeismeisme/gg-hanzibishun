@@ -40,4 +40,4 @@
 
 - 代码与功能完善（性能/工程化）：`docs/android-improvement-plan.md`
 - UI/UX 全面美化（iOS 风格参考）：`docs/ui-ux-upgrade-plan.md`
-
+- 内购（离线优先 + 无感恢复）：`docs/iap-upgrade-plan.md`

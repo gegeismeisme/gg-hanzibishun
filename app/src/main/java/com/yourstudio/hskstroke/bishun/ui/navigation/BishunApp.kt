@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -27,6 +28,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.yourstudio.hskstroke.bishun.data.billing.BillingRepository
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
 import com.yourstudio.hskstroke.bishun.ui.account.AccountScreen
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterRoute
 import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
@@ -82,6 +85,20 @@ fun BishunApp(
     )
     val userPreferences by sharedCharacterViewModel.userPreferences.collectAsState()
     val navigationStrings = rememberLocalizedStrings(userPreferences.languageOverride).navigation
+    val billingRepository = remember {
+        BillingRepository(
+            context = context.applicationContext,
+            preferencesStore = UserPreferencesStore(context.applicationContext),
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        billingRepository.start()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { billingRepository.end() }
+    }
 
     LaunchedEffect(launchRequest) {
         when (val request = launchRequest) {
@@ -222,6 +239,7 @@ fun BishunApp(
                     onClearLocalData = sharedCharacterViewModel::clearLocalData,
                     languageOverride = userPreferences.languageOverride,
                     onShowOnboarding = onShowOnboarding,
+                    billingRepository = billingRepository,
                 )
             }
         }
