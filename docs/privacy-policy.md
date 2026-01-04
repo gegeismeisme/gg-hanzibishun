@@ -1,6 +1,6 @@
 ---
 title: Hanzi Dictionary & Strokes - Privacy Policy
-updated: 2025-12-26
+updated: 2026-01-04
 ---
 
 Hanzi Dictionary & Strokes (the "App", package name `com.yourstudio.hskstroke.bishun`) is an offline-first learning tool published by `ark_go`. This document explains what information is processed, how it is stored, and how you can control it.
@@ -13,6 +13,7 @@ Hanzi Dictionary & Strokes (the "App", package name `com.yourstudio.hskstroke.bi
 | Practice history | Characters practiced, stroke progress, and history needed to resume. | Stored locally using Android DataStore; never uploaded. |
 | Settings | Board options (grid, stroke color, template visibility), language override. | Stored locally via DataStore. |
 | Dictionary history | Recent lookups for quick access. | Stored locally via DataStore; never uploaded. |
+| Reminder settings | Daily reminder toggle, time, and reminder rules (e.g. only when incomplete). | Stored locally via DataStore. |
 
 We do **not** collect names, contacts, or precise location.
 
@@ -21,6 +22,7 @@ We do **not** collect names, contacts, or precise location.
 - Resume your latest character/course session.
 - Display learning statistics and practice history on your device.
 - Remember board and demo preferences.
+- Schedule optional daily practice reminders (local notifications) if you enable them.
 
 The App does not upload any data. All storage is local-only on your device.
 
@@ -28,11 +30,14 @@ The App does not upload any data. All storage is local-only on your device.
 
 | Permission | Reason |
 | --- | --- |
-| *(none)* | The App does not request network access or any dangerous permissions. |
+| `android.permission.POST_NOTIFICATIONS` (Android 13+) | Optional. Only requested when you enable daily practice reminders. Used to display local notifications. |
+| `android.permission.RECEIVE_BOOT_COMPLETED` | Restore scheduled reminders after device reboot, app update, or time changes. |
+| *(no network permission)* | The App does not request `INTERNET` and cannot upload your data. |
 
 ## 4. Your Controls
 
 - **Reset data**: Android Settings > Apps > (this app) > Storage > Clear data.
+- **Daily reminders**: Disable in the App settings, or disable notifications for the App in Android system settings.
 
 ## 5. Children's Privacy
 

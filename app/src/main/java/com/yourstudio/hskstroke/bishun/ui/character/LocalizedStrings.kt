@@ -1141,6 +1141,10 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
             detail = "Stroke JSON and course packs ship inside the APK.",
         ),
         SummaryRowText(
+            title = "Notifications",
+            detail = "Optional daily reminders. On Android 13+ the app asks for notification permission only if you enable reminders.",
+        ),
+        SummaryRowText(
             title = "Network",
             detail = "No network permission. The app does not access the internet and never uploads your data.",
         ),
@@ -1157,6 +1161,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
                 "Local practice history, HSK progress, and resume state.",
                 "Board preferences such as grids, colors, template visibility, and language override.",
                 "Recent dictionary searches stored on-device.",
+                "Daily reminder preferences (enabled/time/rules) stored on-device.",
                 "No advertising, no in-app purchases.",
             ),
         ),
@@ -1171,6 +1176,8 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
         PolicySectionText(
             title = "3. Permissions",
             bullets = listOf(
+                "POST_NOTIFICATIONS (Android 13+): optional, used for daily reminder notifications if enabled.",
+                "RECEIVE_BOOT_COMPLETED: restore reminders after reboot, app update, or time changes.",
                 "No network permission required. The app works offline.",
                 "No access to precise location, contacts, camera, or microphone.",
             ),
@@ -1367,6 +1374,10 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
             detail = "Los paquetes de trazos y cursos vienen en el APK.",
         ),
         SummaryRowText(
+            title = "Notificaciones",
+            detail = "Recordatorios diarios opcionales. En Android 13+ la app solicita permiso de notificaciones solo si activas los recordatorios.",
+        ),
+        SummaryRowText(
             title = "Red",
             detail = "Sin permiso de red. La app no accede a internet ni sube tus datos.",
         ),
@@ -1383,6 +1394,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
                 "Historial local de práctica, progreso HSK y estado de reanudación.",
                 "Preferencias del tablero y ajuste de idioma guardados localmente.",
                 "Búsquedas recientes del diccionario guardadas en el dispositivo.",
+                "Preferencias de recordatorios diarios (activado/hora/reglas) guardadas en el dispositivo.",
                 "Sin anuncios ni compras dentro de la app.",
             ),
         ),
@@ -1397,6 +1409,8 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
         PolicySectionText(
             title = "3. Permisos",
             bullets = listOf(
+                "POST_NOTIFICATIONS (Android 13+): opcional, para mostrar recordatorios diarios si están activados.",
+                "RECEIVE_BOOT_COMPLETED: restaura los recordatorios tras reiniciar el dispositivo o cambiar la hora.",
                 "No requiere permiso de red. Funciona sin conexión.",
                 "Sin acceso a ubicación precisa, contactos, cámara o micrófono.",
             ),
