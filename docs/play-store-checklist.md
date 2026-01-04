@@ -27,7 +27,7 @@ updated: 2025-12-25
 - [ ] Host privacy policy on a public URL (required by Play Console)
 - [ ] Update Play Console Data safety form
 - [ ] Accessibility pass (content descriptions, TalkBack labels)
-- [ ] Confirm permissions list (`POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`)
+- [ ] Confirm permissions list (`POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `BILLING`, `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`)
 
 ## Store Assets
 

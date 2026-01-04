@@ -26,7 +26,7 @@ We do **not** collect names, contacts, or precise location.
 - Schedule optional daily practice reminders (local notifications) if you enable them.
 - Unlock Pro features if you purchase them, and restore them automatically when you reinstall on the same Google account.
 
-The App does not upload any data. All storage is local-only on your device.
+The App stores your learning data locally on your device. If you choose to buy Pro, Google Play handles the purchase and the app may connect to Google Play to check purchase status. We do not operate our own server and we do not upload your practice history or dictionary usage.
 
 ## 3. Permissions
 
@@ -34,7 +34,11 @@ The App does not upload any data. All storage is local-only on your device.
 | --- | --- |
 | `android.permission.POST_NOTIFICATIONS` (Android 13+) | Optional. Only requested when you enable daily practice reminders. Used to display local notifications. |
 | `android.permission.RECEIVE_BOOT_COMPLETED` | Restore scheduled reminders after device reboot, app update, or time changes. |
-| *(no network permission)* | The App does not request `INTERNET` and cannot upload your data. |
+| `com.android.vending.BILLING` | Used to start and restore optional Google Play in-app purchases (Pro). |
+| `android.permission.INTERNET` | Used for optional Google Play purchase and restore flows. Learning features work offline. |
+| `android.permission.ACCESS_NETWORK_STATE` | Used to detect connectivity for purchase and restore flows. |
+| `android.permission.WAKE_LOCK` | Used by Android components for reliable background scheduling. |
+| `android.permission.FOREGROUND_SERVICE` | Used by Android components for certain background tasks. |
 
 ## 4. Your Controls
 

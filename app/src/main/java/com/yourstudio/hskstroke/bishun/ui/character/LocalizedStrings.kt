@@ -1123,7 +1123,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
             description = "Need help? Reach out anytime.",
             bullets = listOf(
                 "Email: qq260316514@gmail.com",
-                "This app runs fully offline and never uploads your data.",
+                "Core learning works offline and your learning data stays on-device.",
             ),
         ),
     ),
@@ -1146,7 +1146,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
         ),
         SummaryRowText(
             title = "Network",
-            detail = "No network permission. The app does not access the internet and never uploads your data.",
+            detail = "Network permission is used for optional Google Play purchase and restore. Learning data is not uploaded.",
         ),
     ),
     contactSupportLabel = "Contact: %s",
@@ -1178,7 +1178,7 @@ private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStri
             bullets = listOf(
                 "POST_NOTIFICATIONS (Android 13+): optional, used for daily reminder notifications if enabled.",
                 "RECEIVE_BOOT_COMPLETED: restore reminders after reboot, app update, or time changes.",
-                "No network permission required. The app works offline.",
+                "Network permission: used for optional Google Play purchases and restore. Core learning works offline.",
                 "No access to precise location, contacts, camera, or microphone.",
             ),
         ),
@@ -1356,7 +1356,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
             description = "¿Necesitas ayuda? Escríbenos.",
             bullets = listOf(
                 "Correo: qq260316514@gmail.com",
-                "La app funciona sin conexión y nunca sube tus datos.",
+                "El aprendizaje funciona sin conexión y tus datos se quedan en el dispositivo.",
             ),
         ),
     ),
@@ -1379,7 +1379,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
         ),
         SummaryRowText(
             title = "Red",
-            detail = "Sin permiso de red. La app no accede a internet ni sube tus datos.",
+            detail = "Permiso de red usado solo para compras y restauración con Google Play. Los datos de aprendizaje no se suben.",
         ),
     ),
     contactSupportLabel = "Contacto: %s",
@@ -1411,7 +1411,7 @@ private fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStri
             bullets = listOf(
                 "POST_NOTIFICATIONS (Android 13+): opcional, para mostrar recordatorios diarios si están activados.",
                 "RECEIVE_BOOT_COMPLETED: restaura los recordatorios tras reiniciar el dispositivo o cambiar la hora.",
-                "No requiere permiso de red. Funciona sin conexión.",
+                "Permiso de red: usado solo para compras y restauración con Google Play. El aprendizaje funciona sin conexión.",
                 "Sin acceso a ubicación precisa, contactos, cámara o micrófono.",
             ),
         ),

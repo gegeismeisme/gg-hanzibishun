@@ -23,6 +23,7 @@ updated: 2026-01-04
 - [x] 字典页：Saved/History 编辑模式批量一键练习（Pro）
 
 ### B. Play Console 配置（可真实测试）
+- [ ] 按操作清单完成配置与验证：`docs/play-console-iap-test-steps.md`
 - [ ] Play Console 创建 In-app product：`hanzi_pro_lifetime`
 - [ ] 添加许可测试账号（License testers）
 - [ ] 上传 AAB 到 Internal testing（从商店安装测试）

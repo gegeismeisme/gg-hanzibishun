@@ -103,7 +103,7 @@ updated: 2026-01-04
 # 5. UI/产品节奏（减少负面反馈）
 - 入口建议放在 `Me/Account` 页：`Upgrade to Pro` + `Restore purchases` + `Purchase status`
 - 锁定功能采用“轻提示”而非强弹窗：点击锁功能时再引导购买
-- 加一个“隐私/权益说明”短摘要：说明离线存储、换机自动恢复、无网络权限等核心点
+- 加一个“隐私/权益说明”短摘要：说明离线存储、换机自动恢复、网络仅用于 Google Play 购买/恢复、不上传学习数据等核心点
 
 # 6. 测试与发布（Play Billing 的现实约束）
 - 必须上传到 Play Console（至少 Internal testing），并从 Play 安装才能稳定测试购买/恢复
