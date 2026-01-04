@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import com.yourstudio.hskstroke.bishun.data.settings.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AccentRedDark,
+    primary = AccentLilacDark,
     onPrimary = Color(0xFF121214),
     secondary = OnSurfaceVariantDark,
     background = BackgroundDark,
@@ -25,7 +25,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = AccentRedLight,
+    primary = AccentLilacLight,
     onPrimary = Color(0xFF121214),
     secondary = OnSurfaceVariantLight,
     background = BackgroundLight,

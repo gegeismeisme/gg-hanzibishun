@@ -2,8 +2,8 @@ package com.yourstudio.hskstroke.bishun.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val AccentRedLight = Color(0xFFE34D4D)
-val AccentRedDark = Color(0xFFFF5A5F)
+val AccentLilacLight = Color(0xFFB39DDB)
+val AccentLilacDark = Color(0xFFD1C4E9)
 
 val BackgroundLight = Color(0xFFF5F5F7)
 val SurfaceLight = Color(0xFFFFFFFF)

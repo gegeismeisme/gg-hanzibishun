@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.School
 import androidx.compose.ui.platform.LocalContext
@@ -176,24 +178,87 @@ fun PracticeContent(
                 .weight(1f, fill = true),
         ) {
             val boardSize = if (maxWidth < maxHeight) maxWidth else maxHeight
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(modifier = Modifier.size(boardSize)) {
-                    CharacterCanvas(
-                        definition = definition,
-                        renderSnapshot = renderSnapshot,
-                        practiceState = practiceState,
-                        gridMode = gridMode,
-                        userStrokeColor = strokeColor,
-                        showTemplate = showTemplate,
-                        calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
-                        onStrokeStart = onStrokeStart,
-                        onStrokeMove = onStrokeMove,
-                        onStrokeEnd = onStrokeEnd,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+            val boardControlButtonSize = 36.dp
+            val boardControlSpacing = 12.dp
+            val sideSlotWidth = boardControlButtonSize + boardControlSpacing
+            val canPlaceSideControls = maxWidth >= boardSize + sideSlotWidth + sideSlotWidth
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (canPlaceSideControls) {
+                    Row(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Spacer(modifier = Modifier.width(sideSlotWidth))
+                        Box(modifier = Modifier.size(boardSize)) {
+                            CharacterCanvas(
+                                definition = definition,
+                                renderSnapshot = renderSnapshot,
+                                practiceState = practiceState,
+                                gridMode = gridMode,
+                                userStrokeColor = strokeColor,
+                                showTemplate = showTemplate,
+                                calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
+                                onStrokeStart = onStrokeStart,
+                                onStrokeMove = onStrokeMove,
+                                onStrokeEnd = onStrokeEnd,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(boardControlSpacing))
+                        Column(
+                            modifier = Modifier
+                                .width(boardControlButtonSize)
+                                .padding(top = boardControlSpacing),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (hskEntry != null) {
+                                IconActionButton(
+                                    icon = Icons.Filled.School,
+                                    description = boardStrings.hskLabel,
+                                    onClick = { showHskDialog = true },
+                                    buttonSize = boardControlButtonSize,
+                                )
+                            }
+                            CanvasSettingsMenu(
+                                currentGrid = gridMode,
+                                currentColor = strokeColorOption,
+                                showTemplate = showTemplate,
+                                onGridChange = onGridModeChange,
+                                onColorChange = onStrokeColorChange,
+                                onTemplateToggle = { enabled ->
+                                    onTemplateToggle(enabled)
+                                    if (!enabled) {
+                                        onStopCalligraphyDemo()
+                                    }
+                                },
+                                description = boardStrings.settingsLabel,
+                                buttonSize = boardControlButtonSize,
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(boardSize),
+                    ) {
+                        CharacterCanvas(
+                            definition = definition,
+                            renderSnapshot = renderSnapshot,
+                            practiceState = practiceState,
+                            gridMode = gridMode,
+                            userStrokeColor = strokeColor,
+                            showTemplate = showTemplate,
+                            calligraphyDemoProgress = calligraphyDemoState.strokeProgress,
+                            onStrokeStart = onStrokeStart,
+                            onStrokeMove = onStrokeMove,
+                            onStrokeEnd = onStrokeEnd,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -206,7 +271,7 @@ fun PracticeContent(
                                 icon = Icons.Filled.School,
                                 description = boardStrings.hskLabel,
                                 onClick = { showHskDialog = true },
-                                buttonSize = 36.dp,
+                                buttonSize = boardControlButtonSize,
                             )
                         }
                         CanvasSettingsMenu(
@@ -222,7 +287,7 @@ fun PracticeContent(
                                 }
                             },
                             description = boardStrings.settingsLabel,
-                            buttonSize = 36.dp,
+                            buttonSize = boardControlButtonSize,
                         )
                     }
                 }
