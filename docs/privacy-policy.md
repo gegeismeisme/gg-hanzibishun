@@ -1,6 +1,6 @@
 ---
 title: Hanzi Dictionary & Strokes - Privacy Policy
-updated: 2026-01-04
+updated: 2026-01-05
 ---
 
 Hanzi Dictionary & Strokes (the "App", package name `com.yourstudio.hskstroke.bishun`) is an offline-first learning tool published by `ark_go`. This document explains what information is processed, how it is stored, and how you can control it.
@@ -15,8 +15,10 @@ Hanzi Dictionary & Strokes (the "App", package name `com.yourstudio.hskstroke.bi
 | Dictionary history | Recent lookups for quick access. | Stored locally via DataStore; never uploaded. |
 | Reminder settings | Daily reminder toggle, time, and reminder rules (e.g. only when incomplete). | Stored locally via DataStore. |
 | Purchase status | If you choose to buy Pro, the purchase is processed by Google Play. The app stores a local "entitlement" flag and last sync time so Pro works offline. | Local DataStore only. |
+| Diagnostics | Google Play may provide aggregated crash/ANR diagnostics and install statistics so we can improve stability. | Google Play Console reports; not stored in our app database. |
+| Support communications | If you email us for support, we receive your email address and message content so we can respond. | Your email provider + our inbox. |
 
-We do **not** collect names, contacts, or precise location.
+We do **not** collect names, contacts, or precise location through the App itself. If you contact us via email, you voluntarily share contact details and message content.
 
 ## 2. How Data Is Used
 
@@ -25,6 +27,7 @@ We do **not** collect names, contacts, or precise location.
 - Remember board and demo preferences.
 - Schedule optional daily practice reminders (local notifications) if you enable them.
 - Unlock Pro features if you purchase them, and restore them automatically when you reinstall on the same Google account.
+- Diagnose crashes and performance issues via aggregated Google Play reports.
 
 The App stores your learning data locally on your device. If you choose to buy Pro, Google Play handles the purchase and the app may connect to Google Play to check purchase status. We do not operate our own server and we do not upload your practice history or dictionary usage.
 
@@ -44,6 +47,7 @@ The App stores your learning data locally on your device. If you choose to buy P
 
 - **Reset data**: Android Settings > Apps > (this app) > Storage > Clear data.
 - **Daily reminders**: Disable in the App settings, or disable notifications for the App in Android system settings.
+- **Support email**: You can ask us to delete past support communications by emailing `qq260316514@gmail.com`.
 
 ## 5. Children's Privacy
 

@@ -1,64 +1,69 @@
 # Privacy Policy
 
-**Last updated:** 5 December 2025
+**Last updated:** 5 January 2026
 
-Hanzi Dictionary & Strokes (the “App”) is published by the Bishun Art team (“we”, “us”). This policy explains what information we collect, how we use it, and the controls you have when using the App and any related services (for example beta tests, support email, or feedback forms). The App is designed for non-native learners who want to search HSK characters, review stroke orders, and practice handwriting.
+Hanzi Dictionary & Strokes (the “App”, package name `com.yourstudio.hskstroke.bishun`) is an offline-first learning tool. This policy explains what information is processed, how it is stored, and what controls you have when using the App.
 
-## Data We Collect
+## Data We Collect / Process
 
-We keep data collection to the absolute minimum required to operate and improve the App.
+We keep data collection to the minimum required to operate the App.
 
-1. **On-device study data.** Stroke practice history, bookmarks, and other preferences are stored only on your device. We do not receive or sync this information unless you explicitly share it with us.
-2. **Diagnostics and crash reports.** Google Play may automatically provide us with anonymized, aggregated diagnostics such as crash logs and ANR reports so that we can fix stability issues. These reports do not contain personally identifying information.
-3. **Communication data.** If you contact us (for example by emailing `qq260316514@qq.com`), we collect the contact details and message content you submit so we can respond to your request.
-
-The App currently does **not** require an account or login, and we do not collect personal identifiers, payment details, or tracking information.
+1. **On-device learning data.** Practice history, streaks, saved items, and preferences are stored on your device using Android DataStore. This data is not uploaded to any server operated by us.
+2. **In-app purchases (optional).** If you choose to buy Pro, the purchase is processed by Google Play. The App stores a local entitlement flag and last sync time so Pro can work offline. We do not receive your payment details.
+3. **Diagnostics (aggregated).** Google Play may provide aggregated crash/ANR reports and install statistics so we can improve stability. These reports are typically anonymized and do not include your practice content.
+4. **Support communications (optional).** If you email us, we receive your email address and the message content you provide so we can respond.
 
 ## How We Use Information
 
-Collected data is used solely to:
+We use the information above to:
 
-- Provide the App’s core features (HSK Level 1 lessons, stroke animations, and dictionary lookups).
-- Diagnose crashes and performance issues.
-- Respond to support requests and manage beta tests.
-- Plan future updates such as paid unlocks for higher HSK levels.
+- Provide the App’s core offline learning features and resume state.
+- Restore Pro access after reinstalling (via Google Play purchase status).
+- Diagnose crashes and performance issues using aggregated Google Play diagnostics.
+- Respond to support requests.
 
-We do not sell or rent your information.
+We do not sell your information.
 
 ## Data Sharing
 
-We may share limited data only in the following situations:
+We do not share your learning history or dictionary usage with third parties. Limited data may be processed by:
 
-- **Service providers.** Google Play and related Google services process diagnostics, delivery, and install statistics on our behalf.
-- **Legal compliance.** We may disclose information if required to comply with applicable laws or to protect our rights.
-- **Aggregated statistics.** We may share anonymized, aggregated usage trends that cannot identify you.
+- **Google Play** for purchase, restore, and aggregated diagnostics.
+- **Email providers** when you contact us via email.
+
+We may disclose information if required by law.
 
 ## Data Retention
 
-On-device study data remains on your device until you delete the App or clear the App data. Emails and crash logs are retained only as long as necessary to handle the associated request or improve stability.
+- On-device learning data remains until you clear the App data or uninstall the App (note: device backup settings may back up App data).
+- Support emails are retained only as long as needed to respond or for record-keeping.
 
-## Data Security
+## Permissions
 
-We rely on Google Play’s distribution infrastructure and industry-standard safeguards to protect diagnostics data. Communications sent to us are stored on password-protected systems. Because no system is completely secure, we encourage you not to include sensitive information in support emails.
+The App may request or include the following permissions depending on your device and Android version:
+
+- `android.permission.POST_NOTIFICATIONS` (Android 13+): only requested if you enable daily reminders.
+- `android.permission.RECEIVE_BOOT_COMPLETED`: restore reminders after reboot, app update, or time changes.
+- `com.android.vending.BILLING`: optional Google Play in-app purchases.
+- `android.permission.INTERNET` / `android.permission.ACCESS_NETWORK_STATE`: used for optional Google Play purchase and restore flows.
+- `android.permission.WAKE_LOCK` / `android.permission.FOREGROUND_SERVICE`: used by Android components for reliable background scheduling (for example daily reminders).
+
+The App does not request access to precise location, contacts, camera, or microphone.
 
 ## Children’s Privacy
 
-The App is intended for learners aged 13 and older. We do not knowingly collect personal data from children under 13. If you believe that a child has provided us with personal information, please contact us and we will remove it.
+The App targets general audiences, including students. We do not knowingly collect personally identifiable information from children. Parents can clear practice data at any time via system settings.
 
 ## Your Choices
 
-- You can delete local study data at any time via the App or by uninstalling it.
-- If you opt out of sharing diagnostics in Google Play or your device settings, we will no longer receive crash logs tied to your device.
-- You can request deletion of prior communications by emailing us.
-
-## Changes to This Policy
-
-We may update this policy as the App evolves. Material changes will be communicated through App updates or our website. Continued use of the App after changes take effect constitutes acceptance of the revised policy.
+- Clear local App data in Android settings to reset all learning data.
+- Disable daily reminders in the App settings or in Android notification settings.
+- Request deletion of prior support communications by emailing us.
 
 ## Contact Us
 
-For privacy questions or to exercise your rights, email us at `qq260316514@qq.com`.
+Email: `qq260316514@gmail.com`
 
 ---
 
-中文摘要：Hanzi Dictionary & Strokes 仅在设备本地保存学习记录，除非您主动发送，否则我们不会获取个人信息。我们可能通过 Google Play 获得匿名崩溃日志，用于修复问题。若有疑问，可发送邮件至 `qq260316514@qq.com` 与我们联系。
+中文摘要：本应用以离线学习为主，学习记录与设置仅保存在本机（DataStore），不会上传到我们自建服务器。若您选择购买 Pro，交易由 Google Play 处理，应用仅在本地缓存权益状态用于离线使用。若您通过邮件联系我们，我们会收到您的邮箱与内容以便回复。若有隐私相关问题，请邮件联系：`qq260316514@gmail.com`。
