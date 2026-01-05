@@ -26,6 +26,10 @@ updated: 2026-01-04
 - 准备 1~2 个用于测试的 Google 账号（Gmail）。
 - 建议：不要用开发者主账号直接测购买；用 License tester 账号更安全、流程更接近真实用户。
 
+4) **设备要求**
+- Google Play Billing 仅适用于带 Google Play 的设备（已安装 Play 商店并登录 Google 账号）。
+- 例如部分华为机型（无 GMS / 无 Play 商店）会导致购买按钮不可用，这是预期行为；如需覆盖该渠道，需要单独集成对应商店的 IAP（不在本清单范围内）。
+
 ---
 
 # 1. Play Console：添加 License testers（许可测试）
@@ -52,9 +56,15 @@ updated: 2026-01-04
 2) **Create product**
 3) Product ID：`hanzi_pro_lifetime`
 4) Product type：**Managed product（一次性买断 / Non-consumable）**
-5) 填写：
-   - Name（名称）：建议“Pro（一次性买断）”
-   - Description（描述）：简要说明（可参考 `docs/pro-lifetime-offer.md`）
+5) 填写（页面提示一般要求 **英语（美国）**）：
+   - Label（标签，内部用，不会展示给用户）：建议 `pro-lifetime`（小写 + 连字符，≤20）
+   - Name（名称，展示给用户，≤55）：示例 `Hanzi Pro (Lifetime)`
+   - Description（说明，展示给用户，≤200）：示例
+     - `Unlock Pro: extra accent themes, bold brush thickness, and batch practice from Saved/History. One-time purchase. Restores automatically via Google Play.`
+6) 税费、法规遵从和计划（通常保持默认即可）：
+   - 商品税种：Digital app sales（数字应用销售）
+   - 年龄分级：按你的 App 年龄分级选择（一般学习类可选 Everyone/All ages）
+   - 支付地点限制：建议先不限制（避免测试账号因地区限制无法购买）
 6) 设置价格（可先用最低价档，测试完再改）
 7) 保存并 **Activate（激活）**（或确保状态为 Active）
 
@@ -225,4 +235,3 @@ updated: 2026-01-04
 - `hanzi_pro_lifetime` 商品已创建并激活
 - Internal testing 从 Play 安装的版本，5.1~5.5 用例全部通过（5.6 尽量覆盖）
 - 隐私政策与 Data safety、商店文案与 Pro 权益保持一致（参考 `docs/play-store-checklist.md`）
-

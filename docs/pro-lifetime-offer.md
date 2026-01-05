@@ -21,8 +21,8 @@ updated: 2026-01-04
 ## 不包含（当前阶段的边界）
 - 不引入广告 SDK，不以广告换权益。
 - 不做云端账号体系/自建后端验签（仍以 Google Play 为单一事实源）。
+- 不提供非 Google Play 渠道的内购（例如华为 AppGallery IAP）。未安装 Google Play 的设备将无法购买/恢复。
 
 ## 验收清单
 - 设置页 `Me/Account`：Appearance 里能看到 Accent/Brush thickness；未购买时 Pro 选项展示但不可点。
 - 字典页 `Dict`：Saved/History 编辑模式出现批量练习入口；未购买时按钮禁用并标记 Pro。
-

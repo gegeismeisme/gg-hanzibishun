@@ -1,6 +1,6 @@
 ---
 title: IAP 升级进度（Pro / 离线优先 + 无感恢复）
-updated: 2026-01-04
+updated: 2026-01-05
 ---
 
 本文件用于记录“Google Play 内购（Pro）接入”的实施进度与验收情况。
@@ -47,3 +47,6 @@ updated: 2026-01-04
 - 完成 A 阶段（工程接入）：依赖 + DataStore + BillingRepository + 启动连接 + 设置页入口
 - 补齐基础合规文案（隐私政策与 App 内隐私说明）
 - 增加 v1 Pro 可感知内容：Accent 主题强调色 / 笔迹粗细 / 字典批量练习
+
+### 2026-01-05
+- `Me/Settings` 文案多语言对齐：移除硬编码字符串，zh/en/es/ja 全部走 `LocalizedStrings.AccountStrings`

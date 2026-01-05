@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -154,5 +155,6 @@ private val onboardingIcons = listOf(
     Icons.Outlined.Search,
     Icons.Outlined.Create,
     Icons.AutoMirrored.Outlined.MenuBook,
+    Icons.Outlined.Widgets,
     Icons.AutoMirrored.Outlined.VolumeUp,
 )

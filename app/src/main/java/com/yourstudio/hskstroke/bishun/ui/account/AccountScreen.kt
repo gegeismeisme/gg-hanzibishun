@@ -81,6 +81,19 @@ fun AccountScreen(
     val accountStrings = strings.account
     val context = LocalContext.current
     val activity = context as? Activity
+    val hasPlayStore = remember {
+        runCatching {
+            if (Build.VERSION.SDK_INT >= 33) {
+                context.packageManager.getPackageInfo(
+                    "com.android.vending",
+                    PackageManager.PackageInfoFlags.of(0),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo("com.android.vending", 0)
+            }
+        }.isSuccess
+    }
     val preferencesStore = remember { UserPreferencesStore(context.applicationContext) }
     val userPreferences by preferencesStore.data.collectAsState(initial = UserPreferences())
     val billingUiState by billingRepository.uiState.collectAsState()
@@ -100,18 +113,23 @@ fun AccountScreen(
         Text(text = accountStrings.title, style = MaterialTheme.typography.headlineSmall)
 
         ProUpgradeCard(
+            accountStrings = accountStrings,
+            locale = strings.locale,
             isPro = userPreferences.isPro,
             product = billingUiState.proProduct,
             isConnecting = billingUiState.isConnecting,
             isReady = billingUiState.isReady,
+            isPlayStoreAvailable = hasPlayStore,
             hasPendingPurchase = billingUiState.hasPendingPurchase,
             lastErrorCode = userPreferences.billingLastErrorCode,
             onUpgrade = { if (activity != null) billingRepository.launchProPurchase(activity) },
-            upgradeEnabled = activity != null && !userPreferences.isPro && billingUiState.proProduct != null,
+            upgradeEnabled = hasPlayStore && activity != null && !userPreferences.isPro && billingUiState.proProduct != null,
             onRestore = billingRepository::restorePurchases,
         )
 
         AppearanceCard(
+            accountStrings = accountStrings,
+            locale = strings.locale,
             themeMode = userPreferences.themeMode,
             accentColorIndex = userPreferences.accentColorIndex,
             brushWidthIndex = userPreferences.brushWidthIndex,
@@ -128,6 +146,7 @@ fun AccountScreen(
         )
 
         AudioSafetyCard(
+            accountStrings = accountStrings,
             enabled = userPreferences.volumeSafetyEnabled,
             thresholdPercent = userPreferences.volumeSafetyThresholdPercent,
             lowerToPercent = userPreferences.volumeSafetyLowerToPercent,
@@ -143,6 +162,8 @@ fun AccountScreen(
         )
 
         DailyReminderCard(
+            accountStrings = accountStrings,
+            locale = strings.locale,
             enabled = userPreferences.dailyReminderEnabled,
             minutesOfDay = userPreferences.dailyReminderTimeMinutes,
             onlyWhenIncomplete = userPreferences.dailyReminderOnlyWhenIncomplete,
@@ -171,9 +192,11 @@ fun AccountScreen(
             },
         )
 
-        GuidanceCard(onShowOnboarding = onShowOnboarding)
+        GuidanceCard(accountStrings = accountStrings, onShowOnboarding = onShowOnboarding)
 
         LanguageCard(
+            accountStrings = accountStrings,
+            locale = strings.locale,
             languageOverride = userPreferences.languageOverride,
             showMenu = showLanguageMenu,
             onToggleMenu = { showLanguageMenu = it },
@@ -227,8 +250,8 @@ fun AccountScreen(
     if (showClearRecentsDialog) {
         AlertDialog(
             onDismissRequest = { showClearRecentsDialog = false },
-            title = { Text("Clear dictionary history") },
-            text = { Text("Remove recent dictionary searches saved on this device.") },
+            title = { Text(accountStrings.clearDictionaryHistoryDialogTitle) },
+            text = { Text(accountStrings.clearDictionaryHistoryDialogBody) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -236,7 +259,7 @@ fun AccountScreen(
                         showClearRecentsDialog = false
                     },
                 ) {
-                    Text("Clear")
+                    Text(accountStrings.clearDictionaryHistoryConfirmButton)
                 }
             },
             dismissButton = {
@@ -282,10 +305,13 @@ private fun SettingsCard(
 
 @Composable
 private fun ProUpgradeCard(
+    accountStrings: AccountStrings,
+    locale: Locale,
     isPro: Boolean,
     product: InAppProduct?,
     isConnecting: Boolean,
     isReady: Boolean,
+    isPlayStoreAvailable: Boolean,
     hasPendingPurchase: Boolean,
     lastErrorCode: Int?,
     onUpgrade: () -> Unit,
@@ -294,20 +320,23 @@ private fun ProUpgradeCard(
 ) {
     val price = product?.formattedPrice
     val status = when {
-        isPro -> "Pro"
-        hasPendingPurchase -> "Pending purchase"
-        isConnecting -> "Connecting…"
-        isReady -> "Free"
-        else -> "Not available"
+        isPro -> accountStrings.proStatusPro
+        !isPlayStoreAvailable -> accountStrings.proStatusPlayRequired
+        hasPendingPurchase -> accountStrings.proStatusPending
+        isConnecting -> accountStrings.proStatusConnecting
+        isReady -> accountStrings.proStatusFree
+        else -> accountStrings.proStatusNotAvailable
     }
     val description = if (isPro) {
-        "Thanks for supporting the app. Pro stays available offline and restores automatically with Google Play."
+        accountStrings.proDescriptionPro
+    } else if (!isPlayStoreAvailable) {
+        accountStrings.proDescriptionNoPlayStore
     } else {
-        "Support the app with a one-time purchase. Pro restores automatically with Google Play."
+        accountStrings.proDescriptionFree
     }
 
     SettingsCard(
-        title = "Pro",
+        title = accountStrings.proCardTitle,
         description = description,
     ) {
         Row(
@@ -322,7 +351,7 @@ private fun ProUpgradeCard(
         }
         if (lastErrorCode != null && !isPro) {
             Text(
-                text = "Billing status code: $lastErrorCode",
+                text = String.format(locale, accountStrings.proBillingStatusCodeFormat, lastErrorCode),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -332,14 +361,25 @@ private fun ProUpgradeCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onRestore) { Text("Restore purchases") }
-            Button(onClick = onUpgrade, enabled = upgradeEnabled) { Text(if (price != null) "Buy ($price)" else "Buy") }
+            TextButton(onClick = onRestore, enabled = isPlayStoreAvailable) {
+                Text(accountStrings.proRestorePurchasesButton)
+            }
+            Button(onClick = onUpgrade, enabled = upgradeEnabled) {
+                val label = if (price != null) {
+                    String.format(locale, accountStrings.proBuyButtonWithPriceFormat, price)
+                } else {
+                    accountStrings.proBuyButton
+                }
+                Text(label)
+            }
         }
     }
 }
 
 @Composable
 private fun AppearanceCard(
+    accountStrings: AccountStrings,
+    locale: Locale,
     themeMode: ThemeMode,
     accentColorIndex: Int,
     brushWidthIndex: Int,
@@ -349,19 +389,27 @@ private fun AppearanceCard(
     onBrushWidthIndexChange: (Int) -> Unit,
 ) {
     SettingsCard(
-        title = "Appearance",
-        description = "Choose how the app looks on this device.",
+        title = accountStrings.appearanceCardTitle,
+        description = accountStrings.appearanceCardDescription,
     ) {
-        ThemeModeOptions(themeMode = themeMode, onThemeModeChange = onThemeModeChange)
-        Text(text = "Accent color", style = MaterialTheme.typography.bodyMedium)
+        ThemeModeOptions(
+            accountStrings = accountStrings,
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
+        )
+        Text(text = accountStrings.accentColorLabel, style = MaterialTheme.typography.bodyMedium)
         AccentColorOptions(
+            accountStrings = accountStrings,
+            locale = locale,
             themeMode = themeMode,
             accentColorIndex = accentColorIndex,
             isPro = isPro,
             onAccentColorIndexChange = onAccentColorIndexChange,
         )
-        Text(text = "Brush thickness", style = MaterialTheme.typography.bodyMedium)
+        Text(text = accountStrings.brushThicknessLabel, style = MaterialTheme.typography.bodyMedium)
         BrushWidthOptions(
+            accountStrings = accountStrings,
+            locale = locale,
             brushWidthIndex = brushWidthIndex,
             isPro = isPro,
             onBrushWidthIndexChange = onBrushWidthIndexChange,
@@ -372,13 +420,14 @@ private fun AppearanceCard(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ThemeModeOptions(
+    accountStrings: AccountStrings,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
 ) {
     val options = listOf(
-        ThemeMode.System to "System",
-        ThemeMode.Light to "Light",
-        ThemeMode.Dark to "Dark",
+        ThemeMode.System to accountStrings.themeModeSystemLabel,
+        ThemeMode.Light to accountStrings.themeModeLightLabel,
+        ThemeMode.Dark to accountStrings.themeModeDarkLabel,
     )
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -397,6 +446,8 @@ private fun ThemeModeOptions(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AccentColorOptions(
+    accountStrings: AccountStrings,
+    locale: Locale,
     themeMode: ThemeMode,
     accentColorIndex: Int,
     isPro: Boolean,
@@ -416,7 +467,12 @@ private fun AccentColorOptions(
     ) {
         AccentColorOption.entries.forEach { option ->
             val enabled = isPro || !option.requiresPro
-            val label = if (option.requiresPro) "${option.label} · Pro" else option.label
+            val baseLabel = accountStrings.accentColorOptionLabels.getOrNull(option.ordinal) ?: option.label
+            val label = if (option.requiresPro) {
+                String.format(locale, accountStrings.requiresProChipLabelFormat, baseLabel)
+            } else {
+                baseLabel
+            }
             val dotColor = option.primary(darkTheme).let { if (enabled) it else it.copy(alpha = 0.35f) }
             FilterChip(
                 selected = option == effectiveOption,
@@ -436,6 +492,8 @@ private fun AccentColorOptions(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BrushWidthOptions(
+    accountStrings: AccountStrings,
+    locale: Locale,
     brushWidthIndex: Int,
     isPro: Boolean,
     onBrushWidthIndexChange: (Int) -> Unit,
@@ -449,7 +507,12 @@ private fun BrushWidthOptions(
     ) {
         BrushWidthOption.entries.forEach { option ->
             val enabled = isPro || !option.requiresPro
-            val label = if (option.requiresPro) "${option.label} · Pro" else option.label
+            val baseLabel = accountStrings.brushWidthOptionLabels.getOrNull(option.ordinal) ?: option.label
+            val label = if (option.requiresPro) {
+                String.format(locale, accountStrings.requiresProChipLabelFormat, baseLabel)
+            } else {
+                baseLabel
+            }
             FilterChip(
                 selected = option == effectiveOption,
                 onClick = { if (enabled) onBrushWidthIndexChange(option.ordinal) },
@@ -462,6 +525,7 @@ private fun BrushWidthOptions(
 
 @Composable
 private fun AudioSafetyCard(
+    accountStrings: AccountStrings,
     enabled: Boolean,
     thresholdPercent: Int,
     lowerToPercent: Int,
@@ -470,15 +534,15 @@ private fun AudioSafetyCard(
     onLowerToPercentChange: (Int) -> Unit,
 ) {
     SettingsCard(
-        title = "Audio safety",
-        description = "Show a reminder before playing pronunciation at high volume.",
+        title = accountStrings.audioSafetyTitle,
+        description = accountStrings.audioSafetyDescription,
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(text = "Volume reminder", style = MaterialTheme.typography.bodyMedium)
+            Text(text = accountStrings.audioSafetyVolumeReminderLabel, style = MaterialTheme.typography.bodyMedium)
             Switch(
                 checked = enabled,
                 onCheckedChange = onEnabledChange,
@@ -486,13 +550,13 @@ private fun AudioSafetyCard(
         }
         if (enabled) {
             VolumeSliderRow(
-                title = "Reminder threshold",
+                title = accountStrings.audioSafetyThresholdLabel,
                 value = thresholdPercent,
                 onValueChange = onThresholdPercentChange,
                 valueRange = 50..100,
             )
             VolumeSliderRow(
-                title = "Lower to",
+                title = accountStrings.audioSafetyLowerToLabel,
                 value = lowerToPercent,
                 onValueChange = onLowerToPercentChange,
                 valueRange = 0..60,
@@ -524,19 +588,21 @@ private fun VolumeSliderRow(
 }
 
 @Composable
-private fun GuidanceCard(onShowOnboarding: () -> Unit) {
+private fun GuidanceCard(accountStrings: AccountStrings, onShowOnboarding: () -> Unit) {
     SettingsCard(
-        title = "Getting started",
-        description = "Review the quick guide for first-time users.",
+        title = accountStrings.guidanceTitle,
+        description = accountStrings.guidanceDescription,
     ) {
         Button(onClick = onShowOnboarding) {
-            Text("Open guide")
+            Text(accountStrings.guidanceOpenButton)
         }
     }
 }
 
 @Composable
 private fun DailyReminderCard(
+    accountStrings: AccountStrings,
+    locale: Locale,
     enabled: Boolean,
     minutesOfDay: Int,
     onlyWhenIncomplete: Boolean,
@@ -551,8 +617,8 @@ private fun DailyReminderCard(
     val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
 
     SettingsCard(
-        title = "每日提醒",
-        description = "每天在指定时间提醒你练习今日一字（Android 13+ 需允许通知权限）。",
+        title = accountStrings.dailyReminderTitle,
+        description = accountStrings.dailyReminderDescription,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
@@ -560,7 +626,7 @@ private fun DailyReminderCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "开启提醒", style = MaterialTheme.typography.bodyMedium)
+                Text(text = accountStrings.dailyReminderEnabledLabel, style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = enabled,
                     onCheckedChange = onEnabledChange,
@@ -573,7 +639,10 @@ private fun DailyReminderCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(text = "提醒时间：$formattedTime", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = String.format(locale, accountStrings.dailyReminderTimeLabelFormat, formattedTime),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                     Button(
                         onClick = {
                             TimePickerDialog(
@@ -587,7 +656,7 @@ private fun DailyReminderCard(
                             ).show()
                         },
                     ) {
-                        Text("修改")
+                        Text(accountStrings.dailyReminderChangeTimeButton)
                     }
                 }
 
@@ -596,7 +665,7 @@ private fun DailyReminderCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(text = "仅未完成时提醒", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = accountStrings.dailyReminderOnlyWhenIncompleteLabel, style = MaterialTheme.typography.bodyMedium)
                     Switch(
                         checked = onlyWhenIncomplete,
                         onCheckedChange = onOnlyWhenIncompleteChange,
@@ -609,21 +678,33 @@ private fun DailyReminderCard(
 
 @Composable
 private fun LanguageCard(
+    accountStrings: AccountStrings,
+    locale: Locale,
     languageOverride: String?,
     showMenu: Boolean,
     onToggleMenu: (Boolean) -> Unit,
     onLanguageChange: (String?) -> Unit,
 ) {
+    val languageChoices = listOf(
+        LanguageChoice(null, accountStrings.languageSystemOption),
+        LanguageChoice("zh", accountStrings.languageChineseOption),
+        LanguageChoice("en", accountStrings.languageEnglishOption),
+        LanguageChoice("es", accountStrings.languageSpanishOption),
+        LanguageChoice("ja", accountStrings.languageJapaneseOption),
+    )
     val currentChoice = languageChoices.firstOrNull { it.tag == languageOverride } ?: languageChoices.first()
     SettingsCard(
-        title = "Language",
-        description = "Overrides in-app content language.",
+        title = accountStrings.languageTitle,
+        description = accountStrings.languageDescription,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Current: ${currentChoice.label}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = String.format(locale, accountStrings.languageCurrentFormat, currentChoice.label),
+                style = MaterialTheme.typography.bodyMedium,
+            )
             Box {
                 Button(onClick = { onToggleMenu(true) }) {
-                    Text("Change")
+                    Text(accountStrings.languageChangeButton)
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { onToggleMenu(false) }) {
                     languageChoices.forEach { choice ->
@@ -683,11 +764,11 @@ private fun DataCard(
     onClearLocalData: () -> Unit,
 ) {
     SettingsCard(
-        title = "Data",
-        description = "Manage what is stored on this device.",
+        title = accountStrings.dataTitle,
+        description = accountStrings.dataDescription,
     ) {
         Button(onClick = onClearDictionaryHistory) {
-            Text("Clear dictionary history")
+            Text(accountStrings.clearDictionaryHistoryButton)
         }
         Button(onClick = onClearLocalData) {
             Text(accountStrings.clearDataButton)
@@ -696,10 +777,3 @@ private fun DataCard(
 }
 
 private data class LanguageChoice(val tag: String?, val label: String)
-
-private val languageChoices = listOf(
-    LanguageChoice(null, "System"),
-    LanguageChoice("en", "English"),
-    LanguageChoice("es", "Español"),
-    LanguageChoice("ja", "日本語"),
-)
