@@ -325,6 +325,8 @@ private val chineseAccountStrings = AccountStrings(
     languageEnglishOption = "英语",
     languageSpanishOption = "西班牙语",
     languageJapaneseOption = "日语",
+    languageKoreanOption = "韩语",
+    languageFrenchOption = "法语",
     dataTitle = "数据",
     dataDescription = "管理存储在此设备上的内容。",
     clearDictionaryHistoryButton = "清除字典历史",
@@ -334,6 +336,7 @@ private val chineseAccountStrings = AccountStrings(
     shareAppButton = "分享给朋友",
     shareAppMessage = "推荐一个好用的汉字笔顺学习工具——Hanzi Dictionary & Strokes，离线也能用！\nhttps://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun",
     rateAppButton = "去 Google Play 评价",
+    hskWebsiteButton = "HSK 官方网站",
 )
 
 fun localizedStringsZh(locale: Locale): LocalizedStrings {

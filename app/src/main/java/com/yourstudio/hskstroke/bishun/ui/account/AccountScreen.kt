@@ -31,6 +31,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -229,6 +230,18 @@ fun AccountScreen(
                     .onFailure {
                         context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
                     }
+            },
+            onHskWebsiteClick = {
+                val hskUrl = when (strings.locale.language) {
+                    "zh" -> "https://www.chinesetest.cn/"
+                    "ja" -> "https://www.chinesetest.jp/"
+                    "ko" -> "https://www.chinesetest.kr/"
+                    else -> "https://www.chinesetest.cn/"
+                }
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(hskUrl))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
             },
         )
 
@@ -711,6 +724,8 @@ private fun LanguageCard(
         LanguageChoice("en", accountStrings.languageEnglishOption),
         LanguageChoice("es", accountStrings.languageSpanishOption),
         LanguageChoice("ja", accountStrings.languageJapaneseOption),
+        LanguageChoice("ko", accountStrings.languageKoreanOption),
+        LanguageChoice("fr", accountStrings.languageFrenchOption),
     )
     val currentChoice = languageChoices.firstOrNull { it.tag == languageOverride } ?: languageChoices.first()
     SettingsCard(
@@ -749,6 +764,7 @@ private fun SupportCard(
     onPrivacyClick: () -> Unit,
     onShareClick: () -> Unit,
     onRateClick: () -> Unit,
+    onHskWebsiteClick: () -> Unit,
     strings: LocalizedStrings,
 ) {
     Card(
@@ -790,6 +806,12 @@ private fun SupportCard(
                 Button(onClick = onRateClick, modifier = Modifier.weight(1f)) {
                     Text(accountStrings.rateAppButton)
                 }
+            }
+            OutlinedButton(
+                onClick = onHskWebsiteClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(accountStrings.hskWebsiteButton)
             }
         }
     }

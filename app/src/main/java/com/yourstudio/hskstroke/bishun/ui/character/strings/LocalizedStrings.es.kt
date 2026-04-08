@@ -225,6 +225,8 @@ private val spanishAccountStrings = AccountStrings(
     languageEnglishOption = "Ingl\u00e9s",
     languageSpanishOption = "Espa\u00f1ol",
     languageJapaneseOption = "Japon\u00e9s",
+    languageKoreanOption = "Coreano",
+    languageFrenchOption = "Franc\u00e9s",
     dataTitle = "Datos",
     dataDescription = "Gestiona lo que se guarda en este dispositivo.",
     clearDictionaryHistoryButton = "Borrar historial del diccionario",
@@ -234,6 +236,7 @@ private val spanishAccountStrings = AccountStrings(
     shareAppButton = "Compartir app",
     shareAppMessage = "Descubre Hanzi Dictionary & Strokes — aprende el orden de trazos chino sin conexión.\nhttps://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun",
     rateAppButton = "Valorar en Google Play",
+    hskWebsiteButton = "Sitio oficial HSK",
 )
 
 private val spanishSupportStrings = SupportStrings(

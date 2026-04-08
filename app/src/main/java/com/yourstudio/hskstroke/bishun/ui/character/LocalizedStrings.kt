@@ -134,6 +134,8 @@ data class AccountStrings(
     val languageEnglishOption: String,
     val languageSpanishOption: String,
     val languageJapaneseOption: String,
+    val languageKoreanOption: String,
+    val languageFrenchOption: String,
     val dataTitle: String,
     val dataDescription: String,
     val clearDictionaryHistoryButton: String,
@@ -143,6 +145,7 @@ data class AccountStrings(
     val shareAppButton: String,
     val shareAppMessage: String,
     val rateAppButton: String,
+    val hskWebsiteButton: String,
 )
 
 data class SupportStrings(
@@ -379,6 +382,8 @@ fun rememberLocalizedStrings(languageOverride: String?): LocalizedStrings {
             "zh" -> localizedStringsZh(targetLocale)
             "es" -> localizedStringsEs(targetLocale)
             "ja" -> localizedStringsJa(targetLocale)
+            "ko" -> localizedStringsKo(targetLocale)
+            "fr" -> localizedStringsFr(targetLocale)
             else -> localizedStringsEn(targetLocale)
         }
     }

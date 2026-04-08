@@ -286,6 +286,8 @@ private val enAccountStrings = AccountStrings(
     languageEnglishOption = "English",
     languageSpanishOption = "Spanish",
     languageJapaneseOption = "Japanese",
+    languageKoreanOption = "Korean",
+    languageFrenchOption = "French",
     dataTitle = "Data",
     dataDescription = "Manage what is stored on this device.",
     clearDictionaryHistoryButton = "Clear dictionary history",
@@ -295,6 +297,7 @@ private val enAccountStrings = AccountStrings(
     shareAppButton = "Share app",
     shareAppMessage = "Check out Hanzi Dictionary & Strokes — learn Chinese stroke order offline!\nhttps://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun",
     rateAppButton = "Rate on Google Play",
+    hskWebsiteButton = "HSK Official Website",
 )
 
 private val enOnboardingStrings = OnboardingStrings(

@@ -249,6 +249,8 @@ private val japaneseAccountStrings = AccountStrings(
     languageEnglishOption = "\u82f1\u8a9e",
     languageSpanishOption = "\u30b9\u30da\u30a4\u30f3\u8a9e",
     languageJapaneseOption = "\u65e5\u672c\u8a9e",
+    languageKoreanOption = "\u97d3\u56fd\u8a9e",
+    languageFrenchOption = "\u30d5\u30e9\u30f3\u30b9\u8a9e",
     dataTitle = "\u30c7\u30fc\u30bf",
     dataDescription = "\u3053\u306e\u7aef\u672b\u306b\u4fdd\u5b58\u3055\u308c\u308b\u5185\u5bb9\u3092\u7ba1\u7406\u3057\u307e\u3059\u3002",
     clearDictionaryHistoryButton = "\u8f9e\u66f8\u5c65\u6b74\u3092\u6d88\u53bb",
@@ -258,6 +260,7 @@ private val japaneseAccountStrings = AccountStrings(
     shareAppButton = "\u30a2\u30d7\u30ea\u3092\u5171\u6709",
     shareAppMessage = "Hanzi Dictionary & Strokes — \u30aa\u30d5\u30e9\u30a4\u30f3\u3067\u6f22\u5b57\u306e\u66f8\u304d\u9806\u3092\u5b66\u3079\u308b\u30a2\u30d7\u30ea\u3067\u3059\u3002\nhttps://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun",
     rateAppButton = "Google Play\u3067\u8a55\u4fa1",
+    hskWebsiteButton = "HSK 公式サイト",
     consentSignInBullets = listOf(
         "\u30b5\u30a4\u30f3\u30a4\u30f3\u306f\u3001\u8cfc\u5165\u3092\u95a2\u9023\u4ed8\u3051\u308b\u5834\u5408\u306b\u306e\u307f\u5fc5\u8981\u3067\u3059\u3002\u7df4\u7fd2\u30c7\u30fc\u30bf\u306f\u30c7\u30d0\u30a4\u30b9\u4e0a\u306b\u6b8b\u308a\u307e\u3059\u3002",
         "\u7d9a\u884c\u3059\u308b\u3068\u3001\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc \u30dd\u30ea\u30b7\u30fc\u3092\u78ba\u8a8d\u3057\u305f\u3053\u3068\u3092\u78ba\u8a8d\u3057\u307e\u3059\u3002",
