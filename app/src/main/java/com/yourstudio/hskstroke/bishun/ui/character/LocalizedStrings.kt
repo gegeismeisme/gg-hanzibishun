@@ -140,6 +140,9 @@ data class AccountStrings(
     val clearDictionaryHistoryDialogTitle: String,
     val clearDictionaryHistoryDialogBody: String,
     val clearDictionaryHistoryConfirmButton: String,
+    val shareAppButton: String,
+    val shareAppMessage: String,
+    val rateAppButton: String,
 )
 
 data class SupportStrings(
@@ -612,6 +615,9 @@ private val defaultAccountStrings = AccountStrings(
     clearDictionaryHistoryDialogTitle = "Clear dictionary history",
     clearDictionaryHistoryDialogBody = "Remove recent dictionary searches saved on this device.",
     clearDictionaryHistoryConfirmButton = "Clear",
+    shareAppButton = "Share app",
+    shareAppMessage = "Check out Hanzi Dictionary & Strokes — learn Chinese stroke order offline!\nhttps://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun",
+    rateAppButton = "Rate on Google Play",
 )
 
 private val defaultSupportStrings = SupportStrings(
@@ -991,6 +997,9 @@ private val spanishAccountStrings = AccountStrings(
     clearDictionaryHistoryDialogTitle = "Borrar historial del diccionario",
     clearDictionaryHistoryDialogBody = "Elimina las b\u00fasquedas recientes del diccionario guardadas en este dispositivo.",
     clearDictionaryHistoryConfirmButton = "Borrar",
+    shareAppButton = "Compartir app",
+    shareAppMessage = "Descubre Hanzi Dictionary & Strokes — aprende el orden de trazos chino sin conexión.\nhttps://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun",
+    rateAppButton = "Valorar en Google Play",
 )
 
 private val spanishSupportStrings = SupportStrings(
@@ -1158,6 +1167,9 @@ private val japaneseAccountStrings = AccountStrings(
     clearDictionaryHistoryDialogTitle = "\u8f9e\u66f8\u5c65\u6b74\u3092\u6d88\u53bb",
     clearDictionaryHistoryDialogBody = "\u3053\u306e\u7aef\u672b\u306b\u4fdd\u5b58\u3055\u308c\u305f\u6700\u8fd1\u306e\u8f9e\u66f8\u691c\u7d22\u3092\u524a\u9664\u3057\u307e\u3059\u3002",
     clearDictionaryHistoryConfirmButton = "\u6d88\u53bb",
+    shareAppButton = "\u30a2\u30d7\u30ea\u3092\u5171\u6709",
+    shareAppMessage = "Hanzi Dictionary & Strokes — \u30aa\u30d5\u30e9\u30a4\u30f3\u3067\u6f22\u5b57\u306e\u66f8\u304d\u9806\u3092\u5b66\u3079\u308b\u30a2\u30d7\u30ea\u3067\u3059\u3002\nhttps://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun",
+    rateAppButton = "Google Play\u3067\u8a55\u4fa1",
     consentSignInBullets = listOf(
         "\u30b5\u30a4\u30f3\u30a4\u30f3\u306f\u3001\u8cfc\u5165\u3092\u95a2\u9023\u4ed8\u3051\u308b\u5834\u5408\u306b\u306e\u307f\u5fc5\u8981\u3067\u3059\u3002\u7df4\u7fd2\u30c7\u30fc\u30bf\u306f\u30c7\u30d0\u30a4\u30b9\u4e0a\u306b\u6b8b\u308a\u307e\u3059\u3002",
         "\u7d9a\u884c\u3059\u308b\u3068\u3001\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc \u30dd\u30ea\u30b7\u30fc\u3092\u78ba\u8a8d\u3057\u305f\u3053\u3068\u3092\u78ba\u8a8d\u3057\u307e\u3059\u3002",
@@ -1445,6 +1457,9 @@ private val chineseAccountStrings = AccountStrings(
     clearDictionaryHistoryDialogTitle = "清除字典历史",
     clearDictionaryHistoryDialogBody = "移除本机保存的最近字典搜索记录。",
     clearDictionaryHistoryConfirmButton = "清除",
+    shareAppButton = "分享给朋友",
+    shareAppMessage = "推荐一个好用的汉字笔顺学习工具——Hanzi Dictionary & Strokes，离线也能用！\nhttps://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun",
+    rateAppButton = "去 Google Play 评价",
 )
 
 private fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStrings(

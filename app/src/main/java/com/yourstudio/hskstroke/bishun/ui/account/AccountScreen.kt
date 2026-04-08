@@ -3,7 +3,9 @@ package com.yourstudio.hskstroke.bishun.ui.account
 import android.Manifest
 import android.app.Activity
 import android.app.TimePickerDialog
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -210,6 +212,24 @@ fun AccountScreen(
             strings = strings,
             onHelpClick = { showHelpDialog = true },
             onPrivacyClick = { showPrivacyDialog = true },
+            onShareClick = {
+                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, accountStrings.shareAppMessage)
+                }
+                context.startActivity(Intent.createChooser(sendIntent, accountStrings.shareAppButton))
+            },
+            onRateClick = {
+                val uri = Uri.parse("market://details?id=com.yourstudio.hskstroke.bishun")
+                val fallbackUri = Uri.parse("https://play.google.com/store/apps/details?id=com.yourstudio.hskstroke.bishun")
+                val rateIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                runCatching { context.startActivity(rateIntent) }
+                    .onFailure {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
+                    }
+            },
         )
 
         DataCard(
@@ -727,6 +747,8 @@ private fun SupportCard(
     accountStrings: AccountStrings,
     onHelpClick: () -> Unit,
     onPrivacyClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onRateClick: () -> Unit,
     strings: LocalizedStrings,
 ) {
     Card(
@@ -747,11 +769,27 @@ private fun SupportCard(
                 text = accountStrings.supportDescription,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Button(onClick = onHelpClick) {
-                Text(strings.helpTitle)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onHelpClick, modifier = Modifier.weight(1f)) {
+                    Text(strings.helpTitle)
+                }
+                Button(onClick = onPrivacyClick, modifier = Modifier.weight(1f)) {
+                    Text(strings.privacyTitle)
+                }
             }
-            Button(onClick = onPrivacyClick) {
-                Text(strings.privacyTitle)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onShareClick, modifier = Modifier.weight(1f)) {
+                    Text(accountStrings.shareAppButton)
+                }
+                Button(onClick = onRateClick, modifier = Modifier.weight(1f)) {
+                    Text(accountStrings.rateAppButton)
+                }
             }
         }
     }
