@@ -9,6 +9,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.yourstudio.hskstroke.bishun.R
 import com.yourstudio.hskstroke.bishun.data.daily.DailyPracticeUseCase
 import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
+import com.yourstudio.hskstroke.bishun.ui.character.resolveLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequests
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +55,9 @@ class DailyReminderReceiver : BroadcastReceiver() {
 
                 NotificationUtils.ensureDailyReminderChannel(applicationContext)
 
+                val strings = resolveLocalizedStrings(applicationContext)
+                val widgetStrings = strings.widget
+
                 val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 val practiceIntent = AppLaunchRequests.practiceIntent(applicationContext, symbol)
                 val dictionaryIntent = AppLaunchRequests.dictionaryIntent(applicationContext, symbol)
@@ -65,19 +69,19 @@ class DailyReminderReceiver : BroadcastReceiver() {
                     snapshot.explanationSummary?.trim()?.takeIf { it.isNotBlank() }?.let(::add)
                 }
                 val contentText = when {
-                    contentParts.isEmpty() -> "点击开始练习"
+                    contentParts.isEmpty() -> widgetStrings.tapToPracticeLabel
                     else -> contentParts.joinToString(separator = " · ")
                 }
 
                 val notification = NotificationCompat.Builder(applicationContext, NotificationUtils.DAILY_REMINDER_CHANNEL_ID)
                     .setSmallIcon(R.mipmap.ic_launcher)
-                    .setContentTitle("今日一字：$symbol")
+                    .setContentTitle("${widgetStrings.dailyTitle}：$symbol")
                     .setContentText(contentText)
-                    .setSubText(snapshot.streakDays.takeIf { it > 0 }?.let { "连续 $it 天" })
+                    .setSubText(snapshot.streakDays.takeIf { it > 0 }?.let { widgetStrings.streakDaysFormat.format(it) })
                     .setContentIntent(practicePendingIntent)
                     .setAutoCancel(true)
-                    .addAction(R.mipmap.ic_launcher, "练习", practicePendingIntent)
-                    .addAction(R.mipmap.ic_launcher, "字典", dictionaryPendingIntent)
+                    .addAction(R.mipmap.ic_launcher, widgetStrings.practiceLabel, practicePendingIntent)
+                    .addAction(R.mipmap.ic_launcher, widgetStrings.dictionaryLabel, dictionaryPendingIntent)
                     .build()
 
                 NotificationManagerCompat.from(applicationContext).notify(NOTIFICATION_ID, notification)

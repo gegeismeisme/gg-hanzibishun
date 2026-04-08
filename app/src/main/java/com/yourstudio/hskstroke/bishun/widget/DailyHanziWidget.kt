@@ -25,6 +25,8 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.yourstudio.hskstroke.bishun.data.daily.DailyPracticeUseCase
+import com.yourstudio.hskstroke.bishun.ui.character.WidgetStrings
+import com.yourstudio.hskstroke.bishun.ui.character.resolveLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.navigation.AppLaunchRequests
 import java.time.LocalDate
 import java.time.ZoneId
@@ -47,6 +49,7 @@ class DailyHanziWidget : GlanceAppWidget() {
             ?: AppLaunchRequests.openAppIntent(context)
         val dictionaryIntent = symbol?.let { AppLaunchRequests.dictionaryIntent(context, it) }
             ?: AppLaunchRequests.openAppIntent(context)
+        val strings = resolveLocalizedStrings(context)
 
         provideContent {
             DailyHanziWidgetContent(
@@ -57,6 +60,7 @@ class DailyHanziWidget : GlanceAppWidget() {
                 streakDays = streakDays,
                 practiceIntent = practiceIntent,
                 dictionaryIntent = dictionaryIntent,
+                widgetStrings = strings.widget,
             )
         }
     }
@@ -71,6 +75,7 @@ private fun DailyHanziWidgetContent(
     streakDays: Int,
     practiceIntent: Intent,
     dictionaryIntent: Intent,
+    widgetStrings: WidgetStrings,
 ) {
     Column(
         modifier = GlanceModifier
@@ -79,9 +84,9 @@ private fun DailyHanziWidgetContent(
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
     ) {
-        Text(text = "今日一字", style = TextStyle(fontSize = 12.sp))
+        Text(text = widgetStrings.dailyTitle, style = TextStyle(fontSize = 12.sp))
         if (streakDays > 0) {
-            Text(text = "连续 $streakDays 天", style = TextStyle(fontSize = 10.sp))
+            Text(text = widgetStrings.streakDaysFormat.format(streakDays), style = TextStyle(fontSize = 10.sp))
         }
         Spacer(modifier = GlanceModifier.height(8.dp))
         Text(
@@ -99,7 +104,7 @@ private fun DailyHanziWidgetContent(
         }
         if (completedToday) {
             Spacer(modifier = GlanceModifier.height(4.dp))
-            Text(text = "今日已完成", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium))
+            Text(text = widgetStrings.completedTodayLabel, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium))
         }
         Spacer(modifier = GlanceModifier.height(12.dp))
         Row(
@@ -107,14 +112,14 @@ private fun DailyHanziWidgetContent(
             horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
         ) {
             Text(
-                text = "练习",
+                text = widgetStrings.practiceLabel,
                 modifier = GlanceModifier
                     .clickable(actionStartActivity(practiceIntent))
                     .padding(horizontal = 8.dp, vertical = 4.dp),
             )
             Spacer(modifier = GlanceModifier.width(6.dp))
             Text(
-                text = "字典",
+                text = widgetStrings.dictionaryLabel,
                 modifier = GlanceModifier
                     .clickable(actionStartActivity(dictionaryIntent))
                     .padding(horizontal = 8.dp, vertical = 4.dp),

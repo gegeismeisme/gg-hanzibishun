@@ -150,5 +150,15 @@ fun localizedStringsFr(locale: Locale): LocalizedStrings {
         navigation = frenchNavigationStrings,
         onboarding = frenchOnboardingStrings,
         account = frenchAccountStrings,
+        widget = WidgetStrings(
+            dailyTitle = "Caractère du jour",
+            streakDaysFormat = "%1\$d jours de suite",
+            completedTodayLabel = "Terminé aujourd'hui",
+            practiceLabel = "Pratiquer",
+            dictionaryLabel = "Dictionnaire",
+            tapToPracticeLabel = "Appuyez pour pratiquer",
+            notificationChannelName = "Rappel quotidien",
+            notificationChannelDescription = "Vous rappelle de pratiquer le caractère du jour",
+        ),
     )
 }

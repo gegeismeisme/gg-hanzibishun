@@ -167,6 +167,17 @@ private val chineseCoursesStrings = CoursesStrings(
     toastNextUpFormat = "下一个：%1\$s",
 )
 
+private val chineseWidgetStrings = WidgetStrings(
+    dailyTitle = "今日一字",
+    streakDaysFormat = "连续 %1\$d 天",
+    completedTodayLabel = "今日已完成",
+    practiceLabel = "练习",
+    dictionaryLabel = "字典",
+    tapToPracticeLabel = "点击开始练习",
+    notificationChannelName = "每日提醒",
+    notificationChannelDescription = "提醒你练习今日一字",
+)
+
 private val chineseSupportStrings = SupportStrings(
     analyticsTitle = "使用统计",
     analyticsDescription = "匿名计数，用于规划未来功能。",
@@ -453,6 +464,7 @@ fun localizedStringsZh(locale: Locale): LocalizedStrings {
         library = chineseLibraryStrings,
         courses = chineseCoursesStrings,
         support = chineseSupportStrings,
+        widget = chineseWidgetStrings,
         boardControls = chinesePracticeBoardStrings,
     )
 }

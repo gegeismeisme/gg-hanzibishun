@@ -167,6 +167,17 @@ private val koreanCoursesStrings = CoursesStrings(
     toastNextUpFormat = "다음: %1\$s",
 )
 
+private val koreanWidgetStrings = WidgetStrings(
+    dailyTitle = "오늘의 한자",
+    streakDaysFormat = "%1\$d일 연속",
+    completedTodayLabel = "오늘 완료",
+    practiceLabel = "연습",
+    dictionaryLabel = "사전",
+    tapToPracticeLabel = "탭하여 연습 시작",
+    notificationChannelName = "매일 알림",
+    notificationChannelDescription = "오늘의 한자 연습 알림",
+)
+
 private val koreanSupportStrings = SupportStrings(
     analyticsTitle = "사용 분석",
     analyticsDescription = "향후 기능 계획용 익명 카운터입니다.",
@@ -488,6 +499,7 @@ fun localizedStringsKo(locale: Locale): LocalizedStrings {
         courses = koreanCoursesStrings,
         account = koreanAccountStrings,
         support = koreanSupportStrings,
+        widget = koreanWidgetStrings,
         boardControls = koreanPracticeBoardStrings,
     )
 }

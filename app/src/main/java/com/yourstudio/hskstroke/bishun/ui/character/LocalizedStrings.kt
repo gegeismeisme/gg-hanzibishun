@@ -1,8 +1,11 @@
 package com.yourstudio.hskstroke.bishun.ui.character
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.yourstudio.hskstroke.bishun.data.settings.UserPreferencesStore
+import kotlinx.coroutines.flow.first
 import java.util.Locale
 
 data class HelpSectionText(
@@ -250,6 +253,17 @@ data class ProgressStrings(
     val relativeDaysFormat: String,
 )
 
+data class WidgetStrings(
+    val dailyTitle: String,
+    val streakDaysFormat: String,
+    val completedTodayLabel: String,
+    val practiceLabel: String,
+    val dictionaryLabel: String,
+    val tapToPracticeLabel: String,
+    val notificationChannelName: String,
+    val notificationChannelDescription: String,
+)
+
 data class LibraryStrings(
     val title: String,
     val description: String,
@@ -368,6 +382,7 @@ data class LocalizedStrings(
     val courses: CoursesStrings,
     val account: AccountStrings,
     val support: SupportStrings,
+    val widget: WidgetStrings,
     val boardControls: PracticeBoardStrings,
 )
 
@@ -386,5 +401,25 @@ fun rememberLocalizedStrings(languageOverride: String?): LocalizedStrings {
             "fr" -> localizedStringsFr(targetLocale)
             else -> localizedStringsEn(targetLocale)
         }
+    }
+}
+
+/**
+ * Non-Composable helper for use in widgets, notifications, and other contexts
+ * where Compose LocalContext is unavailable. Reads language override from DataStore.
+ */
+suspend fun resolveLocalizedStrings(context: Context): LocalizedStrings {
+    val contextLocale = context.resources.configuration.locales[0]
+    val prefs = UserPreferencesStore(context).data.first()
+    val languageOverride = prefs.languageOverride
+    val targetLocale = languageOverride?.takeIf { it.isNotBlank() }?.let { Locale.forLanguageTag(it) }
+        ?: contextLocale
+    return when (targetLocale.language) {
+        "zh" -> localizedStringsZh(targetLocale)
+        "es" -> localizedStringsEs(targetLocale)
+        "ja" -> localizedStringsJa(targetLocale)
+        "ko" -> localizedStringsKo(targetLocale)
+        "fr" -> localizedStringsFr(targetLocale)
+        else -> localizedStringsEn(targetLocale)
     }
 }

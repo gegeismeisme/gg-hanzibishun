@@ -273,6 +273,17 @@ private val japaneseAccountStrings = AccountStrings(
     ),
 )
 
+private val japaneseWidgetStrings = WidgetStrings(
+    dailyTitle = "今日の漢字",
+    streakDaysFormat = "%1\$d日連続",
+    completedTodayLabel = "今日完了",
+    practiceLabel = "練習",
+    dictionaryLabel = "辞書",
+    tapToPracticeLabel = "タップして練習を開始",
+    notificationChannelName = "毎日のリマインダー",
+    notificationChannelDescription = "今日の漢字の練習をリマインド",
+)
+
 private val japaneseSupportStrings = SupportStrings(
     analyticsTitle = "\u4f7f\u7528\u72b6\u6cc1\u5206\u6790",
     analyticsDescription = "\u4eca\u5f8c\u306e\u6a5f\u80fd\u306e\u533f\u540d\u30ab\u30a6\u30f3\u30bf\u30fc\u3002",
@@ -482,6 +493,7 @@ fun localizedStringsJa(locale: Locale): LocalizedStrings {
         courses = japaneseCoursesStrings,
         account = japaneseAccountStrings,
         support = japaneseSupportStrings,
+        widget = japaneseWidgetStrings,
         progress = japaneseProgressStrings,
         library = japaneseLibraryStrings,
         boardControls = japanesePracticeBoardStrings,

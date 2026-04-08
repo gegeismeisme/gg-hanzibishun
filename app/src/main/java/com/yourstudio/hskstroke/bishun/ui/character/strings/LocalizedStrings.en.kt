@@ -196,6 +196,17 @@ private val enSupportStrings = SupportStrings(
     feedbackEmailNoApp = "No email app installed. Log saved locally—share from Account later.",
 )
 
+private val enWidgetStrings = WidgetStrings(
+    dailyTitle = "Daily Character",
+    streakDaysFormat = "%1\$d-day streak",
+    completedTodayLabel = "Completed today",
+    practiceLabel = "Practice",
+    dictionaryLabel = "Dictionary",
+    tapToPracticeLabel = "Tap to start practicing",
+    notificationChannelName = "Daily Reminder",
+    notificationChannelDescription = "Reminds you to practice the daily character",
+)
+
 private val enAccountStrings = AccountStrings(
     title = "Settings",
     signInCardTitle = "Sign-in status",
@@ -477,5 +488,6 @@ fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStrings(
     courses = enCoursesStrings,
     account = enAccountStrings,
     support = enSupportStrings,
+    widget = enWidgetStrings,
     boardControls = enPracticeBoardStrings,
 )

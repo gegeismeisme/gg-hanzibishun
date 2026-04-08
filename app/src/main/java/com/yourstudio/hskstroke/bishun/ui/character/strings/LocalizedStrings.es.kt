@@ -492,6 +492,16 @@ fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStrings(
     courses = spanishCoursesStrings,
     account = spanishAccountStrings,
     support = spanishSupportStrings,
+    widget = WidgetStrings(
+        dailyTitle = "Carácter del día",
+        streakDaysFormat = "%1\$d días seguidos",
+        completedTodayLabel = "Completado hoy",
+        practiceLabel = "Practicar",
+        dictionaryLabel = "Diccionario",
+        tapToPracticeLabel = "Toca para empezar a practicar",
+        notificationChannelName = "Recordatorio diario",
+        notificationChannelDescription = "Te recuerda practicar el carácter del día",
+    ),
     boardControls = spanishPracticeBoardStrings,
 )
 

@@ -8,6 +8,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.yourstudio.hskstroke.bishun.ui.character.resolveLocalizedStrings
+import kotlinx.coroutines.runBlocking
 
 object NotificationUtils {
     const val DAILY_REMINDER_CHANNEL_ID = "daily_reminder"
@@ -31,12 +33,13 @@ object NotificationUtils {
         val existing = manager.getNotificationChannel(DAILY_REMINDER_CHANNEL_ID)
         if (existing != null) return
 
+        val strings = runBlocking { resolveLocalizedStrings(context) }
         val channel = NotificationChannel(
             DAILY_REMINDER_CHANNEL_ID,
-            "每日提醒",
+            strings.widget.notificationChannelName,
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
-            description = "提醒你练习今日一字"
+            description = strings.widget.notificationChannelDescription
         }
         manager.createNotificationChannel(channel)
     }
