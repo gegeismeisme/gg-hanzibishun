@@ -183,8 +183,34 @@ data class SupportStrings(
 data class NavigationStrings(
     val homeLabel: String,
     val learnLabel: String,
+    val flashcardLabel: String,
     val libraryLabel: String,
     val accountLabel: String,
+)
+
+data class FlashcardStrings(
+    val title: String,
+    val description: String,
+    val levelAll: String,
+    val levelFormat: String,
+    val statDue: String,
+    val statWeak: String,
+    val statMastered: String,
+    val ratingAgain: String,
+    val ratingHard: String,
+    val ratingGood: String,
+    val ratingEasy: String,
+    val cardFrontHint: String,
+    val emptyTitle: String,
+    val emptyDescription: String,
+    val reviewedFormat: String,
+    val proGateTitle: String,
+    val proGateDescription: String,
+    val proGateButton: String,
+    val seedingMessage: String,
+    val nextReviewLabel: String,
+    val tomorrowLabel: String,
+    val inDaysFormat: String,
 )
 
 data class OnboardingPageText(
@@ -383,6 +409,7 @@ data class LocalizedStrings(
     val account: AccountStrings,
     val support: SupportStrings,
     val widget: WidgetStrings,
+    val flashcard: FlashcardStrings,
     val boardControls: PracticeBoardStrings,
 )
 

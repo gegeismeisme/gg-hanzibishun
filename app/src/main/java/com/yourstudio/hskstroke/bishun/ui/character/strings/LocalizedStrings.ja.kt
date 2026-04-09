@@ -316,8 +316,34 @@ private val japaneseSupportStrings = SupportStrings(
 private val japaneseNavigationStrings = NavigationStrings(
     homeLabel = "ホーム",
     learnLabel = "学習",
+    flashcardLabel = "フラッシュカード",
     libraryLabel = "辞書",
     accountLabel = "設定",
+)
+
+private val japaneseFlashcardStrings = FlashcardStrings(
+    title = "フラッシュカード",
+    description = "間隔反復法で語彙を復習します。",
+    levelAll = "すべて",
+    levelFormat = "HSK %1\$d",
+    statDue = "復習予定：%1\$d",
+    statWeak = "苦手：%1\$d",
+    statMastered = "習得済み：%1\$d",
+    ratingAgain = "もう一度",
+    ratingHard = "難しい",
+    ratingGood = "普通",
+    ratingEasy = "簡単",
+    cardFrontHint = "タップして裏面を見る",
+    emptyTitle = "すべて完了！",
+    emptyDescription = "復習予定のカードはありません。後でまた来てください。",
+    reviewedFormat = "%1\$d枚のカードを復習しました",
+    proGateTitle = "HSK 2–7をアンロック",
+    proGateDescription = "Proにアップグレードして、間隔反復法で全3,090文字を学びましょう。",
+    proGateButton = "Proにアップグレード",
+    seedingMessage = "フラッシュカードを準備中…",
+    nextReviewLabel = "次の復習：",
+    tomorrowLabel = "明日",
+    inDaysFormat = "%1\$d日後",
 )
 
 private val japaneseOnboardingStrings = OnboardingStrings(
@@ -494,6 +520,7 @@ fun localizedStringsJa(locale: Locale): LocalizedStrings {
         account = japaneseAccountStrings,
         support = japaneseSupportStrings,
         widget = japaneseWidgetStrings,
+        flashcard = japaneseFlashcardStrings,
         progress = japaneseProgressStrings,
         library = japaneseLibraryStrings,
         boardControls = japanesePracticeBoardStrings,

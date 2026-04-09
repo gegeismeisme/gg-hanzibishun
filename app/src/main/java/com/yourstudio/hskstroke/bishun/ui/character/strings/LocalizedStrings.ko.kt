@@ -5,8 +5,34 @@ import java.util.Locale
 private val koreanNavigationStrings = NavigationStrings(
     homeLabel = "홈",
     learnLabel = "학습",
+    flashcardLabel = "플래시카드",
     libraryLabel = "사전",
     accountLabel = "설정",
+)
+
+private val koreanFlashcardStrings = FlashcardStrings(
+    title = "플래시카드",
+    description = "간격 반복으로 어휘를 복습하세요.",
+    levelAll = "전체",
+    levelFormat = "HSK %1\$d",
+    statDue = "복습 예정: %1\$d",
+    statWeak = "취약: %1\$d",
+    statMastered = "숙련: %1\$d",
+    ratingAgain = "다시",
+    ratingHard = "어려움",
+    ratingGood = "보통",
+    ratingEasy = "쉬움",
+    cardFrontHint = "탭하여 뒤집기",
+    emptyTitle = "모두 완료!",
+    emptyDescription = "복습할 카드가 없습니다. 나중에 다시 오세요.",
+    reviewedFormat = "%1\$d장의 카드 복습 완료",
+    proGateTitle = "HSK 2–7 잠금 해제",
+    proGateDescription = "Pro로 업그레이드하여 간격 반복으로 전체 3,090자를 학습하세요.",
+    proGateButton = "Pro로 업그레이드",
+    seedingMessage = "플래시카드 준비 중…",
+    nextReviewLabel = "다음 복습:",
+    tomorrowLabel = "내일",
+    inDaysFormat = "%1\$d일 후",
 )
 
 private val koreanPracticeBoardStrings = PracticeBoardStrings(
@@ -500,6 +526,7 @@ fun localizedStringsKo(locale: Locale): LocalizedStrings {
         account = koreanAccountStrings,
         support = koreanSupportStrings,
         widget = koreanWidgetStrings,
+        flashcard = koreanFlashcardStrings,
         boardControls = koreanPracticeBoardStrings,
     )
 }

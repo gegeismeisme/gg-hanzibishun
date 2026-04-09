@@ -5,8 +5,34 @@ import java.util.Locale
 private val chineseNavigationStrings = NavigationStrings(
     homeLabel = "首页",
     learnLabel = "学习",
+    flashcardLabel = "闪卡",
     libraryLabel = "字典",
     accountLabel = "我的",
+)
+
+private val chineseFlashcardStrings = FlashcardStrings(
+    title = "闪卡复习",
+    description = "使用间隔重复法复习词汇。",
+    levelAll = "全部",
+    levelFormat = "HSK %1\$d",
+    statDue = "待复习：%1\$d",
+    statWeak = "薄弱：%1\$d",
+    statMastered = "已掌握：%1\$d",
+    ratingAgain = "再来",
+    ratingHard = "困难",
+    ratingGood = "良好",
+    ratingEasy = "简单",
+    cardFrontHint = "点击翻转",
+    emptyTitle = "全部完成！",
+    emptyDescription = "暂无待复习卡片，稍后再来。",
+    reviewedFormat = "已复习 %1\$d 张卡片",
+    proGateTitle = "解锁 HSK 2–7",
+    proGateDescription = "升级 Pro 即可使用间隔重复法学习全部 3,090 个汉字。",
+    proGateButton = "升级到 Pro",
+    seedingMessage = "正在准备闪卡…",
+    nextReviewLabel = "下次复习：",
+    tomorrowLabel = "明天",
+    inDaysFormat = "%1\$d 天后",
 )
 
 private val chinesePracticeBoardStrings = PracticeBoardStrings(
@@ -465,6 +491,7 @@ fun localizedStringsZh(locale: Locale): LocalizedStrings {
         courses = chineseCoursesStrings,
         support = chineseSupportStrings,
         widget = chineseWidgetStrings,
+        flashcard = chineseFlashcardStrings,
         boardControls = chinesePracticeBoardStrings,
     )
 }

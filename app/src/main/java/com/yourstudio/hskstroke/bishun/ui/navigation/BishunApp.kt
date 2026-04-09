@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -36,6 +37,7 @@ import com.yourstudio.hskstroke.bishun.ui.character.CharacterViewModel
 import com.yourstudio.hskstroke.bishun.ui.character.rememberLocalizedStrings
 import com.yourstudio.hskstroke.bishun.ui.learn.LearnScreen
 import com.yourstudio.hskstroke.bishun.ui.learn.LearnTab
+import com.yourstudio.hskstroke.bishun.ui.flashcard.FlashcardRoute
 import com.yourstudio.hskstroke.bishun.ui.library.LibraryScreen
 import com.yourstudio.hskstroke.bishun.ui.library.LibraryViewModel
 import com.yourstudio.hskstroke.bishun.ui.testing.TestTags
@@ -47,6 +49,7 @@ private sealed class MainDestination(
 ) {
     data object Home : MainDestination("home", Icons.Outlined.Home, TestTags.NAV_HOME)
     data object Learn : MainDestination("learn", Icons.Outlined.AutoStories, TestTags.NAV_LEARN)
+    data object Flashcard : MainDestination("flashcard", Icons.Outlined.Widgets, TestTags.NAV_FLASHCARD)
     data object Library : MainDestination("library", Icons.AutoMirrored.Outlined.MenuBook, TestTags.NAV_LIBRARY)
     data object Account : MainDestination("account", Icons.Outlined.Person, TestTags.NAV_ACCOUNT)
 
@@ -54,6 +57,7 @@ private sealed class MainDestination(
         val items: List<MainDestination> = listOf(
             Home,
             Learn,
+            Flashcard,
             Library,
             Account,
         )
@@ -135,6 +139,7 @@ fun BishunApp(
                     val label = when (destination) {
                         MainDestination.Home -> navigationStrings.homeLabel
                         MainDestination.Learn -> navigationStrings.learnLabel
+                        MainDestination.Flashcard -> navigationStrings.flashcardLabel
                         MainDestination.Library -> navigationStrings.libraryLabel
                         MainDestination.Account -> navigationStrings.accountLabel
                     }
@@ -212,6 +217,19 @@ fun BishunApp(
                     },
                     languageOverride = userPreferences.languageOverride,
                     initialTab = LearnTab.Progress,
+                )
+            }
+            composable(MainDestination.Flashcard.route) {
+                FlashcardRoute(
+                    modifier = Modifier.fillMaxSize().testTag(TestTags.SCREEN_FLASHCARD),
+                    languageOverride = userPreferences.languageOverride,
+                    isPro = userPreferences.isPro,
+                    onNavigateToPractice = { symbol ->
+                        sharedCharacterViewModel.startPracticeForSymbol(symbol)
+                        navController.navigate(MainDestination.Home.route) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(MainDestination.Library.route) {

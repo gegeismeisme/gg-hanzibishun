@@ -5,11 +5,13 @@ object TestTags {
     const val NAV_LEARN = "nav_learn"
     const val NAV_LIBRARY = "nav_library"
     const val NAV_ACCOUNT = "nav_account"
+    const val NAV_FLASHCARD = "nav_flashcard"
 
     const val SCREEN_HOME = "screen_home"
     const val SCREEN_LEARN = "screen_learn"
     const val SCREEN_LIBRARY = "screen_library"
     const val SCREEN_ACCOUNT = "screen_account"
+    const val SCREEN_FLASHCARD = "screen_flashcard"
 
     const val ONBOARDING_SKIP = "onboarding_skip"
     const val ONBOARDING_BACK = "onboarding_back"

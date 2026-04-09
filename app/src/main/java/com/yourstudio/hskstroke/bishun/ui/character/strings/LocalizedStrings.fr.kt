@@ -5,6 +5,7 @@ import java.util.Locale
 private val frenchNavigationStrings = NavigationStrings(
     homeLabel = "Accueil",
     learnLabel = "Apprendre",
+    flashcardLabel = "Cartes",
     libraryLabel = "Dictionnaire",
     accountLabel = "Paramètres",
 )
@@ -159,6 +160,30 @@ fun localizedStringsFr(locale: Locale): LocalizedStrings {
             tapToPracticeLabel = "Appuyez pour pratiquer",
             notificationChannelName = "Rappel quotidien",
             notificationChannelDescription = "Vous rappelle de pratiquer le caractère du jour",
+        ),
+        flashcard = FlashcardStrings(
+            title = "Cartes mémo",
+            description = "Révisez le vocabulaire avec la répétition espacée.",
+            levelAll = "Tout",
+            levelFormat = "HSK %1\$d",
+            statDue = "À réviser : %1\$d",
+            statWeak = "Faible : %1\$d",
+            statMastered = "Maîtrisé : %1\$d",
+            ratingAgain = "Encore",
+            ratingHard = "Difficile",
+            ratingGood = "Bien",
+            ratingEasy = "Facile",
+            cardFrontHint = "Appuyez pour retourner",
+            emptyTitle = "Tout est à jour !",
+            emptyDescription = "Aucune carte à réviser. Revenez plus tard.",
+            reviewedFormat = "%1\$d cartes révisées",
+            proGateTitle = "Débloquer HSK 2–7",
+            proGateDescription = "Passez à Pro pour étudier les 3 090 caractères avec répétition espacée.",
+            proGateButton = "Passer à Pro",
+            seedingMessage = "Préparation des cartes…",
+            nextReviewLabel = "Prochaine révision :",
+            tomorrowLabel = "Demain",
+            inDaysFormat = "Dans %1\$d jours",
         ),
     )
 }

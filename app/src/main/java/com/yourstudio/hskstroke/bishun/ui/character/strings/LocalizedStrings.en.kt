@@ -5,8 +5,34 @@ import java.util.Locale
 private val enNavigationStrings = NavigationStrings(
     homeLabel = "Home",
     learnLabel = "Learn",
+    flashcardLabel = "Flashcards",
     libraryLabel = "Dictionary",
     accountLabel = "Account",
+)
+
+private val enFlashcardStrings = FlashcardStrings(
+    title = "Flashcards",
+    description = "Review vocabulary with spaced repetition.",
+    levelAll = "All",
+    levelFormat = "HSK %1\$d",
+    statDue = "Due: %1\$d",
+    statWeak = "Weak: %1\$d",
+    statMastered = "Mastered: %1\$d",
+    ratingAgain = "Again",
+    ratingHard = "Hard",
+    ratingGood = "Good",
+    ratingEasy = "Easy",
+    cardFrontHint = "Tap to reveal",
+    emptyTitle = "All caught up!",
+    emptyDescription = "No cards due for review. Come back later.",
+    reviewedFormat = "%1\$d cards reviewed",
+    proGateTitle = "Unlock HSK 2–7",
+    proGateDescription = "Upgrade to Pro to study all 3,090 characters with spaced repetition.",
+    proGateButton = "Upgrade to Pro",
+    seedingMessage = "Preparing flashcards…",
+    nextReviewLabel = "Next review:",
+    tomorrowLabel = "Tomorrow",
+    inDaysFormat = "In %1\$d days",
 )
 
 private val enPracticeBoardStrings = PracticeBoardStrings(
@@ -488,6 +514,7 @@ fun localizedStringsEn(locale: Locale): LocalizedStrings = LocalizedStrings(
     courses = enCoursesStrings,
     account = enAccountStrings,
     support = enSupportStrings,
+    flashcard = enFlashcardStrings,
     widget = enWidgetStrings,
     boardControls = enPracticeBoardStrings,
 )

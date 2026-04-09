@@ -239,6 +239,31 @@ private val spanishAccountStrings = AccountStrings(
     hskWebsiteButton = "Sitio oficial HSK",
 )
 
+private val spanishFlashcardStrings = FlashcardStrings(
+    title = "Tarjetas de repaso",
+    description = "Repasa vocabulario con repetición espaciada.",
+    levelAll = "Todos",
+    levelFormat = "HSK %1\$d",
+    statDue = "Pendientes: %1\$d",
+    statWeak = "Débiles: %1\$d",
+    statMastered = "Dominadas: %1\$d",
+    ratingAgain = "Otra vez",
+    ratingHard = "Difícil",
+    ratingGood = "Bien",
+    ratingEasy = "Fácil",
+    cardFrontHint = "Toca para voltear",
+    emptyTitle = "¡Todo al día!",
+    emptyDescription = "No hay tarjetas pendientes. Vuelve más tarde.",
+    reviewedFormat = "%1\$d tarjetas revisadas",
+    proGateTitle = "Desbloquea HSK 2–7",
+    proGateDescription = "Mejora a Pro para estudiar los 3.090 caracteres con repetición espaciada.",
+    proGateButton = "Mejorar a Pro",
+    seedingMessage = "Preparando tarjetas…",
+    nextReviewLabel = "Próximo repaso:",
+    tomorrowLabel = "Mañana",
+    inDaysFormat = "En %1\$d días",
+)
+
 private val spanishSupportStrings = SupportStrings(
     analyticsTitle = "Analítica de uso",
     analyticsDescription = "Contadores anónimos para funciones futuras.",
@@ -271,6 +296,7 @@ private val spanishSupportStrings = SupportStrings(
 private val spanishNavigationStrings = NavigationStrings(
     homeLabel = "Inicio",
     learnLabel = "Aprender",
+    flashcardLabel = "Tarjetas",
     libraryLabel = "Diccionario",
     accountLabel = "Ajustes",
 )
@@ -502,6 +528,7 @@ fun localizedStringsEs(locale: Locale): LocalizedStrings = LocalizedStrings(
         notificationChannelName = "Recordatorio diario",
         notificationChannelDescription = "Te recuerda practicar el carácter del día",
     ),
+    flashcard = spanishFlashcardStrings,
     boardControls = spanishPracticeBoardStrings,
 )
 
