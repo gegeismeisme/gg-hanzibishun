@@ -402,6 +402,15 @@ private val enHelpSections = listOf(
         ),
     ),
     HelpSectionText(
+        title = "Flashcards & spaced repetition",
+        description = "The Flashcards tab uses an SM-2 algorithm to schedule reviews at optimal intervals.",
+        bullets = listOf(
+            "Select an HSK level or All, then tap a card to reveal pinyin and meaning.",
+            "Rate your recall: Again (forgot), Hard, Good, or Easy — the algorithm adjusts the next review date.",
+            "Due cards appear first, then weak cards, then earliest scheduled. HSK 1 is free; HSK 2–7 requires Pro.",
+        ),
+    ),
+    HelpSectionText(
         title = "Support",
         description = "Need help? Reach out anytime.",
         bullets = listOf(

@@ -1,6 +1,6 @@
 ---
 title: Hanzi Dictionary & Strokes - Privacy Policy
-updated: 2026-01-05
+updated: 2026-04-09
 ---
 
 Hanzi Dictionary & Strokes (the "App", package name `com.yourstudio.hskstroke.bishun`) is an offline-first learning tool published by `ark_go`. This document explains what information is processed, how it is stored, and how you can control it.
@@ -11,6 +11,7 @@ Hanzi Dictionary & Strokes (the "App", package name `com.yourstudio.hskstroke.bi
 | --- | --- | --- |
 | Character resources | Local JSON stroke data bundled inside the APK. | Assets only; not user data. |
 | Practice history | Characters practiced, stroke progress, and history needed to resume. | Stored locally using Android DataStore; never uploaded. |
+| Flashcard progress | Review intervals, ease factors, and SRS scheduling data for spaced repetition. | Stored locally using Room database (`flashcard.db`); never uploaded. |
 | Settings | Board options (grid, stroke color, template visibility), language override. | Stored locally via DataStore. |
 | Dictionary history | Recent lookups for quick access. | Stored locally via DataStore; never uploaded. |
 | Reminder settings | Daily reminder toggle, time, and reminder rules (e.g. only when incomplete). | Stored locally via DataStore. |
@@ -24,6 +25,7 @@ We do **not** collect names, contacts, or precise location through the App itsel
 
 - Resume your latest character/course session.
 - Display learning statistics and practice history on your device.
+- Schedule spaced repetition reviews for vocabulary flashcards using locally stored SRS data.
 - Remember board and demo preferences.
 - Schedule optional daily practice reminders (local notifications) if you enable them.
 - Unlock Pro features if you purchase them, and restore them automatically when you reinstall on the same Google account.
